@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerador de Certificados Escolares</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📜 Gerador de Certificados Escolares</h1>
+            <p>Sistema completo para cadastro e geração de certificados</p>
+        </header>
+
+        <nav class="tabs">
+            <button class="tab-btn active" data-tab="cadastro">Cadastrar Alunos</button>
+            <button class="tab-btn" data-tab="lista">Lista de Alunos</button>
+            <button class="tab-btn" data-tab="templates">Modelos</button>
+            <button class="tab-btn" data-tab="gerar">Gerar Certificados</button>
+        </nav>
+
+        <!-- Tab: Cadastro de Alunos -->
+        <div class="tab-content active" id="cadastro">
+            <div class="card">
+                <h2>Cadastrar Novo Aluno</h2>
+                <form id="formAluno">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="nomeAluno">Nome do Estudante*</label>
+                            <input type="text" id="nomeAluno" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="rgAluno">RG*</label>
+                            <input type="text" id="rgAluno" placeholder="0.000.000" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="orgaoEmissor">Órgão Emissor*</label>
+                            <input type="text" id="orgaoEmissor" placeholder="SSP/PI" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="cpfAluno">CPF*</label>
+                            <input type="text" id="cpfAluno" placeholder="000.000.000-00" required>
+                        </div>
+                    </div>
+
+                    <h3 style="margin-top: 20px; margin-bottom: 15px; color: #1e3a8a;">Data de Nascimento</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="diaNascimento">Dia*</label>
+                            <input type="number" id="diaNascimento" min="1" max="31" placeholder="01" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="mesNascimento">Mês*</label>
+                            <select id="mesNascimento" required>
+                                <option value="">Selecione</option>
+                                <option value="janeiro">janeiro</option>
+                                <option value="fevereiro">fevereiro</option>
+                                <option value="março">março</option>
+                                <option value="abril">abril</option>
+                                <option value="maio">maio</option>
+                                <option value="junho">junho</option>
+                                <option value="julho">julho</option>
+                                <option value="agosto">agosto</option>
+                                <option value="setembro">setembro</option>
+                                <option value="outubro">outubro</option>
+                                <option value="novembro">novembro</option>
+                                <option value="dezembro">dezembro</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="anoNascimento">Ano*</label>
+                            <input type="number" id="anoNascimento" min="1900" max="2020" placeholder="2008" required>
+                        </div>
+                    </div>
+
+                    <h3 style="margin-top: 20px; margin-bottom: 15px; color: #1e3a8a;">Naturalidade</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="cidadeNascimento">Cidade de Nascimento*</label>
+                            <input type="text" id="cidadeNascimento" placeholder="Curimatá" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="estadoNascimento">Estado*</label>
+                            <input type="text" id="estadoNascimento" placeholder="Piauí" required>
+                        </div>
+                    </div>
+
+                    <h3 style="margin-top: 20px; margin-bottom: 15px; color: #1e3a8a;">Filiação</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="nomeMae">Nome da Mãe*</label>
+                            <input type="text" id="nomeMae" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="nomePai">Nome do Pai*</label>
+                            <input type="text" id="nomePai" required>
+                        </div>
+                    </div>
+
+                    <h3 style="margin-top: 20px; margin-bottom: 15px; color: #1e3a8a;">Informações do Certificado</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="dataConfeccao">Data de Confecção*</label>
+                            <input type="date" id="dataConfeccao" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="resolucao">Resolução CEE/PI Nº*</label>
+                            <input type="text" id="resolucao" placeholder="224/2022" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="anoConclusao">Ano de Conclusão*</label>
+                            <input type="number" id="anoConclusao" min="2000" max="2030" placeholder="2025" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="nacionalidade">Nacionalidade*</label>
+                            <input type="text" id="nacionalidade" value="Brasileira" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="observacoes">Observações</label>
+                        <textarea id="observacoes" rows="3"></textarea>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">✓ Cadastrar Aluno</button>
+                        <button type="button" class="btn btn-secondary" id="btnLimpar">✗ Limpar Campos</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Tab: Lista de Alunos -->
+        <div class="tab-content" id="lista">
+            <div class="card">
+                <div class="header-actions">
+                    <h2>Alunos Cadastrados (<span id="totalAlunos">0</span>)</h2>
+                    <div>
+                        <button class="btn btn-warning" id="btnExportarDados">📥 Exportar Dados</button>
+                        <button class="btn btn-danger" id="btnLimparTodos">🗑️ Limpar Todos</button>
+                    </div>
+                </div>
+                <div class="search-box">
+                    <input type="text" id="buscarAluno" placeholder="🔍 Buscar aluno por nome, curso ou CPF...">
+                </div>
+                <div id="listaAlunos"></div>
+            </div>
+        </div>
+
+        <!-- Tab: Templates -->
+        <div class="tab-content" id="templates">
+            <div class="card">
+                <h2>Modelos de Certificados</h2>
+                <p>Selecione um modelo padrão ou faça upload do seu próprio modelo</p>
+                
+                <div class="templates-grid" id="templatesGrid">
+                    <!-- Templates serão carregados aqui -->
+                </div>
+
+                <div class="custom-template">
+                    <h3>Modelo Personalizado</h3>
+                    <p>Faça upload de uma imagem de fundo para seu certificado (PNG, JPG - Recomendado: 1920x1080px)</p>
+                    <input type="file" id="uploadTemplate" accept="image/*" style="display:none">
+                    <button class="btn btn-secondary" onclick="document.getElementById('uploadTemplate').click()">
+                        📤 Fazer Upload de Modelo
+                    </button>
+                    <div id="customTemplatePreview"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Gerar Certificados -->
+        <div class="tab-content" id="gerar">
+            <div class="card">
+                <h2>Gerar Certificados</h2>
+                
+                <div class="generate-options">
+                    <div class="option-card">
+                        <h3>📄 Gerar Individual</h3>
+                        <p>Selecione um aluno da lista para gerar seu certificado</p>
+                        <select id="selectAluno" class="form-control">
+                            <option value="">-- Selecione um aluno --</option>
+                        </select>
+                        <button class="btn btn-primary" id="btnGerarIndividual">Gerar Certificado</button>
+                    </div>
+
+                    <div class="option-card">
+                        <h3>📚 Gerar em Lote</h3>
+                        <p>Gere certificados para todos os alunos cadastrados</p>
+                        <button class="btn btn-success" id="btnGerarLote">Gerar Todos os Certificados</button>
+                    </div>
+                </div>
+
+                <div class="selected-template-info">
+                    <strong>Modelo Selecionado:</strong> 
+                    <span id="templateSelecionado">Clássico Azul</span>
+                </div>
+            </div>
+
+            <!-- Canvas para geração de certificados -->
+            <div id="canvasContainer" style="display:none;">
+                <canvas id="certificadoCanvas"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div id="notification" class="notification"></div>
+
+    <script>
+        // Verificar autenticação e redirecionar admins
+        const usuarioLogado = localStorage.getItem('usuario');
+        if (!usuarioLogado) {
+            window.location.href = 'public/login.html';
+        } else {
+            const usuario = JSON.parse(usuarioLogado);
+            // Administradores não podem acessar o gerador de certificados
+            if (usuario.role === 'admin') {
+                alert('Administradores não têm acesso ao gerador de certificados. Você será redirecionado ao painel administrativo.');
+                window.location.href = 'public/admin.html';
+            }
+        }
+    </script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="brasao-data.js"></script>
+    <script src="bordas-data.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

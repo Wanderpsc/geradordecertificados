@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Gerador de Certificados</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .login-container {
+            max-width: 450px;
+            margin: 100px auto;
+            padding: 40px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .login-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .login-header h1 {
+            color: #1e3a8a;
+            margin-bottom: 10px;
+        }
+        .tab-login {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+        .tab-login button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-size: 16px;
+            color: #6b7280;
+            transition: all 0.3s;
+        }
+        .tab-login button.active {
+            color: #1e3a8a;
+            border-bottom: 3px solid #1e3a8a;
+            margin-bottom: -2px;
+        }
+        .form-login {
+            display: none;
+        }
+        .form-login.active {
+            display: block;
+        }
+        .error-message {
+            background: #fee2e2;
+            color: #991b1b;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        .success-message {
+            background: #d1fae5;
+            color: #065f46;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+        .termos-checkbox {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin: 20px 0;
+            font-size: 14px;
+        }
+        .termos-checkbox input[type="checkbox"] {
+            margin-top: 4px;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        .termos-checkbox label {
+            flex: 1;
+            cursor: pointer;
+            line-height: 1.5;
+        }
+        .termos-checkbox a {
+            color: #1e3a8a;
+            text-decoration: underline;
+        }
+        .copyright-footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+            font-size: 12px;
+            color: #6b7280;
+        }
+        .copyright-footer strong {
+            color: #1e3a8a;
+        }
+        .security-badge {
+            background: #f0fdf4;
+            border: 1px solid #86efac;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 13px;
+            color: #166534;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <h1>📜 Gerador de Certificados</h1>
+            <p>Sistema Profissional de Certificados Escolares</p>
+            <div class="security-badge">
+                🔒 Sistema Seguro • Protegido por Copyright © 2026
+            </div>
+        </div>
+
+        <div class="error-message" id="errorMessage"></div>
+        <div class="success-message" id="successMessage"></div>
+
+        <div class="tab-login">
+            <button class="active" onclick="switchTab('login')">Login</button>
+            <button onclick="switchTab('register')">Registrar</button>
+        </div>
+
+        <!-- Form Login -->
+        <form id="formLogin" class="form-login active">
+            <div class="form-group">
+                <label for="loginEmail">Email</label>
+                <input type="email" id="loginEmail" required>
+            </div>
+            <div class="form-group">
+                <label for="loginSenha">Senha</label>
+                <input type="password" id="loginSenha" required>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 20px;">
+                Entrar
+            </button>
+        </form>
+
+        <!-- Form Registro -->
+        <form id="formRegister" class="form-login">
+            <div class="form-group">
+                <label for="registerNome">Nome Completo*</label>
+                <input type="text" id="registerNome" required>
+            </div>
+            <div class="form-group">
+                <label for="registerEmail">Email*</label>
+                <input type="email" id="registerEmail" required>
+            </div>
+            <div class="form-group">
+                <label for="registerSenha">Senha* (mínimo 6 caracteres)</label>
+                <input type="password" id="registerSenha" minlength="6" required>
+            </div>
+            <div class="form-group">
+                <label for="registerInstituicao">Nome da Instituição*</label>
+                <input type="text" id="registerInstituicao" required>
+            </div>
+            <div class="form-group">
+                <label for="registerTelefone">Telefone</label>
+                <input type="tel" id="registerTelefone">
+            </div>
+            
+            <div class="termos-checkbox">
+                <input type="checkbox" id="aceitarTermos" required>
+                <label for="aceitarTermos">
+                    Li e aceito os <a href="termos.html" target="_blank">Termos de Uso e Licença</a>. 
+                    Concordo que este software é protegido por copyright e que o uso não autorizado constitui crime previsto em lei.
+                </label>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 20px;">
+                Criar Conta (7 dias grátis)
+            </button>
+            <p style="text-align: center; margin-top: 15px; font-size: 14px; color: #6b7280;">
+                Ao registrar, você recebe 7 dias grátis para testar!
+            </p>
+        </form>
+
+        <div class="copyright-footer">
+            <p><strong>© 2026 Gerador de Certificados Profissional</strong></p>
+            <p>Todos os direitos reservados. Software Proprietário.</p>
+            <p>🔒 Protegido por leis de propriedade intelectual</p>
+            <p style="margin-top: 10px;">
+                Lei 9.610/98 (Direitos Autorais) • Lei 9.609/98 (Software)
+            </p>
+            <p style="margin-top: 10px;">
+                <a href="termos.html" target="_blank" style="color: #1e3a8a;">Ver Termos de Uso Completos</a>
+            </p>
+        </div>
+    </div>
+
+    <script src="auth.js"></script>
+</body>
+</html>
