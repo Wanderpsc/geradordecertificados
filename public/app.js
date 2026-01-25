@@ -2,7 +2,8 @@
 const APP_STATE = {
     alunos: JSON.parse(localStorage.getItem('alunos')) || [],
     templateSelecionado: 'estadual-pi',
-    templateCustom: localStorage.getItem('templateCustom') || null
+    templateCustom: localStorage.getItem('templateCustom') || null,
+    alunoEditando: null
 };
 
 // ==================== TEMPLATES DE CERTIFICADOS ====================
@@ -63,8 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
     inicializarTabs();
     inicializarFormulario();
     inicializarTemplates();
-    atualizarListaAlunos();
-    atualizarSelectAlunos();
+    carregarAlunos(); // Carregar alunos do servidor
     carregarTemplateCustom();
 });
 
@@ -76,15 +76,48 @@ function inicializarTabs() {
     tabButtons.forEach(button => {
         button.addEventListener('click', () => {
             const targetTab = button.dataset.tab;
-            
-            tabButtons.forEach(btn => btn.classList.remove('active'));
-            tabContents.forEach(content => content.classList.remove('active'));
-            
-            button.classList.add('active');
-            document.getElementById(targetTab).classList.add('active');
+            navegarParaTab(targetTab);
         });
     });
+    
+    // Restaurar aba da URL ou usar primeira aba
+    const hash = window.location.hash.slice(1);
+    if (hash) {
+        navegarParaTab(hash);
+    } else {
+        navegarParaTab('cadastro');
+    }
+    
+    // Escutar mudanças no hash
+    window.addEventListener('hashchange', () => {
+        const novaTab = window.location.hash.slice(1);
+        if (novaTab) {
+            navegarParaTab(novaTab, false);
+        }
+    });
 }
+
+function navegarParaTab(targetTab, atualizarHash = true) {
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
+    
+    tabButtons.forEach(btn => btn.classList.remove('active'));
+    tabContents.forEach(content => content.classList.remove('active'));
+    
+    const btnAlvo = document.querySelector(`[data-tab="${targetTab}"]`);
+    const contentAlvo = document.getElementById(targetTab);
+    
+    if (btnAlvo && contentAlvo) {
+        btnAlvo.classList.add('active');
+        contentAlvo.classList.add('active');
+        
+        if (atualizarHash) {
+            window.location.hash = targetTab;
+        }
+    }
+}
+
+// ==================== FORMULÁRIO DE CADASTRO ====================
 
 // ==================== FORMULÁRIO DE CADASTRO ====================
 function inicializarFormulario() {
@@ -109,6 +142,8 @@ function inicializarFormulario() {
 
     btnLimpar.addEventListener('click', () => {
         form.reset();
+        APP_STATE.alunoEditando = null;
+        mostrarNotificacao('Formulário limpo', 'info');
     });
 
     // Busca de alunos
@@ -119,22 +154,38 @@ function inicializarFormulario() {
     // Botões de ação
     document.getElementById('btnLimparTodos').addEventListener('click', limparTodosAlunos);
     document.getElementById('btnExportarDados').addEventListener('click', exportarDados);
+    document.getElementById('btnFazerBackup').addEventListener('click', fazerBackupCompleto);
+    
+    // Verificar se precisa lembrar de fazer backup
+    verificarLembreteBackup();
 }
 
-function cadastrarAluno() {
+async function cadastrarAluno() {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        mostrarNotificacao('Sessão expirada. Faça login novamente.', 'error');
+        window.location.href = 'login.html';
+        return;
+    }
+
     const aluno = {
-        id: Date.now(),
         nome: document.getElementById('nomeAluno').value.trim(),
         rg: document.getElementById('rgAluno').value.trim(),
         orgaoEmissor: document.getElementById('orgaoEmissor').value.trim(),
         cpf: document.getElementById('cpfAluno').value.trim(),
-        diaNascimento: document.getElementById('diaNascimento').value,
-        mesNascimento: document.getElementById('mesNascimento').value,
-        anoNascimento: document.getElementById('anoNascimento').value,
-        cidadeNascimento: document.getElementById('cidadeNascimento').value.trim(),
-        estadoNascimento: document.getElementById('estadoNascimento').value.trim(),
-        nomeMae: document.getElementById('nomeMae').value.trim(),
-        nomePai: document.getElementById('nomePai').value.trim(),
+        dataNascimento: {
+            dia: parseInt(document.getElementById('diaNascimento').value),
+            mes: document.getElementById('mesNascimento').value,
+            ano: parseInt(document.getElementById('anoNascimento').value)
+        },
+        naturalidade: {
+            cidade: document.getElementById('cidadeNascimento').value.trim(),
+            estado: document.getElementById('estadoNascimento').value.trim()
+        },
+        filiacao: {
+            mae: document.getElementById('nomeMae').value.trim(),
+            pai: document.getElementById('nomePai').value.trim()
+        },
         dataConfeccao: document.getElementById('dataConfeccao').value,
         resolucao: document.getElementById('resolucao').value.trim(),
         anoConclusao: document.getElementById('anoConclusao').value,
@@ -142,55 +193,141 @@ function cadastrarAluno() {
         observacoes: document.getElementById('observacoes').value.trim()
     };
 
-    APP_STATE.alunos.push(aluno);
-    salvarAlunos();
-    
-    document.getElementById('formAluno').reset();
-    atualizarListaAlunos();
-    atualizarSelectAlunos();
-    
-    mostrarNotificacao(`Aluno ${aluno.nome} cadastrado com sucesso!`, 'success');
+    try {
+        const isEdicao = APP_STATE.alunoEditando !== null;
+        const url = isEdicao 
+            ? `http://localhost:5000/api/alunos/${APP_STATE.alunoEditando}`
+            : 'http://localhost:5000/api/alunos';
+        const method = isEdicao ? 'PUT' : 'POST';
+
+        const response = await fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(aluno)
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            document.getElementById('formAluno').reset();
+            APP_STATE.alunoEditando = null;
+            await carregarAlunos(); // Recarrega a lista do servidor
+            const acao = isEdicao ? 'atualizado' : 'cadastrado';
+            mostrarNotificacao(`Aluno ${aluno.nome} ${acao} com sucesso!`, 'success');
+        } else {
+            mostrarNotificacao(data.message || 'Erro ao processar aluno', 'error');
+        }
+    } catch (error) {
+        console.error('Erro ao cadastrar aluno:', error);
+        mostrarNotificacao('Erro ao conectar com o servidor', 'error');
+    }
+}
+
+async function carregarAlunos() {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    try {
+        const response = await fetch('http://localhost:5000/api/alunos', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            // Converte os alunos do MongoDB para o formato esperado pelo sistema
+            APP_STATE.alunos = data.alunos.map(aluno => ({
+                id: aluno._id,
+                nome: aluno.nome,
+                rg: aluno.rg,
+                orgaoEmissor: aluno.orgaoEmissor,
+                cpf: aluno.cpf,
+                diaNascimento: aluno.dataNascimento?.dia || '',
+                mesNascimento: aluno.dataNascimento?.mes || '',
+                anoNascimento: aluno.dataNascimento?.ano || '',
+                cidadeNascimento: aluno.naturalidade?.cidade || '',
+                estadoNascimento: aluno.naturalidade?.estado || '',
+                nomeMae: aluno.filiacao?.mae || '',
+                nomePai: aluno.filiacao?.pai || '',
+                dataConfeccao: aluno.dataConfeccao,
+                resolucao: aluno.resolucao,
+                anoConclusao: aluno.anoConclusao,
+                nacionalidade: aluno.nacionalidade,
+                observacoes: aluno.observacoes
+            }));
+            
+            atualizarListaAlunos();
+            atualizarSelectAlunos();
+        }
+    } catch (error) {
+        console.error('Erro ao carregar alunos:', error);
+    }
 }
 
 function editarAluno(id) {
     const aluno = APP_STATE.alunos.find(a => a.id === id);
     if (!aluno) return;
 
-    document.getElementById('nomeAluno').value = aluno.nome;
-    document.getElementById('rgAluno').value = aluno.rg;
-    document.getElementById('orgaoEmissor').value = aluno.orgaoEmissor;
-    document.getElementById('cpfAluno').value = aluno.cpf;
-    document.getElementById('diaNascimento').value = aluno.diaNascimento;
-    document.getElementById('mesNascimento').value = aluno.mesNascimento;
-    document.getElementById('anoNascimento').value = aluno.anoNascimento;
-    document.getElementById('cidadeNascimento').value = aluno.cidadeNascimento;
-    document.getElementById('estadoNascimento').value = aluno.estadoNascimento;
-    document.getElementById('nomeMae').value = aluno.nomeMae;
-    document.getElementById('nomePai').value = aluno.nomePai;
-    document.getElementById('dataConfeccao').value = aluno.dataConfeccao;
-    document.getElementById('resolucao').value = aluno.resolucao;
-    document.getElementById('anoConclusao').value = aluno.anoConclusao;
-    document.getElementById('nacionalidade').value = aluno.nacionalidade;
-    document.getElementById('observacoes').value = aluno.observacoes;
+    document.getElementById('nomeAluno').value = aluno.nome || '';
+    document.getElementById('rgAluno').value = aluno.rg || '';
+    document.getElementById('orgaoEmissor').value = aluno.orgaoEmissor || '';
+    document.getElementById('cpfAluno').value = aluno.cpf || '';
+    document.getElementById('diaNascimento').value = aluno.diaNascimento || '';
+    document.getElementById('mesNascimento').value = aluno.mesNascimento || '';
+    document.getElementById('anoNascimento').value = aluno.anoNascimento || '';
+    document.getElementById('cidadeNascimento').value = aluno.cidadeNascimento || '';
+    document.getElementById('estadoNascimento').value = aluno.estadoNascimento || '';
+    document.getElementById('nomeMae').value = aluno.nomeMae || '';
+    document.getElementById('nomePai').value = aluno.nomePai || '';
+    document.getElementById('dataConfeccao').value = aluno.dataConfeccao || '';
+    document.getElementById('resolucao').value = aluno.resolucao || '';
+    document.getElementById('anoConclusao').value = aluno.anoConclusao || '';
+    document.getElementById('nacionalidade').value = aluno.nacionalidade || 'Brasileira';
+    document.getElementById('observacoes').value = aluno.observacoes || '';
 
-    excluirAluno(id, false);
+    // Armazenar ID do aluno sendo editado
+    APP_STATE.alunoEditando = id;
     
     // Mudar para a aba de cadastro
     document.querySelector('[data-tab="cadastro"]').click();
-    mostrarNotificacao('Aluno carregado para edição', 'info');
+    mostrarNotificacao('Aluno carregado para edicao. Faca as alteracoes e clique em Cadastrar.', 'info');
 }
 
-function excluirAluno(id, mostrarMensagem = true) {
+async function excluirAluno(id, mostrarMensagem = true) {
+    const token = localStorage.getItem('token');
     const index = APP_STATE.alunos.findIndex(a => a.id === id);
     if (index !== -1) {
         const nome = APP_STATE.alunos[index].nome;
-        APP_STATE.alunos.splice(index, 1);
-        salvarAlunos();
-        atualizarListaAlunos();
-        atualizarSelectAlunos();
         
-        if (mostrarMensagem) {
-            mostrarNotificacao(`Aluno ${nome} removido`, 'success');
+        try {
+            const response = await fetch(`http://localhost:5000/api/alunos/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                APP_STATE.alunos.splice(index, 1);
+                atualizarListaAlunos();
+                atualizarSelectAlunos();
+                
+                if (mostrarMensagem) {
+                    mostrarNotificacao(`Aluno ${nome} removido`, 'success');
+                }
+            } else {
+                mostrarNotificacao(data.message || 'Erro ao excluir aluno', 'error');
+            }
+        } catch (error) {
+            console.error('Erro ao excluir aluno:', error);
+            mostrarNotificacao('Erro ao conectar com o servidor', 'error');
         }
     }
 }
@@ -237,8 +374,8 @@ function atualizarListaAlunos(filtro = '') {
             <div class="aluno-header">
                 <div class="aluno-nome">${aluno.nome}</div>
                 <div class="aluno-actions">
-                    <button class="btn btn-primary btn-small" onclick="editarAluno(${aluno.id})">✏️ Editar</button>
-                    <button class="btn btn-danger btn-small" onclick="excluirAluno(${aluno.id})">🗑️ Excluir</button>
+                    <button class="btn btn-primary btn-small" onclick="editarAluno('${aluno.id}')">✏️ Editar</button>
+                    <button class="btn btn-danger btn-small" onclick="excluirAluno('${aluno.id}')">🗑️ Excluir</button>
                 </div>
             </div>
             <div class="aluno-info">
@@ -282,7 +419,7 @@ function atualizarSelectAlunos() {
 
     select.innerHTML = '<option value="">-- Selecione um aluno --</option>' +
         APP_STATE.alunos.map(aluno => 
-            `<option value="${aluno.id}">${aluno.nome} (${aluno.anoConclusao})</option>`
+            `<option value="${aluno.id}">${aluno.nome}${aluno.anoConclusao ? ' (' + aluno.anoConclusao + ')' : ''}</option>`
         ).join('');
 }
 
@@ -385,7 +522,7 @@ function atualizarTemplateInfo() {
 // ==================== GERAÇÃO DE CERTIFICADOS ====================
 async function gerarCertificadoIndividual() {
     const selectAluno = document.getElementById('selectAluno');
-    const alunoId = parseInt(selectAluno.value);
+    const alunoId = selectAluno.value; // MongoDB usa string _id, não número
     
     if (!alunoId) {
         mostrarNotificacao('Selecione um aluno primeiro!', 'error');
@@ -420,29 +557,42 @@ async function gerarCertificadosLote() {
 }
 
 async function gerarCertificado(aluno, emLote = false) {
-    const { jsPDF } = window.jspdf;
-    
-    // Criar PDF em formato A4 landscape
-    const pdf = new jsPDF({
-        orientation: 'landscape',
-        unit: 'mm',
-        format: 'a4'
-    });
+    try {
+        // Verificar se jsPDF está disponível
+        if (!window.jspdf || !window.jspdf.jsPDF) {
+            mostrarNotificacao('Biblioteca jsPDF não carregada. Recarregue a página.', 'error');
+            return;
+        }
+        
+        const { jsPDF } = window.jspdf;
+        
+        // Criar PDF em formato A4 landscape
+        const pdf = new jsPDF({
+            orientation: 'landscape',
+            unit: 'mm',
+            format: 'a4'
+        });
 
-    // Gerar frente do certificado
-    await gerarFrenteCertificado(pdf, aluno);
-    
-    // Adicionar nova página para o verso
-    pdf.addPage();
-    gerarVersoCertificado(pdf, aluno);
-    
-    // Se for em lote, fazer download direto
-    if (emLote) {
-        const nomeArquivo = `Certificado_${aluno.nome.replace(/\s+/g, '_')}.pdf`;
-        pdf.save(nomeArquivo);
-    } else {
-        // Visualizar em nova janela
-        pdf.output('dataurlnewwindow', `Certificado_${aluno.nome.replace(/\s+/g, '_')}.pdf`);
+        // Gerar frente do certificado
+        await gerarFrenteCertificado(pdf, aluno);
+        
+        // Adicionar nova página para o verso
+        pdf.addPage();
+        gerarVersoCertificado(pdf, aluno);
+        
+        // Abrir PDF em nova aba para visualização
+        const pdfBlob = pdf.output('blob');
+        const pdfUrl = URL.createObjectURL(pdfBlob);
+        window.open(pdfUrl, '_blank');
+        
+        // Aguardar um pouco e fazer o download também
+        setTimeout(() => {
+            const nomeArquivo = `Certificado_${aluno.nome.replace(/\s+/g, '_')}.pdf`;
+            pdf.save(nomeArquivo);
+        }, 500);
+    } catch (error) {
+        console.error('Erro ao gerar certificado:', error);
+        mostrarNotificacao('Erro ao gerar certificado: ' + error.message, 'error');
     }
 }
 
@@ -566,7 +716,8 @@ async function gerarFrenteCertificado(pdf, aluno) {
     // Resolução
     pdf.setFont('times', 'italic');
     pdf.setFontSize(14);
-    pdf.text(`Resolução CEE/PI Nº ${aluno.resolucao}`, pageWidth / 2, 100, { align: 'center' });
+    const resolucaoTexto = aluno.resolucao ? `Resolução CEE/PI Nº ${aluno.resolucao}` : 'Resolução CEE/PI';
+    pdf.text(resolucaoTexto, pageWidth / 2, 100, { align: 'center' });
     
     // Título
     pdf.setFont('times', 'bolditalic');
@@ -619,7 +770,8 @@ async function gerarFrenteCertificado(pdf, aluno) {
     // Dividir em palavras mantendo a formatação
     let palavrasFormatadas = [];
     textoParts.forEach(part => {
-        const palavras = part.texto.split(' ');
+        const textoString = String(part.texto || ''); // Converte para string e trata undefined
+        const palavras = textoString.split(' ');
         palavras.forEach((palavra, idx) => {
             if (palavra) {
                 palavrasFormatadas.push({ 
@@ -679,11 +831,17 @@ async function gerarFrenteCertificado(pdf, aluno) {
     
     // Data de confecção
     yPos += 12;
-    const dataConf = new Date(aluno.dataConfeccao + 'T00:00:00');
-    const dataFormatada = `${dataConf.getDate()} de ${obterNomeMes(dataConf.getMonth())} de ${dataConf.getFullYear()}`;
+    let dataFormatada = '';
+    if (aluno.dataConfeccao) {
+        const dataConf = new Date(aluno.dataConfeccao + 'T00:00:00');
+        dataFormatada = `${dataConf.getDate()} de ${obterNomeMes(dataConf.getMonth())} de ${dataConf.getFullYear()}.`;
+    } else {
+        const hoje = new Date();
+        dataFormatada = `${hoje.getDate()} de ${obterNomeMes(hoje.getMonth())} de ${hoje.getFullYear()}.`;
+    }
     pdf.setFont('times', 'bold');
     pdf.setTextColor(30, 58, 138);
-    pdf.text(dataFormatada + '.', pageWidth / 2, yPos, { align: 'center' });
+    pdf.text(dataFormatada, pageWidth / 2, yPos, { align: 'center' });
     
     // Linhas de assinatura - ajustadas
     yPos += 15;
@@ -771,28 +929,28 @@ function gerarVersoCertificado(pdf, aluno) {
     pdf.text('ESTUDANTE:', posX, yPos);
     pdf.setFont('helvetica', 'bold');
     posX += pdf.getTextWidth('ESTUDANTE: ');
-    pdf.text(aluno.nome.toUpperCase(), posX, yPos);
+    pdf.text(String(aluno.nome || '').toUpperCase(), posX, yPos);
     
     pdf.setFont('helvetica', 'normal');
     posX = 150;
     pdf.text('RG:', posX, yPos);
     pdf.setFont('helvetica', 'bold');
     posX += pdf.getTextWidth('RG: ');
-    pdf.text(aluno.rg, posX, yPos);
+    pdf.text(String(aluno.rg || ''), posX, yPos);
     
     pdf.setFont('helvetica', 'normal');
     posX = 190;
     pdf.text('ÓRGÃO EMISSOR:', posX, yPos);
     pdf.setFont('helvetica', 'bold');
     posX += pdf.getTextWidth('ÓRGÃO EMISSOR: ');
-    pdf.text(aluno.orgaoEmissor, posX, yPos);
+    pdf.text(String(aluno.orgaoEmissor || ''), posX, yPos);
     
     pdf.setFont('helvetica', 'normal');
     posX = 240;
     pdf.text('CPF:', posX, yPos);
     pdf.setFont('helvetica', 'bold');
     posX += pdf.getTextWidth('CPF: ');
-    pdf.text(aluno.cpf, posX, yPos);
+    pdf.text(String(aluno.cpf || ''), posX, yPos);
     
     // Linha 3
     yPos += 5;
@@ -809,7 +967,7 @@ function gerarVersoCertificado(pdf, aluno) {
     
     pdf.setFont('helvetica', 'bold');
     posX += pdf.getTextWidth('DE ');
-    pdf.text(aluno.mesNascimento, posX, yPos);
+    pdf.text(String(aluno.mesNascimento || ''), posX, yPos);
     
     pdf.setFont('helvetica', 'normal');
     posX += pdf.getTextWidth(aluno.mesNascimento) + 1;
@@ -817,14 +975,14 @@ function gerarVersoCertificado(pdf, aluno) {
     
     pdf.setFont('helvetica', 'bold');
     posX += pdf.getTextWidth('DE ');
-    pdf.text(aluno.anoNascimento, posX, yPos);
+    pdf.text(String(aluno.anoNascimento || ''), posX, yPos);
     
     pdf.setFont('helvetica', 'normal');
     posX = 115;
     pdf.text('NATURALIDADE:', posX, yPos);
     pdf.setFont('helvetica', 'bold');
     posX += pdf.getTextWidth('NATURALIDADE: ');
-    pdf.text(aluno.cidadeNascimento, posX, yPos);
+    pdf.text(String(aluno.cidadeNascimento || ''), posX, yPos);
     
     pdf.setFont('helvetica', 'normal');
     posX += pdf.getTextWidth(aluno.cidadeNascimento) + 1;
@@ -832,14 +990,14 @@ function gerarVersoCertificado(pdf, aluno) {
     
     pdf.setFont('helvetica', 'bold');
     posX += pdf.getTextWidth('- ');
-    pdf.text(aluno.estadoNascimento, posX, yPos);
+    pdf.text(String(aluno.estadoNascimento || ''), posX, yPos);
     
     pdf.setFont('helvetica', 'normal');
     posX = 210;
     pdf.text('NACIONALIDADE:', posX, yPos);
     pdf.setFont('helvetica', 'bold');
     posX += pdf.getTextWidth('NACIONALIDADE: ');
-    pdf.text(aluno.nacionalidade.toUpperCase(), posX, yPos);
+    pdf.text(String(aluno.nacionalidade || '').toUpperCase(), posX, yPos);
     
     // Linha 4 - Filiação
     yPos += 5;
@@ -848,7 +1006,7 @@ function gerarVersoCertificado(pdf, aluno) {
     pdf.text('FILIAÇÃO: MÃE:', posX, yPos);
     pdf.setFont('helvetica', 'bold');
     posX += pdf.getTextWidth('FILIAÇÃO: MÃE: ');
-    pdf.text(aluno.nomeMae, posX, yPos);
+    pdf.text(String(aluno.nomeMae || ''), posX, yPos);
     
     // Linha 5 - PAI
     yPos += 5;
@@ -857,7 +1015,7 @@ function gerarVersoCertificado(pdf, aluno) {
     pdf.text('PAI:', posX, yPos);
     pdf.setFont('helvetica', 'bold');
     posX += pdf.getTextWidth('PAI: ');
-    pdf.text(aluno.nomePai, posX, yPos);
+    pdf.text(String(aluno.nomePai || ''), posX, yPos);
     
     // Título
     yPos += 10;
@@ -929,10 +1087,114 @@ function exportarDados() {
     mostrarNotificacao('Dados exportados com sucesso!', 'success');
 }
 
-// ==================== UTILITÁRIOS ====================
-function salvarAlunos() {
-    localStorage.setItem('alunos', JSON.stringify(APP_STATE.alunos));
+// ==================== SISTEMA DE BACKUP ====================
+async function fazerBackupCompleto() {
+    if (APP_STATE.alunos.length === 0) {
+        mostrarNotificacao('Nenhum dado para fazer backup!', 'error');
+        return;
+    }
+
+    // Criar backup completo com data e hora
+    const agora = new Date();
+    const dataFormatada = `${agora.getDate().toString().padStart(2, '0')}-${(agora.getMonth() + 1).toString().padStart(2, '0')}-${agora.getFullYear()}_${agora.getHours().toString().padStart(2, '0')}h${agora.getMinutes().toString().padStart(2, '0')}`;
+    
+    const backup = {
+        versao: '1.0',
+        dataBackup: agora.toISOString(),
+        totalAlunos: APP_STATE.alunos.length,
+        usuario: JSON.parse(localStorage.getItem('usuario') || '{}'),
+        alunos: APP_STATE.alunos,
+        templates: {
+            brasao: localStorage.getItem('brasaoCustomizado'),
+            bordas: localStorage.getItem('bordasCustomizadas')
+        }
+    };
+
+    const dados = JSON.stringify(backup, null, 2);
+    const blob = new Blob([dados], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `BACKUP_COMPLETO_${dataFormatada}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    
+    // Registrar data do último backup
+    localStorage.setItem('ultimoBackup', agora.toISOString());
+    
+    mostrarNotificacao(`✅ Backup completo realizado! ${APP_STATE.alunos.length} alunos salvos.`, 'success');
 }
+
+function verificarLembreteBackup() {
+    const ultimoBackup = localStorage.getItem('ultimoBackup');
+    const agora = new Date();
+    
+    if (!ultimoBackup) {
+        // Nunca fez backup - avisar após 7 dias de uso
+        const primeiroCadastro = localStorage.getItem('primeiroCadastro');
+        if (!primeiroCadastro) {
+            localStorage.setItem('primeiroCadastro', agora.toISOString());
+        } else {
+            const diasDesde = Math.floor((agora - new Date(primeiroCadastro)) / (1000 * 60 * 60 * 24));
+            if (diasDesde >= 7 && APP_STATE.alunos.length > 0) {
+                setTimeout(() => {
+                    mostrarLembreteBackup();
+                }, 3000);
+            }
+        }
+    } else {
+        // Já fez backup - lembrar a cada 30 dias
+        const ultimaData = new Date(ultimoBackup);
+        const diasDesdeBackup = Math.floor((agora - ultimaData) / (1000 * 60 * 60 * 24));
+        
+        if (diasDesdeBackup >= 30 && APP_STATE.alunos.length > 0) {
+            setTimeout(() => {
+                mostrarLembreteBackup();
+            }, 3000);
+        }
+    }
+}
+
+function mostrarLembreteBackup() {
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+    `;
+    
+    modal.innerHTML = `
+        <div style="background: white; padding: 30px; border-radius: 15px; max-width: 500px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
+            <div style="font-size: 60px; margin-bottom: 20px;">⚠️</div>
+            <h2 style="color: #dc2626; margin-bottom: 15px;">Lembrete Importante!</h2>
+            <p style="font-size: 16px; color: #333; margin-bottom: 20px; line-height: 1.6;">
+                <strong>Faça backup dos seus dados regularmente!</strong><br><br>
+                Você tem <strong>${APP_STATE.alunos.length} aluno(s)</strong> cadastrado(s).<br>
+                Para garantir que seus dados não sejam perdidos, recomendamos fazer backup mensal.
+            </p>
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button onclick="this.closest('div').parentElement.remove(); fazerBackupCompleto();" style="background: #16a34a; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: bold;">
+                    💾 Fazer Backup Agora
+                </button>
+                <button onclick="this.closest('div').parentElement.remove();" style="background: #6b7280; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-size: 16px;">
+                    Lembrar Depois
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+}
+
+// ==================== UTILITÁRIOS ====================
+// Função removida - agora salvamos no MongoDB via API
 
 function formatarData(dataStr) {
     if (!dataStr) return '';
@@ -958,3 +1220,167 @@ function mostrarNotificacao(mensagem, tipo = 'info') {
         notification.classList.remove('show');
     }, 3000);
 }
+
+// ==================== MINHA ASSINATURA ====================
+let cronometroInterval = null;
+
+async function carregarDadosAssinatura() {
+    const token = localStorage.getItem('token');
+    
+    try {
+        const response = await fetch('http://localhost:5000/api/auth/me', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!response.ok) throw new Error('Erro ao carregar dados');
+        
+        const data = await response.json();
+        const usuario = data.usuario;
+        const licenca = usuario.licenca || {};
+        
+        // Atualizar informações do plano
+        const planoNomes = {
+            'trial': '🎁 Trial Gratuito',
+            'pay-per-certificate': '📜 Pagar por Certificado',
+            'mensal': '⚡ Plano Ilimitado'
+        };
+        
+        const planoDescricoes = {
+            'trial': '7 dias de teste gratuito',
+            'pay-per-certificate': 'Pague apenas quando usar',
+            'mensal': 'Certificados ilimitados'
+        };
+        
+        const valoresPlano = {
+            'trial': 'GRÁTIS',
+            'pay-per-certificate': 'R$ 10,00/cert',
+            'mensal': 'R$ 199,90/mês'
+        };
+        
+        document.getElementById('plano-nome').textContent = planoNomes[licenca.tipo] || 'Trial Gratuito';
+        document.getElementById('plano-descricao').textContent = planoDescricoes[licenca.tipo] || '7 dias de teste';
+        document.getElementById('plano-status').textContent = licenca.status === 'ativa' ? '✅ ATIVA' : '❌ EXPIRADA';
+        document.getElementById('cert-disponiveis').textContent = licenca.certificadosDisponiveis || 10;
+        document.getElementById('cert-gerados').textContent = licenca.certificadosGerados || 0;
+        document.getElementById('valor-plano').textContent = valoresPlano[licenca.tipo] || 'GRÁTIS';
+        
+        // Iniciar cronômetro
+        if (licenca.dataExpiracao) {
+            iniciarCronometro(new Date(licenca.dataExpiracao));
+        }
+        
+    } catch (error) {
+        console.error('Erro ao carregar assinatura:', error);
+        mostrarNotificacao('Erro ao carregar dados da assinatura', 'error');
+    }
+}
+
+function iniciarCronometro(dataExpiracao) {
+    // Limpar intervalo anterior se existir
+    if (cronometroInterval) clearInterval(cronometroInterval);
+    
+    const dataVencimento = document.getElementById('data-vencimento');
+    dataVencimento.textContent = dataExpiracao.toLocaleDateString('pt-BR', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+    
+    function atualizarCronometro() {
+        const agora = new Date().getTime();
+        const expiracao = dataExpiracao.getTime();
+        const diferenca = expiracao - agora;
+        
+        if (diferenca <= 0) {
+            document.getElementById('dias').textContent = '0';
+            document.getElementById('horas').textContent = '0';
+            document.getElementById('minutos').textContent = '0';
+            document.getElementById('segundos').textContent = '0';
+            clearInterval(cronometroInterval);
+            document.getElementById('plano-status').textContent = '❌ EXPIRADA';
+            document.getElementById('alerta-vencimento').style.display = 'block';
+            return;
+        }
+        
+        const dias = Math.floor(diferenca / (1000 * 60 * 60 * 24));
+        const horas = Math.floor((diferenca % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutos = Math.floor((diferenca % (1000 * 60 * 60)) / (1000 * 60));
+        const segundos = Math.floor((diferenca % (1000 * 60)) / 1000);
+        
+        document.getElementById('dias').textContent = dias;
+        document.getElementById('horas').textContent = horas.toString().padStart(2, '0');
+        document.getElementById('minutos').textContent = minutos.toString().padStart(2, '0');
+        document.getElementById('segundos').textContent = segundos.toString().padStart(2, '0');
+        
+        // Mostrar alerta se faltarem menos de 3 dias
+        if (dias < 3) {
+            document.getElementById('alerta-vencimento').style.display = 'block';
+        }
+    }
+    
+    atualizarCronometro();
+    cronometroInterval = setInterval(atualizarCronometro, 1000);
+}
+
+function renovarPlano() {
+    const planoAtual = document.getElementById('plano-nome').textContent;
+    if (confirm(`🔄 Deseja renovar seu plano atual (${planoAtual})?\n\nRolagem para baixo para escolher o plano desejado.`)) {
+        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    }
+}
+
+function atualizarPlano() {
+    if (confirm('⬆️ Deseja fazer upgrade do seu plano?\n\nRolagem para baixo para ver os planos disponíveis.')) {
+        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    }
+}
+
+function selecionarPlano(tipo) {
+    const planos = {
+        'trial': 'Trial Gratuito',
+        'pay-per-certificate': 'Pagar por Certificado (R$ 10,00)',
+        'mensal': 'Plano Ilimitado (R$ 199,90/mês)'
+    };
+    
+    if (tipo === 'pay-per-certificate') {
+        const qtd = prompt('💰 Quantos certificados deseja comprar?\n\nValor: R$ 10,00 por certificado', '10');
+        if (qtd && parseInt(qtd) > 0) {
+            const total = parseInt(qtd) * 10;
+            alert(`✅ Você está contratando:\n\n${qtd} certificados\nValor total: R$ ${total.toFixed(2)}\n\n🔜 Em breve: Integração com pagamento Pix`);
+        }
+    } else if (tipo === 'mensal') {
+        if (confirm(`✅ Contratar ${planos[tipo]}?\n\n📞 Entre em contato com o suporte:\nEmail: suporte@exemplo.com\nWhatsApp: (00) 00000-0000`)) {
+            // Funcionalidade futura
+        }
+    }
+}
+
+function verHistoricoPagamentos() {
+    alert('📊 Em breve! Histórico de pagamentos em desenvolvimento.');
+}
+
+// ==================== LOGOUT ====================
+function logout() {
+    if (confirm('Deseja realmente sair?')) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('usuario');
+        if (cronometroInterval) clearInterval(cronometroInterval);
+        window.location.replace('login.html');
+    }
+}
+
+// Carregar dados da assinatura quando a aba for aberta
+document.addEventListener('DOMContentLoaded', () => {
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (btn.dataset.tab === 'assinatura') {
+                carregarDadosAssinatura();
+            }
+        });
+    });
+});
+
+

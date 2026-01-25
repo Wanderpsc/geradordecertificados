@@ -3,16 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#1e3a8a">
+    <meta name="description" content="Sistema Profissional de Certificação Escolar">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%231e3a8a'/%3E%3Ctext x='50' y='70' font-size='60' text-anchor='middle' fill='white'%3E📜%3C/text%3E%3C/svg%3E">
     <title>Login - Gerador de Certificados</title>
-    <link rel="stylesheet" href="styles.css">
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
         .login-container {
-            max-width: 450px;
-            margin: 100px auto;
-            padding: 40px;
+            width: 100%;
+            max-width: 480px;
             background: white;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
         }
         .login-header {
             text-align: center;
@@ -47,6 +64,46 @@
         }
         .form-login.active {
             display: block;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #374151;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 15px;
+            transition: all 0.3s;
+            background: #f9fafb;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: #1e3a8a;
+            background: white;
+        }
+        .btn-primary {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(30, 58, 138, 0.4);
         }
         .error-message {
             background: #fee2e2;
@@ -104,16 +161,99 @@
         .security-badge {
             background: #f0fdf4;
             border: 1px solid #86efac;
-            padding: 10px;
-            border-radius: 6px;
+            padding: 12px;
+            border-radius: 8px;
             margin-bottom: 20px;
             text-align: center;
             font-size: 13px;
             color: #166534;
         }
+        .copyright-footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+            font-size: 12px;
+            color: #6b7280;
+        }
+        .copyright-footer strong {
+            color: #1e3a8a;
+        }
+        .copyright-footer a {
+            color: #1e3a8a;
+            text-decoration: none;
+        }
+        .copyright-footer a:hover {
+            text-decoration: underline;
+        }
+        .password-container {
+            position: relative;
+        }
+        .password-container input {
+            padding-right: 45px;
+        }
+        .toggle-password {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 18px;
+            color: #6b7280;
+            padding: 5px;
+            transition: color 0.3s;
+        }
+        .toggle-password:hover {
+            color: #1e3a8a;
+        }
+        .forgot-password {
+            text-align: right;
+            margin-top: 10px;
+        }
+        .forgot-password a {
+            color: #1e3a8a;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        .forgot-password a:hover {
+            text-decoration: underline;
+        }
+        .install-app-btn {
+            display: none;
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(30, 58, 138, 0.4);
+            transition: all 0.3s;
+            z-index: 1000;
+            animation: pulse 2s infinite;
+        }
+        .install-app-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(30, 58, 138, 0.6);
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
     </style>
 </head>
 <body>
+    <!-- Botão Instalar App -->
+    <button id="installBtn" class="install-app-btn">
+        📥 Instalar App
+    </button>
+
     <div class="login-container">
         <div class="login-header">
             <h1>📜 Gerador de Certificados</h1>
@@ -135,11 +275,19 @@
         <form id="formLogin" class="form-login active">
             <div class="form-group">
                 <label for="loginEmail">Email</label>
-                <input type="email" id="loginEmail" required>
+                <input type="email" id="loginEmail" autocomplete="email" required>
             </div>
             <div class="form-group">
                 <label for="loginSenha">Senha</label>
-                <input type="password" id="loginSenha" required>
+                <div class="password-container">
+                    <input type="password" id="loginSenha" autocomplete="current-password" required>
+                    <button type="button" class="toggle-password" onclick="togglePassword('loginSenha', this)" title="Mostrar/Ocultar senha">
+                        👁️
+                    </button>
+                </div>
+            </div>
+            <div class="forgot-password">
+                <a href="#" onclick="esqueceuSenha(); return false;">Esqueceu a senha?</a>
             </div>
             <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 20px;">
                 Entrar
@@ -154,11 +302,16 @@
             </div>
             <div class="form-group">
                 <label for="registerEmail">Email*</label>
-                <input type="email" id="registerEmail" required>
+                <input type="email" id="registerEmail" autocomplete="email" required>
             </div>
             <div class="form-group">
                 <label for="registerSenha">Senha* (mínimo 6 caracteres)</label>
-                <input type="password" id="registerSenha" minlength="6" required>
+                <div class="password-container">
+                    <input type="password" id="registerSenha" autocomplete="new-password" minlength="6" required>
+                    <button type="button" class="toggle-password" onclick="togglePassword('registerSenha', this)" title="Mostrar/Ocultar senha">
+                        👁️
+                    </button>
+                </div>
             </div>
             <div class="form-group">
                 <label for="registerInstituicao">Nome da Instituição*</label>
@@ -167,6 +320,47 @@
             <div class="form-group">
                 <label for="registerTelefone">Telefone</label>
                 <input type="tel" id="registerTelefone">
+            </div>
+            
+            <!-- Escolha do Plano -->
+            <div style="margin: 25px 0; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; color: white;">
+                <h3 style="margin: 0 0 15px 0; text-align: center;">📋 Escolha seu Plano</h3>
+                
+                <div style="display: grid; gap: 15px;">
+                    <!-- Trial (Padrão) -->
+                    <label style="background: white; color: #333; padding: 15px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 12px;">
+                        <input type="radio" name="plano" value="trial" checked style="width: 20px; height: 20px;">
+                        <div style="flex: 1;">
+                            <div style="font-weight: bold; font-size: 16px;">🎁 Trial Grátis</div>
+                            <div style="font-size: 13px; color: #666; margin-top: 3px;">7 dias • 10 certificados • Teste completo</div>
+                        </div>
+                        <div style="font-weight: bold; color: #16a34a;">GRÁTIS</div>
+                    </label>
+                    
+                    <!-- Por Certificado -->
+                    <label style="background: white; color: #333; padding: 15px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 12px;">
+                        <input type="radio" name="plano" value="pay-per-certificate" style="width: 20px; height: 20px;">
+                        <div style="flex: 1;">
+                            <div style="font-weight: bold; font-size: 16px;">📄 Por Certificado</div>
+                            <div style="font-size: 13px; color: #666; margin-top: 3px;">Pague apenas quando usar</div>
+                        </div>
+                        <div style="font-weight: bold; color: #2563eb;">R$ 10,00/cert</div>
+                    </label>
+                    
+                    <!-- Mensal -->
+                    <label style="background: white; color: #333; padding: 15px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 12px;">
+                        <input type="radio" name="plano" value="mensal" style="width: 20px; height: 20px;">
+                        <div style="flex: 1;">
+                            <div style="font-weight: bold; font-size: 16px;">💎 Plano Mensal</div>
+                            <div style="font-size: 13px; color: #666; margin-top: 3px;">Certificados ilimitados</div>
+                        </div>
+                        <div style="font-weight: bold; color: #7c3aed;">R$ 99,90/mês</div>
+                    </label>
+                </div>
+                
+                <p style="text-align: center; margin: 15px 0 0 0; font-size: 13px; opacity: 0.9;">
+                    💡 Você pode alterar seu plano depois
+                </p>
             </div>
             
             <div class="termos-checkbox">
@@ -199,5 +393,81 @@
     </div>
 
     <script src="auth.js"></script>
+    <script>
+        // Função para mostrar/ocultar senha
+        function togglePassword(inputId, button) {
+            const input = document.getElementById(inputId);
+            if (input.type === 'password') {
+                input.type = 'text';
+                button.textContent = '🙈';
+            } else {
+                input.type = 'password';
+                button.textContent = '👁️';
+            }
+        }
+
+        // Função para esqueceu senha
+        function esqueceuSenha() {
+            const email = prompt('Digite seu email cadastrado:');
+            if (email && email.trim()) {
+                showError('Funcionalidade em desenvolvimento. Entre em contato com o suporte.');
+                // TODO: Implementar recuperação de senha
+                // fetch('/api/auth/reset-password', {
+                //     method: 'POST',
+                //     headers: { 'Content-Type': 'application/json' },
+                //     body: JSON.stringify({ email })
+                // })
+            }
+        }
+
+        // PWA - Registrar Service Worker e limpar cache antigo
+        if ('serviceWorker' in navigator) {
+            // Limpar caches antigos
+            caches.keys().then(cacheNames => {
+                return Promise.all(
+                    cacheNames.filter(cacheName => cacheName !== 'certificados-v2')
+                        .map(cacheName => caches.delete(cacheName))
+                );
+            }).then(() => {
+                console.log('✅ Caches antigos limpos');
+            });
+
+            // Registrar service worker - TEMPORARIAMENTE DESABILITADO
+            /* 
+            navigator.serviceWorker.register('/service-worker.js')
+                .then(reg => {
+                    console.log('✅ Service Worker registrado', reg);
+                    // Forçar atualização
+                    reg.update();
+                })
+                .catch(err => console.log('❌ Erro ao registrar Service Worker', err));
+            */
+        }
+
+        // PWA - Botão Instalar App
+        let deferredPrompt;
+        const installBtn = document.getElementById('installBtn');
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            installBtn.style.display = 'block';
+        });
+
+        installBtn.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                console.log(`Usuário escolheu: ${outcome}`);
+                deferredPrompt = null;
+                installBtn.style.display = 'none';
+            }
+        });
+
+        window.addEventListener('appinstalled', () => {
+            console.log('✅ App instalado com sucesso!');
+            installBtn.style.display = 'none';
+        });
+    </script>
 </body>
 </html>

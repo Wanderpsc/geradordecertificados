@@ -13,7 +13,7 @@ const licencaSchema = new mongoose.Schema({
     },
     tipo: {
         type: String,
-        enum: ['trial', 'mensal', 'anual', 'vitalicia'],
+        enum: ['trial', 'mensal', 'anual', 'vitalicia', 'pay-per-certificate'],
         required: true
     },
     status: {

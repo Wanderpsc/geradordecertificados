@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerador de Certificados Escolares</title>
+    <link rel="stylesheet" href="styles.css">
+    
+    <!-- Verificação de autenticação - DEVE EXECUTAR ANTES DE CARREGAR A PÁGINA -->
+    <script>
+        const token = localStorage.getItem('token');
+        const usuarioLogado = localStorage.getItem('usuario');
+        
+        if (!token || !usuarioLogado) {
+            window.location.replace('login.html');
+        } else {
+            const usuario = JSON.parse(usuarioLogado);
+            // Administradores não podem acessar o gerador de certificados
+            if (usuario.role === 'admin') {
+                alert('Administradores não têm acesso ao gerador de certificados. Você será redirecionado ao painel administrativo.');
+                window.location.replace('admin.html');
+            }
+        }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h1>📜 Gerador de Certificados Escolares</h1>
+                    <p>Sistema completo para cadastro e geração de certificados</p>
+                </div>
+                <button onclick="logout()" style="background: #dc2626; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: bold;">
+                    🚪 Sair
+                </button>
+            </div>
+        </header>
+
+        <nav class="tabs">
+            <button class="tab-btn active" data-tab="cadastro">Cadastrar Alunos</button>
+            <button class="tab-btn" data-tab="lista">Lista de Alunos</button>
+            <button class="tab-btn" data-tab="templates">Modelos</button>
+            <button class="tab-btn" data-tab="gerar">Gerar Certificados</button>
+            <button class="tab-btn" data-tab="assinatura">📊 Minha Assinatura</button>
+        </nav>
+
+        <!-- Tab: Cadastro de Alunos -->
+        <div class="tab-content active" id="cadastro">
+            <div class="card">
+                <h2>Cadastrar Novo Aluno</h2>
+                <form id="formAluno">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="nomeAluno">Nome do Estudante*</label>
+                            <input type="text" id="nomeAluno" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="rgAluno">RG*</label>
+                            <input type="text" id="rgAluno" placeholder="0.000.000" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="orgaoEmissor">Órgão Emissor*</label>
+                            <input type="text" id="orgaoEmissor" placeholder="SSP/PI" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="cpfAluno">CPF*</label>
+                            <input type="text" id="cpfAluno" placeholder="000.000.000-00" required>
+                        </div>
+                    </div>
+
+                    <h3 style="margin-top: 20px; margin-bottom: 15px; color: #1e3a8a;">Data de Nascimento</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="diaNascimento">Dia*</label>
+                            <input type="number" id="diaNascimento" min="1" max="31" placeholder="01" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="mesNascimento">Mês*</label>
+                            <select id="mesNascimento" required>
+                                <option value="">Selecione</option>
+                                <option value="janeiro">janeiro</option>
+                                <option value="fevereiro">fevereiro</option>
+                                <option value="março">março</option>
+                                <option value="abril">abril</option>
+                                <option value="maio">maio</option>
+                                <option value="junho">junho</option>
+                                <option value="julho">julho</option>
+                                <option value="agosto">agosto</option>
+                                <option value="setembro">setembro</option>
+                                <option value="outubro">outubro</option>
+                                <option value="novembro">novembro</option>
+                                <option value="dezembro">dezembro</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="anoNascimento">Ano*</label>
+                            <input type="number" id="anoNascimento" min="1900" max="2020" placeholder="2008" required>
+                        </div>
+                    </div>
+
+                    <h3 style="margin-top: 20px; margin-bottom: 15px; color: #1e3a8a;">Naturalidade</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="cidadeNascimento">Cidade de Nascimento*</label>
+                            <input type="text" id="cidadeNascimento" placeholder="Curimatá" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="estadoNascimento">Estado*</label>
+                            <input type="text" id="estadoNascimento" placeholder="Piauí" required>
+                        </div>
+                    </div>
+
+                    <h3 style="margin-top: 20px; margin-bottom: 15px; color: #1e3a8a;">Filiação</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="nomeMae">Nome da Mãe*</label>
+                            <input type="text" id="nomeMae" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="nomePai">Nome do Pai*</label>
+                            <input type="text" id="nomePai" required>
+                        </div>
+                    </div>
+
+                    <h3 style="margin-top: 20px; margin-bottom: 15px; color: #1e3a8a;">Informações do Certificado</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="dataConfeccao">Data de Confecção*</label>
+                            <input type="date" id="dataConfeccao" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="resolucao">Resolução CEE/PI Nº*</label>
+                            <input type="text" id="resolucao" placeholder="224/2022" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="anoConclusao">Ano de Conclusão*</label>
+                            <input type="number" id="anoConclusao" min="2000" max="2030" placeholder="2025" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="nacionalidade">Nacionalidade*</label>
+                            <input type="text" id="nacionalidade" value="Brasileira" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="observacoes">Observações</label>
+                        <textarea id="observacoes" rows="3"></textarea>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">✓ Cadastrar Aluno</button>
+                        <button type="button" class="btn btn-secondary" id="btnLimpar">✗ Limpar Campos</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Tab: Lista de Alunos -->
+        <div class="tab-content" id="lista">
+            <div class="card">
+                <div class="header-actions">
+                    <h2>Alunos Cadastrados (<span id="totalAlunos">0</span>)</h2>
+                    <div>
+                        <button class="btn btn-info" id="btnImprimirLista">🖨️ Imprimir Lista</button>
+                        <button class="btn btn-success" id="btnFazerBackup">💾 Fazer Backup Completo</button>
+                        <button class="btn btn-warning" id="btnExportarDados">📥 Exportar Dados</button>
+                        <button class="btn btn-danger" id="btnLimparTodos">🗑️ Limpar Todos</button>
+                    </div>
+                </div>
+                <div class="search-box">
+                    <input type="text" id="buscarAluno" placeholder="🔍 Buscar aluno por nome, curso ou CPF...">
+                </div>
+                <div id="listaAlunos"></div>
+            </div>
+        </div>
+
+        <!-- Tab: Templates -->
+        <div class="tab-content" id="templates">
+            <div class="card">
+                <h2>Modelos de Certificados</h2>
+                <p>Selecione um modelo padrão ou faça upload do seu próprio modelo</p>
+                
+                <div class="templates-grid" id="templatesGrid">
+                    <!-- Templates serão carregados aqui -->
+                </div>
+
+                <div class="custom-template">
+                    <h3>Modelo Personalizado</h3>
+                    <p>Faça upload de uma imagem de fundo para seu certificado (PNG, JPG - Recomendado: 1920x1080px)</p>
+                    <input type="file" id="uploadTemplate" accept="image/*" style="display:none">
+                    <button class="btn btn-secondary" onclick="document.getElementById('uploadTemplate').click()">
+                        📤 Fazer Upload de Modelo
+                    </button>
+                    <div id="customTemplatePreview"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Gerar Certificados -->
+        <div class="tab-content" id="gerar">
+            <div class="card">
+                <h2>Gerar Certificados</h2>
+                
+                <div class="generate-options">
+                    <div class="option-card">
+                        <h3>📄 Gerar Individual</h3>
+                        <p>Selecione um aluno da lista para gerar seu certificado</p>
+                        <select id="selectAluno" class="form-control">
+                            <option value="">-- Selecione um aluno --</option>
+                        </select>
+                        <button class="btn btn-primary" id="btnGerarIndividual">Gerar Certificado</button>
+                    </div>
+
+                    <div class="option-card">
+                        <h3>📚 Gerar em Lote</h3>
+                        <p>Gere certificados para todos os alunos cadastrados</p>
+                        <button class="btn btn-success" id="btnGerarLote">Gerar Todos os Certificados</button>
+                    </div>
+                </div>
+
+                <div class="selected-template-info">
+                    <strong>Modelo Selecionado:</strong> 
+                    <span id="templateSelecionado">Clássico Azul</span>
+                </div>
+            </div>
+
+            <!-- Canvas para geração de certificados -->
+            <div id="canvasContainer" style="display:none;">
+                <canvas id="certificadoCanvas"></canvas>
+            </div>
+        </div>
+
+        <!-- Tab: Minha Assinatura -->
+        <div class="tab-content" id="assinatura">
+            <div class="card">
+                <h2>📊 Minha Assinatura</h2>
+                <p style="margin-bottom: 30px; color: #6b7280;">Informações sobre seu plano e vencimento</p>
+                
+                <!-- Card Principal com Resumo -->
+                <div style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); border-radius: 16px; padding: 40px; color: white; margin-bottom: 30px; box-shadow: 0 10px 25px rgba(0,0,0,0.15);">
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 30px;">
+                        <div>
+                            <div style="font-size: 48px; margin-bottom: 10px;">🎁</div>
+                            <h3 style="font-size: 28px; margin-bottom: 8px;" id="plano-nome">Trial Gratuito</h3>
+                            <p style="opacity: 0.9; font-size: 14px;" id="plano-descricao">7 dias de teste</p>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); padding: 16px 24px; border-radius: 12px;">
+                                <div style="font-size: 14px; opacity: 0.9; margin-bottom: 5px;">Status</div>
+                                <div style="font-size: 20px; font-weight: bold;" id="plano-status">✅ ATIVA</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Cronômetro de Vencimento -->
+                    <div style="background: rgba(0,0,0,0.2); backdrop-filter: blur(10px); border-radius: 12px; padding: 30px; text-align: center;">
+                        <div style="font-size: 16px; margin-bottom: 15px; opacity: 0.9;">⏰ Tempo restante até o vencimento</div>
+                        <div id="cronometro" style="display: flex; justify-content: center; gap: 20px; flex-wrap: wrap;">
+                            <div style="background: rgba(255,255,255,0.15); backdrop-filter: blur(10px); padding: 20px; border-radius: 12px; min-width: 100px;">
+                                <div id="dias" style="font-size: 48px; font-weight: bold; line-height: 1;">0</div>
+                                <div style="font-size: 14px; opacity: 0.9; margin-top: 5px;">DIAS</div>
+                            </div>
+                            <div style="background: rgba(255,255,255,0.15); backdrop-filter: blur(10px); padding: 20px; border-radius: 12px; min-width: 100px;">
+                                <div id="horas" style="font-size: 48px; font-weight: bold; line-height: 1;">0</div>
+                                <div style="font-size: 14px; opacity: 0.9; margin-top: 5px;">HORAS</div>
+                            </div>
+                            <div style="background: rgba(255,255,255,0.15); backdrop-filter: blur(10px); padding: 20px; border-radius: 12px; min-width: 100px;">
+                                <div id="minutos" style="font-size: 48px; font-weight: bold; line-height: 1;">0</div>
+                                <div style="font-size: 14px; opacity: 0.9; margin-top: 5px;">MINUTOS</div>
+                            </div>
+                            <div style="background: rgba(255,255,255,0.15); backdrop-filter: blur(10px); padding: 20px; border-radius: 12px; min-width: 100px;">
+                                <div id="segundos" style="font-size: 48px; font-weight: bold; line-height: 1;">0</div>
+                                <div style="font-size: 14px; opacity: 0.9; margin-top: 5px;">SEGUNDOS</div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 20px; font-size: 16px;">
+                            <strong>Vence em:</strong> <span id="data-vencimento">--</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Detalhes do Plano -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px;">
+                    <div style="background: white; border: 2px solid #e5e7eb; border-radius: 12px; padding: 24px;">
+                        <div style="font-size: 32px; margin-bottom: 10px;">📜</div>
+                        <div style="color: #6b7280; font-size: 14px; margin-bottom: 5px;">Certificados Disponíveis</div>
+                        <div style="font-size: 32px; font-weight: bold; color: #1e3a8a;" id="cert-disponiveis">--</div>
+                    </div>
+                    <div style="background: white; border: 2px solid #e5e7eb; border-radius: 12px; padding: 24px;">
+                        <div style="font-size: 32px; margin-bottom: 10px;">✅</div>
+                        <div style="color: #6b7280; font-size: 14px; margin-bottom: 5px;">Certificados Gerados</div>
+                        <div style="font-size: 32px; font-weight: bold; color: #059669;" id="cert-gerados">--</div>
+                    </div>
+                    <div style="background: white; border: 2px solid #e5e7eb; border-radius: 12px; padding: 24px;">
+                        <div style="font-size: 32px; margin-bottom: 10px;">💰</div>
+                        <div style="color: #6b7280; font-size: 14px; margin-bottom: 5px;">Valor do Plano</div>
+                        <div style="font-size: 32px; font-weight: bold; color: #7c3aed;" id="valor-plano">--</div>
+                    </div>
+                </div>
+
+                <!-- Ações Rápidas -->
+                <div style="background: #f9fafb; border-radius: 12px; padding: 24px;">
+                    <h3 style="color: #1e3a8a; margin-bottom: 20px;">⚡ Ações Rápidas</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                        <button onclick="renovarPlano()" style="padding: 16px; background: #10b981; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 16px;">
+                            🔄 Renovar Plano
+                        </button>
+                        <button onclick="atualizarPlano()" style="padding: 16px; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 16px;">
+                            ⬆️ Atualizar Plano
+                        </button>
+                        <button onclick="verHistoricoPagamentos()" style="padding: 16px; background: #8b5cf6; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 16px;">
+                            📊 Histórico
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Alerta de Vencimento Próximo -->
+                <div id="alerta-vencimento" style="display: none; margin-top: 20px; background: #fef3c7; border: 2px solid #f59e0b; border-radius: 12px; padding: 20px;">
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <div style="font-size: 40px;">⚠️</div>
+                        <div>
+                            <h4 style="color: #92400e; margin-bottom: 5px;">Atenção! Seu plano está próximo do vencimento</h4>
+                            <p style="color: #78350f; font-size: 14px;">Renove agora para não perder o acesso aos certificados.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Planos Disponíveis -->
+                <div style="margin-top: 40px;">
+                    <h3 style="color: #1e3a8a; margin-bottom: 20px; text-align: center;">💎 Escolha seu Plano</h3>
+                    <p style="text-align: center; color: #6b7280; margin-bottom: 30px;">Renove ou faça upgrade para continuar gerando certificados</p>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+                        <!-- Plano Trial -->
+                        <div style="border: 2px solid #10b981; border-radius: 12px; padding: 20px; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);">
+                            <div style="text-align: center;">
+                                <div style="font-size: 36px; margin-bottom: 10px;">🎁</div>
+                                <h3 style="color: #059669; margin-bottom: 8px; font-size: 20px;">Trial Gratuito</h3>
+                                <div style="font-size: 28px; font-weight: bold; color: #047857; margin-bottom: 5px;">GRÁTIS</div>
+                                <div style="color: #6b7280; font-size: 13px; margin-bottom: 15px;">7 dias</div>
+                            </div>
+                            <ul style="list-style: none; padding: 0; margin: 15px 0; font-size: 14px;">
+                                <li style="padding: 6px 0; color: #374151;">✅ 10 certificados</li>
+                                <li style="padding: 6px 0; color: #374151;">✅ Todos os templates</li>
+                                <li style="padding: 6px 0; color: #374151;">✅ Sem compromisso</li>
+                            </ul>
+                            <div style="text-align: center; margin-top: 15px; padding: 10px; background: #d1fae5; border-radius: 8px; font-size: 13px; color: #065f46;">
+                                <strong id="badge-trial">Seu plano atual</strong>
+                            </div>
+                        </div>
+
+                        <!-- Plano Pagar por Certificado -->
+                        <div style="border: 2px solid #3b82f6; border-radius: 12px; padding: 20px; background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); position: relative;">
+                            <div style="position: absolute; top: -10px; right: 15px; background: #ef4444; color: white; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: bold;">RECOMENDADO</div>
+                            <div style="text-align: center;">
+                                <div style="font-size: 36px; margin-bottom: 10px;">📜</div>
+                                <h3 style="color: #1e40af; margin-bottom: 8px; font-size: 20px;">Pagar por Certificado</h3>
+                                <div style="font-size: 28px; font-weight: bold; color: #1e3a8a; margin-bottom: 5px;">R$ 10,00</div>
+                                <div style="color: #6b7280; font-size: 13px; margin-bottom: 15px;">por certificado</div>
+                            </div>
+                            <ul style="list-style: none; padding: 0; margin: 15px 0; font-size: 14px;">
+                                <li style="padding: 6px 0; color: #374151;">✅ Pague apenas quando usar</li>
+                                <li style="padding: 6px 0; color: #374151;">✅ Sem mensalidade</li>
+                                <li style="padding: 6px 0; color: #374151;">✅ Pagamento via Pix</li>
+                                <li style="padding: 6px 0; color: #374151;">✅ Créditos nunca expiram</li>
+                            </ul>
+                            <button onclick="selecionarPlano('pay-per-certificate')" style="width: 100%; padding: 12px; font-size: 15px; border-radius: 8px; background: #3b82f6; color: white; border: none; cursor: pointer; font-weight: bold;">
+                                💰 Comprar Créditos
+                            </button>
+                        </div>
+
+                        <!-- Plano Mensal -->
+                        <div style="border: 2px solid #8b5cf6; border-radius: 12px; padding: 20px; background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);">
+                            <div style="text-align: center;">
+                                <div style="font-size: 36px; margin-bottom: 10px;">⚡</div>
+                                <h3 style="color: #7c3aed; margin-bottom: 8px; font-size: 20px;">Plano Ilimitado</h3>
+                                <div style="font-size: 28px; font-weight: bold; color: #6d28d9; margin-bottom: 5px;">R$ 199,90</div>
+                                <div style="color: #6b7280; font-size: 13px; margin-bottom: 15px;">por mês</div>
+                            </div>
+                            <ul style="list-style: none; padding: 0; margin: 15px 0; font-size: 14px;">
+                                <li style="padding: 6px 0; color: #374151;">✅ Certificados ilimitados</li>
+                                <li style="padding: 6px 0; color: #374151;">✅ Templates personalizados</li>
+                                <li style="padding: 6px 0; color: #374151;">✅ Suporte prioritário</li>
+                                <li style="padding: 6px 0; color: #374151;">✅ Históricos escolares</li>
+                            </ul>
+                            <button onclick="selecionarPlano('mensal')" style="width: 100%; padding: 12px; font-size: 15px; border-radius: 8px; background: #8b5cf6; color: white; border: none; cursor: pointer; font-weight: bold;">
+                                📞 Contratar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="notification" class="notification"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="brasao-data.js"></script>
+    <script src="bordas-data.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

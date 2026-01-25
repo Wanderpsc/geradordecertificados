@@ -1,0 +1,48 @@
+name: Deploy Validation
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+
+    steps:
+    - name: Checkout código
+      uses: actions/checkout@v3
+
+    - name: Configurar Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+
+    - name: Instalar dependências
+      run: npm ci
+
+    - name: Verificar sintaxe
+      run: node -c server/server.js
+
+    - name: Listar estrutura
+      run: ls -la
+
+    - name: Build test
+      run: npm run build
+
+    - name: Validar configuração
+      run: |
+        echo "Validação de estrutura de arquivos"
+        test -f server/server.js
+        test -f package.json
+        test -f Dockerfile
+        test -f Procfile
+
+    - name: ✅ Deploy validation passed
+      run: echo "All checks passed! Ready for deployment."

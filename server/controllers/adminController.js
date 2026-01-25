@@ -213,6 +213,45 @@ exports.alterarStatusCliente = async (req, res) => {
     }
 };
 
+// @desc    Resetar senha do cliente
+// @route   POST /api/admin/clientes/:id/resetar-senha
+// @access  Private/Admin
+exports.resetarSenhaCliente = async (req, res) => {
+    try {
+        const usuario = await Usuario.findById(req.params.id);
+        
+        if (!usuario) {
+            return res.status(404).json({
+                success: false,
+                message: 'Cliente não encontrado'
+            });
+        }
+
+        // Gerar senha temporária de 8 caracteres
+        const novaSenha = Math.random().toString(36).slice(-8).toUpperCase();
+        
+        // Atualizar senha (será hasheada pelo pre-save hook)
+        usuario.senha = novaSenha;
+        await usuario.save();
+
+        // Log da ação
+        await logAcao(req, 'resetar_senha_cliente', { clienteId: usuario._id, clienteEmail: usuario.email });
+
+        res.json({
+            success: true,
+            message: 'Senha resetada com sucesso',
+            novaSenha, // ATENÇÃO: Isso expõe a senha. Use apenas em ambiente controlado!
+            email: usuario.email
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Erro ao resetar senha',
+            error: error.message
+        });
+    }
+};
+
 // @desc    Registrar pagamento
 // @route   POST /api/admin/pagamentos
 // @access  Private/Admin

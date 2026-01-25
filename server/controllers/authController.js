@@ -45,22 +45,36 @@ exports.registrar = async (req, res) => {
             dataAceiteTermos: new Date()
         });
 
-        // Criar licença trial de 7 dias
-        const dataExpiracao = new Date();
-        dataExpiracao.setDate(dataExpiracao.getDate() + 7);
+        // Determinar tipo de licença baseado na escolha do usuário
+        const { planoEscolhido = 'trial' } = req.body;
+        let tipoLicenca = planoEscolhido;
+        let dataExpiracao = new Date();
+        let limiteCertificados = null;
+        
+        // Configurar licença de acordo com o plano
+        if (tipoLicenca === 'trial') {
+            dataExpiracao.setDate(dataExpiracao.getDate() + 7); // 7 dias
+            limiteCertificados = 10;
+        } else if (tipoLicenca === 'mensal') {
+            dataExpiracao.setMonth(dataExpiracao.getMonth() + 1); // 1 mês
+            limiteCertificados = null; // Ilimitado
+        } else if (tipoLicenca === 'pay-per-certificate') {
+            dataExpiracao.setFullYear(dataExpiracao.getFullYear() + 100); // "Sem expiração"
+            limiteCertificados = 0; // Paga por certificado
+        }
 
         const licenca = await Licenca.create({
             chaveLicenca: Licenca.gerarChaveLicenca(),
             usuario: usuario._id,
-            tipo: 'trial',
+            tipo: tipoLicenca,
             dataExpiracao,
-            limiteCertificados: 10, // Limite de 10 certificados no trial
+            limiteCertificados,
             recursos: {
-                multiplosTemplates: false,
-                templatesCustomizados: false,
+                multiplosTemplates: tipoLicenca !== 'trial',
+                templatesCustomizados: tipoLicenca !== 'trial',
                 exportacaoPDF: true,
-                historicosEscolares: false,
-                marcaDagua: true
+                historicosEscolares: tipoLicenca !== 'trial',
+                marcaDagua: tipoLicenca === 'trial'
             }
         });
 

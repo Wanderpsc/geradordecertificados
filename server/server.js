@@ -32,9 +32,9 @@ app.use('/api/alunos', alunoRoutes);
 app.use('/api/licenses', licenseRoutes);
 app.use('/api/admin', adminRoutes);
 
-// Rota raiz - servir o frontend
+// Rota raiz - redirecionar para login
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '../public/index.html'));
+    res.sendFile(path.join(__dirname, '../public/login.html'));
 });
 
 // Tratamento de erros global

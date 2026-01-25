@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Painel Administrativo - Gerador de Certificados</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏛️</text></svg>">
     <link rel="stylesheet" href="styles.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -286,8 +287,43 @@
             font-size: 13px;
         }
 
+        .page {
+            display: block !important;
+            width: 100%;
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+
         .hidden {
-            display: none;
+            display: none !important;
+            visibility: hidden !important;
+        }
+
+        /* Inputs de busca */
+        input[type="text"] {
+            padding: 8px 15px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #1e3a8a;
+        }
+
+        /* Garantir visibilidade */
+        .section, .header, .table-container, table {
+            display: block;
+            width: 100%;
+            background: transparent;
+        }
+
+        table {
+            display: table;
+            border-collapse: collapse;
+            margin-top: 20px;
         }
 
         /* Loading */
@@ -435,8 +471,7 @@
                 <div class="section">
                     <div class="section-header">
                         <h2>Lista de Clientes</h2>
-                        <input type="text" id="busca-cliente" placeholder="Buscar cliente..." 
-                               style="padding: 8px 15px; border: 1px solid #e5e7eb; border-radius: 8px; width: 300px;">
+                        <input type="text" id="busca-cliente" placeholder="Buscar cliente..." style="width: 300px;">
                     </div>
                     <div class="table-container">
                         <table>
@@ -452,6 +487,41 @@
                                 </tr>
                             </thead>
                             <tbody id="lista-clientes">
+                                <tr><td colspan="7" class="loading">
+                                    <div class="spinner"></div>
+                                    Carregando...
+                                </td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Licenças Page -->
+            <div id="page-licencas" class="page hidden">
+                <div class="header">
+                    <h1>Gerenciamento de Licenças</h1>
+                    <p>Visualize e gerencie todas as licenças</p>
+                </div>
+
+                <div class="section">
+                    <div class="section-header">
+                        <h2>Lista de Licenças Ativas</h2>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Cliente</th>
+                                    <th>Email</th>
+                                    <th>Tipo</th>
+                                    <th>Status</th>
+                                    <th>Validade</th>
+                                    <th>Certificados</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lista-licencas">
                                 <tr><td colspan="7" class="loading">
                                     <div class="spinner"></div>
                                     Carregando...
@@ -544,9 +614,117 @@
                     <p>Análise financeira e receitas</p>
                 </div>
 
+                <div class="stats-grid">
+                    <div class="stat-card blue">
+                        <div class="icon-badge">💰</div>
+                        <div class="label">Receita Mensal</div>
+                        <div class="value" id="fin-receita-mensal">R$ 0</div>
+                        <div class="change">Mês atual</div>
+                    </div>
+
+                    <div class="stat-card green">
+                        <div class="icon-badge">📈</div>
+                        <div class="label">Receita Anual</div>
+                        <div class="value" id="fin-receita-anual">R$ 0</div>
+                        <div class="change">Ano de 2026</div>
+                    </div>
+
+                    <div class="stat-card purple">
+                        <div class="icon-badge">💳</div>
+                        <div class="label">Pagamentos Recebidos</div>
+                        <div class="value" id="fin-total-pagamentos">0</div>
+                        <div class="change">Total de transações</div>
+                    </div>
+
+                    <div class="stat-card orange">
+                        <div class="icon-badge">🔑</div>
+                        <div class="label">Licenças Ativas</div>
+                        <div class="value" id="fin-licencas-ativas">0</div>
+                        <div class="change">Clientes pagantes</div>
+                    </div>
+                </div>
+
                 <div class="section">
-                    <h2>Em desenvolvimento...</h2>
-                    <p>Gráficos e relatórios financeiros em breve.</p>
+                    <div class="section-header">
+                        <h2>Resumo por Tipo de Plano</h2>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Tipo de Plano</th>
+                                    <th>Quantidade</th>
+                                    <th>Receita Total</th>
+                                    <th>% do Total</th>
+                                </tr>
+                            </thead>
+                            <tbody id="fin-planos">
+                                <tr><td colspan="4" class="loading">
+                                    <div class="spinner"></div>
+                                    Carregando...
+                                </td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-header">
+                        <h2>Últimos Pagamentos</h2>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Cliente</th>
+                                    <th>Plano</th>
+                                    <th>Valor</th>
+                                    <th>Método</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="fin-ultimos-pagamentos">
+                                <tr><td colspan="6" class="loading">
+                                    <div class="spinner"></div>
+                                    Carregando...
+                                </td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Logs Page -->
+            <div id="page-logs" class="page hidden">
+                <div class="header">
+                    <h1>Logs de Auditoria</h1>
+                    <p>Histórico de atividades do sistema</p>
+                </div>
+
+                <div class="section">
+                    <div class="section-header">
+                        <h2>Últimas Atividades</h2>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Data/Hora</th>
+                                    <th>Usuário</th>
+                                    <th>Ação</th>
+                                    <th>Descrição</th>
+                                    <th>Nível</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lista-logs">
+                                <tr><td colspan="5" class="loading">
+                                    <div class="spinner"></div>
+                                    Carregando...
+                                </td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </main>

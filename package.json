@@ -6,7 +6,16 @@
   "scripts": {
     "start": "node server/server.js",
     "dev": "nodemon server/server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "echo \"No build step required\"",
+    "validate": "node validate-deploy.js",
+    "predeploy": "npm run validate",
+    "deploy:surge": "cd public && surge",
+    "deploy:gh-pages": "git subtree push --prefix public origin gh-pages",
+    "docker:build": "docker build -t gerador-certificados .",
+    "docker:run": "docker-compose up -d",
+    "docker:stop": "docker-compose down",
+    "docker:logs": "docker-compose logs -f"
   },
   "keywords": [
     "certificados",

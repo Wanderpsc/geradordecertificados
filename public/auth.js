@@ -1,4 +1,7 @@
-const API_URL = 'http://localhost:5000/api';
+// Detectar ambiente automaticamente
+const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:5000/api'
+    : 'https://seu-app.onrender.com/api'; // TROCAR pela URL do seu backend no Render
 
 function switchTab(tab) {
     const tabs = document.querySelectorAll('.tab-login button');
@@ -93,6 +96,7 @@ document.getElementById('formRegister').addEventListener('submit', async (e) => 
     const instituicao = document.getElementById('registerInstituicao').value;
     const telefone = document.getElementById('registerTelefone').value;
     const aceitouTermos = document.getElementById('aceitarTermos').checked;
+    const planoSelecionado = document.querySelector('input[name="plano"]:checked').value;
     
     // Validar aceite dos termos
     if (!aceitouTermos) {
@@ -109,7 +113,15 @@ document.getElementById('formRegister').addEventListener('submit', async (e) => 
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ nome, email, senha, instituicao, telefone, aceitouTermos })
+            body: JSON.stringify({ 
+                nome, 
+                email, 
+                senha, 
+                instituicao, 
+                telefone, 
+                aceitouTermos,
+                planoEscolhido: planoSelecionado 
+            })
         });
         
         const data = await response.json();
@@ -134,9 +146,10 @@ document.getElementById('formRegister').addEventListener('submit', async (e) => 
     }
 });
 
-// Verificar se já está logado
+// Verificar se já está logado (somente se tiver token válido)
+const token = localStorage.getItem('token');
 const usuarioLogado = localStorage.getItem('usuario');
-if (usuarioLogado) {
+if (token && usuarioLogado) {
     const usuario = JSON.parse(usuarioLogado);
     // Redirecionar baseado no role
     if (usuario.role === 'admin') {

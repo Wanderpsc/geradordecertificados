@@ -5,6 +5,7 @@ const {
     listarClientes,
     detalhesCliente,
     alterarStatusCliente,
+    resetarSenhaCliente,
     registrarPagamento,
     listarPagamentos,
     aprovarPagamento,
@@ -29,6 +30,7 @@ router.get('/dashboard', getDashboard);
 router.get('/clientes', listarClientes);
 router.get('/clientes/:id', detalhesCliente);
 router.patch('/clientes/:id/status', alterarStatusCliente);
+router.post('/clientes/:id/resetar-senha', resetarSenhaCliente);
 
 // Pagamentos
 router.get('/pagamentos', listarPagamentos);
