@@ -6,6 +6,8 @@ const {
     detalhesCliente,
     alterarStatusCliente,
     resetarSenhaCliente,
+    excluirCliente,
+    excluirClientesLote,
     registrarPagamento,
     listarPagamentos,
     aprovarPagamento,
@@ -28,9 +30,11 @@ router.get('/dashboard', getDashboard);
 
 // Clientes
 router.get('/clientes', listarClientes);
+router.post('/clientes/excluir-lote', excluirClientesLote);
 router.get('/clientes/:id', detalhesCliente);
 router.patch('/clientes/:id/status', alterarStatusCliente);
 router.post('/clientes/:id/resetar-senha', resetarSenhaCliente);
+router.delete('/clientes/:id', excluirCliente);
 
 // Pagamentos
 router.get('/pagamentos', listarPagamentos);

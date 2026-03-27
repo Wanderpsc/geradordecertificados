@@ -435,30 +435,6 @@
                     </div>
                 </div>
 
-                <div class="section">
-                    <div class="section-header">
-                        <h2>Últimas Atividades</h2>
-                    </div>
-                    <div class="table-container">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Data/Hora</th>
-                                    <th>Usuário</th>
-                                    <th>Ação</th>
-                                    <th>Descrição</th>
-                                    <th>Nível</th>
-                                </tr>
-                            </thead>
-                            <tbody id="ultimas-atividades">
-                                <tr><td colspan="5" class="loading">
-                                    <div class="spinner"></div>
-                                    Carregando...
-                                </td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
             </div>
 
             <!-- Clientes Page -->
@@ -471,12 +447,18 @@
                 <div class="section">
                     <div class="section-header">
                         <h2>Lista de Clientes</h2>
-                        <input type="text" id="busca-cliente" placeholder="Buscar cliente..." style="width: 300px;">
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <input type="text" id="busca-cliente" placeholder="Buscar cliente..." style="width: 300px;">
+                            <button class="btn btn-sm" id="btn-excluir-lote" style="background: #dc2626; color: white; display: none; white-space: nowrap;" onclick="excluirClientesEmLote()">
+                                🗑️ Excluir Selecionados (<span id="count-selecionados">0</span>)
+                            </button>
+                        </div>
                     </div>
                     <div class="table-container">
                         <table>
                             <thead>
                                 <tr>
+                                    <th style="width: 40px;"><input type="checkbox" id="select-all-clientes" onchange="toggleSelectAllClientes(this)"></th>
                                     <th>Nome</th>
                                     <th>Email</th>
                                     <th>Instituição</th>
@@ -487,7 +469,7 @@
                                 </tr>
                             </thead>
                             <tbody id="lista-clientes">
-                                <tr><td colspan="7" class="loading">
+                                <tr><td colspan="8" class="loading">
                                     <div class="spinner"></div>
                                     Carregando...
                                 </td></tr>

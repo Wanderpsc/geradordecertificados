@@ -828,4 +828,70 @@ exports.listarLogs = async (req, res) => {
     }
 };
 
+// @desc    Excluir cliente individual
+// @route   DELETE /api/admin/clientes/:id
+// @access  Private/Admin
+exports.excluirCliente = async (req, res) => {
+    try {
+        const cliente = await Usuario.findById(req.params.id);
+        if (!cliente) {
+            return res.status(404).json({ success: false, message: 'Cliente não encontrado' });
+        }
+        if (cliente.role === 'admin') {
+            return res.status(403).json({ success: false, message: 'Não é possível excluir um administrador' });
+        }
+        // Remover licença associada
+        if (cliente.licenca) {
+            await Licenca.findByIdAndDelete(cliente.licenca);
+        }
+        // Remover pagamentos e notas fiscais
+        await Pagamento.deleteMany({ usuario: cliente._id });
+        await NotaFiscal.deleteMany({ usuario: cliente._id });
+        await Usuario.findByIdAndDelete(cliente._id);
+
+        res.json({ success: true, message: 'Cliente excluído com sucesso' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Erro ao excluir cliente', error: error.message });
+    }
+};
+
+// @desc    Excluir clientes em lote
+// @route   POST /api/admin/clientes/excluir-lote
+// @access  Private/Admin
+exports.excluirClientesLote = async (req, res) => {
+    try {
+        const { ids } = req.body;
+        if (!ids || !Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json({ success: false, message: 'Informe os IDs dos clientes' });
+        }
+        // Não permitir excluir admins
+        const admins = await Usuario.find({ _id: { $in: ids }, role: 'admin' }).select('_id');
+        const adminIds = admins.map(a => a._id.toString());
+        const idsParaExcluir = ids.filter(id => !adminIds.includes(id));
+
+        if (idsParaExcluir.length === 0) {
+            return res.status(403).json({ success: false, message: 'Nenhum cliente válido para exclusão (admins não podem ser excluídos)' });
+        }
+        // Remover licenças
+        const clientes = await Usuario.find({ _id: { $in: idsParaExcluir } }).select('licenca');
+        const licencaIds = clientes.map(c => c.licenca).filter(Boolean);
+        if (licencaIds.length > 0) {
+            await Licenca.deleteMany({ _id: { $in: licencaIds } });
+        }
+        // Remover pagamentos e notas fiscais
+        await Pagamento.deleteMany({ usuario: { $in: idsParaExcluir } });
+        await NotaFiscal.deleteMany({ usuario: { $in: idsParaExcluir } });
+        await Usuario.deleteMany({ _id: { $in: idsParaExcluir } });
+
+        res.json({
+            success: true,
+            message: `${idsParaExcluir.length} cliente(s) excluído(s) com sucesso`,
+            excluidos: idsParaExcluir.length,
+            ignorados: adminIds.length
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Erro ao excluir clientes', error: error.message });
+    }
+};
+
 module.exports = exports;

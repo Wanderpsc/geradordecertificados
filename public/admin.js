@@ -224,6 +224,7 @@ async function carregarClientes(busca = '') {
         
         tbody.innerHTML = clientes.map(cliente => `
             <tr>
+                <td><input type="checkbox" class="select-cliente" value="${cliente._id}" ${cliente.role === 'admin' ? 'disabled title="Admin não pode ser excluído"' : ''} onchange="atualizarContadorSelecionados()"></td>
                 <td>${cliente.nome}</td>
                 <td>${cliente.email}</td>
                 <td>${cliente.instituicao || '-'}</td>
@@ -232,11 +233,12 @@ async function carregarClientes(busca = '') {
                 <td>${formatarData(cliente.createdAt)}</td>
                 <td class="action-btns">
                     <button class="btn btn-primary btn-sm" onclick="verDetalhesCliente('${cliente._id}')">Ver</button>
-                    <button class="btn btn-warning btn-sm" onclick="resetarSenhaCliente('${cliente._id}', '${cliente.email}')">🔑 Resetar Senha</button>
+                    <button class="btn btn-warning btn-sm" onclick="resetarSenhaCliente('${cliente._id}', '${cliente.email}')">🔑</button>
                     <button class="btn btn-sm ${cliente.ativo ? 'badge-danger' : 'badge-success'}" 
                             onclick="toggleStatusCliente('${cliente._id}', ${!cliente.ativo})">
                         ${cliente.ativo ? 'Desativar' : 'Ativar'}
                     </button>
+                    ${cliente.role !== 'admin' ? `<button class="btn btn-sm" style="background:#dc2626;color:white;" onclick="excluirCliente('${cliente._id}', '${cliente.email}')">🗑️</button>` : ''}
                 </td>
             </tr>
         `).join('');
@@ -490,6 +492,107 @@ async function resetarSenhaCliente(clienteId, email) {
     } catch (error) {
         console.error('Erro ao resetar senha:', error);
         alert('Erro ao resetar senha do cliente');
+    }
+}
+
+// Excluir cliente individual
+async function excluirCliente(clienteId, email) {
+    if (!confirm(`⚠️ ATENÇÃO!\n\nDeseja realmente EXCLUIR PERMANENTEMENTE o cliente:\n${email}\n\nEsta ação não pode ser desfeita!\nTodos os dados (licença, pagamentos, notas fiscais) serão removidos.`)) {
+        return;
+    }
+
+    const token = localStorage.getItem('token');
+
+    try {
+        const response = await fetch(`${API_URL}/admin/clientes/${clienteId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Erro ao excluir cliente');
+        }
+
+        alert('✅ Cliente excluído com sucesso!');
+        carregarClientes();
+    } catch (error) {
+        console.error('Erro ao excluir cliente:', error);
+        alert('❌ ' + error.message);
+    }
+}
+
+// Selecionar/desselecionar todos os clientes
+function toggleSelectAllClientes(checkbox) {
+    document.querySelectorAll('.select-cliente:not(:disabled)').forEach(cb => {
+        cb.checked = checkbox.checked;
+    });
+    atualizarContadorSelecionados();
+}
+
+// Atualizar contador de selecionados
+function atualizarContadorSelecionados() {
+    const selecionados = document.querySelectorAll('.select-cliente:checked');
+    const count = selecionados.length;
+    const btnLote = document.getElementById('btn-excluir-lote');
+    const countSpan = document.getElementById('count-selecionados');
+
+    if (btnLote) btnLote.style.display = count > 0 ? 'inline-block' : 'none';
+    if (countSpan) countSpan.textContent = count;
+}
+
+// Excluir clientes em lote
+async function excluirClientesEmLote() {
+    const selecionados = document.querySelectorAll('.select-cliente:checked');
+    const ids = Array.from(selecionados).map(cb => cb.value);
+
+    if (ids.length === 0) {
+        alert('Nenhum cliente selecionado');
+        return;
+    }
+
+    if (!confirm(`⚠️ ATENÇÃO!\n\nDeseja realmente EXCLUIR PERMANENTEMENTE ${ids.length} cliente(s)?\n\nEsta ação não pode ser desfeita!\nTodos os dados associados serão removidos.`)) {
+        return;
+    }
+
+    // Confirmação dupla para segurança
+    if (!confirm(`🔴 CONFIRMAÇÃO FINAL\n\nVocê está prestes a excluir ${ids.length} cliente(s).\n\nClique OK para confirmar.`)) {
+        return;
+    }
+
+    const token = localStorage.getItem('token');
+
+    try {
+        const response = await fetch(`${API_URL}/admin/clientes/excluir-lote`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ ids })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Erro ao excluir clientes');
+        }
+
+        let msg = `✅ ${data.excluidos} cliente(s) excluído(s) com sucesso!`;
+        if (data.ignorados > 0) {
+            msg += `\n⚠️ ${data.ignorados} admin(s) foram ignorados.`;
+        }
+        alert(msg);
+
+        document.getElementById('select-all-clientes').checked = false;
+        atualizarContadorSelecionados();
+        carregarClientes();
+    } catch (error) {
+        console.error('Erro ao excluir clientes em lote:', error);
+        alert('❌ ' + error.message);
     }
 }
 
