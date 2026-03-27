@@ -485,12 +485,32 @@
                             <input type="file" id="uploadFundoFrente" accept="image/*" class="form-control" onchange="handleUploadFundo(event, 'frente')">
                             <div id="previewFundoFrente" style="margin-top: 10px;"></div>
                             <button class="btn btn-danger btn-sm" onclick="removerUpload('fundoFrente')" style="margin-top: 5px; display: none;" id="btnRemoverFundoFrente">✗ Remover Fundo</button>
+                            <div style="margin-top: 10px;">
+                                <label>Efeito sobre a imagem</label>
+                                <select id="certFundoFrenteMode" class="form-control" onchange="atualizarPreviewCert()" style="margin-bottom: 6px;">
+                                    <option value="nenhum">Nenhum (original)</option>
+                                    <option value="escurecer">Escurecer</option>
+                                    <option value="clarear" selected>Clarear</option>
+                                </select>
+                                <label>Intensidade: <span id="lblFundoFrenteIntensidade">50</span>%</label>
+                                <input type="range" id="certFundoFrenteOpacidade" min="0" max="90" value="50" class="form-control" style="padding: 0;" oninput="document.getElementById('lblFundoFrenteIntensidade').textContent=this.value; atualizarPreviewCert()">
+                            </div>
                         </div>
                         <div class="editor-field">
                             <label>Imagem de Fundo do Verso (PNG/JPG)</label>
                             <input type="file" id="uploadFundoVerso" accept="image/*" class="form-control" onchange="handleUploadFundo(event, 'verso')">
                             <div id="previewFundoVerso" style="margin-top: 10px;"></div>
                             <button class="btn btn-danger btn-sm" onclick="removerUpload('fundoVerso')" style="margin-top: 5px; display: none;" id="btnRemoverFundoVerso">✗ Remover Fundo</button>
+                            <div style="margin-top: 10px;">
+                                <label>Efeito sobre a imagem</label>
+                                <select id="certFundoVersoMode" class="form-control" onchange="atualizarPreviewCert()" style="margin-bottom: 6px;">
+                                    <option value="nenhum">Nenhum (original)</option>
+                                    <option value="escurecer">Escurecer</option>
+                                    <option value="clarear" selected>Clarear</option>
+                                </select>
+                                <label>Intensidade: <span id="lblFundoVersoIntensidade">50</span>%</label>
+                                <input type="range" id="certFundoVersoOpacidade" min="0" max="90" value="50" class="form-control" style="padding: 0;" oninput="document.getElementById('lblFundoVersoIntensidade').textContent=this.value; atualizarPreviewCert()">
+                            </div>
                         </div>
                         <div class="editor-field" style="grid-column: 1 / -1;">
                             <label>Borda Horizontal Personalizada (PNG)</label>

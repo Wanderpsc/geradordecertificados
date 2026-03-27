@@ -819,6 +819,12 @@ function obterConfigCert() {
             texto: document.getElementById('certCorTexto')?.value || '#000000',
             assinatura: document.getElementById('certCorAssinatura')?.value || '#1e3a8a',
             fundo: document.getElementById('certCorFundo')?.value || '#ffffff'
+        },
+        fundoImg: {
+            frenteMode: document.getElementById('certFundoFrenteMode')?.value || 'clarear',
+            frenteOpacidade: parseInt(document.getElementById('certFundoFrenteOpacidade')?.value) || 50,
+            versoMode: document.getElementById('certFundoVersoMode')?.value || 'clarear',
+            versoOpacidade: parseInt(document.getElementById('certFundoVersoOpacidade')?.value) || 50
         }
     };
 }
@@ -872,12 +878,21 @@ function aplicarConfigNosInputs(cfg) {
         ['certCorSecundariaHex', cfg.cores.secundaria],
         ['certCorTextoHex', cfg.cores.texto],
         ['certCorAssinaturaHex', cfg.cores.assinatura],
-        ['certCorFundoHex', cfg.cores.fundo]
+        ['certCorFundoHex', cfg.cores.fundo],
+        ['certFundoFrenteMode', cfg.fundoImg ? cfg.fundoImg.frenteMode : 'clarear'],
+        ['certFundoFrenteOpacidade', cfg.fundoImg ? cfg.fundoImg.frenteOpacidade : 50],
+        ['certFundoVersoMode', cfg.fundoImg ? cfg.fundoImg.versoMode : 'clarear'],
+        ['certFundoVersoOpacidade', cfg.fundoImg ? cfg.fundoImg.versoOpacidade : 50]
     ];
     sets.forEach(([id, val]) => {
         const el = document.getElementById(id);
         if (el && val !== undefined) el.value = val;
     });
+    // Sincronizar labels de intensidade
+    const lblF = document.getElementById('lblFundoFrenteIntensidade');
+    if (lblF) lblF.textContent = (cfg.fundoImg ? cfg.fundoImg.frenteOpacidade : 50) + '%';
+    const lblV = document.getElementById('lblFundoVersoIntensidade');
+    if (lblV) lblV.textContent = (cfg.fundoImg ? cfg.fundoImg.versoOpacidade : 50) + '%';
     // Mostrar previews de uploads salvos
     if (CERT_UPLOADS.emblemaCustom) {
         const prev = document.getElementById('previewEmblemaCustom');
@@ -1042,6 +1057,20 @@ function desenharPreviewFrente(ctx, cfg, sx, sy, pw, ph) {
     const pageWidth = pw / sx; // em mm
     const bordaEsp = cfg.margens.bordaEspessura;
 
+    // Fundo de imagem com overlay
+    if (CERT_UPLOADS.fundoFrente) {
+        const img = new Image();
+        img.src = CERT_UPLOADS.fundoFrente;
+        try { ctx.drawImage(img, 0, 0, pw, ph); } catch(e) {}
+        const fi = cfg.fundoImg || {};
+        const mode = fi.frenteMode || 'clarear';
+        const opac = (fi.frenteOpacidade || 50) / 100;
+        if (mode !== 'nenhum' && opac > 0) {
+            ctx.fillStyle = mode === 'escurecer' ? 'rgba(0,0,0,' + opac + ')' : 'rgba(255,255,255,' + opac + ')';
+            ctx.fillRect(0, 0, pw, ph);
+        }
+    }
+
     // Bordas decorativas simuladas
     if (cfg.margens.bordaExibir === 'sim' && bordaEsp > 0) {
         ctx.fillStyle = cfg.cores.principal;
@@ -1186,6 +1215,20 @@ function desenharPreviewFrente(ctx, cfg, sx, sy, pw, ph) {
 
 function desenharPreviewVerso(ctx, cfg, sx, sy, pw, ph) {
     const bordaEsp = cfg.margens.bordaEspessura;
+
+    // Fundo de imagem com overlay
+    if (CERT_UPLOADS.fundoVerso) {
+        const img = new Image();
+        img.src = CERT_UPLOADS.fundoVerso;
+        try { ctx.drawImage(img, 0, 0, pw, ph); } catch(e) {}
+        const fi = cfg.fundoImg || {};
+        const mode = fi.versoMode || 'clarear';
+        const opac = (fi.versoOpacidade || 50) / 100;
+        if (mode !== 'nenhum' && opac > 0) {
+            ctx.fillStyle = mode === 'escurecer' ? 'rgba(0,0,0,' + opac + ')' : 'rgba(255,255,255,' + opac + ')';
+            ctx.fillRect(0, 0, pw, ph);
+        }
+    }
 
     // Bordas
     if (cfg.verso.bordas === 'sim' && cfg.margens.bordaExibir === 'sim' && bordaEsp > 0) {
@@ -1485,6 +1528,20 @@ async function gerarFrenteCertificado(pdf, aluno, cfg) {
     if (CERT_UPLOADS.fundoFrente) {
         try {
             pdf.addImage(CERT_UPLOADS.fundoFrente, 'JPEG', 0, 0, pageWidth, pageHeight);
+            // Overlay escurecer/clarear
+            const fi = cfg.fundoImg || {};
+            const mode = fi.frenteMode || 'clarear';
+            const opac = (fi.frenteOpacidade || 50) / 100;
+            if (mode !== 'nenhum' && opac > 0) {
+                if (mode === 'escurecer') {
+                    pdf.setFillColor(0, 0, 0);
+                } else {
+                    pdf.setFillColor(255, 255, 255);
+                }
+                pdf.setGState(new pdf.GState({ opacity: opac }));
+                pdf.rect(0, 0, pageWidth, pageHeight, 'F');
+                pdf.setGState(new pdf.GState({ opacity: 1 }));
+            }
         } catch(e) { console.error('Erro fundo frente:', e); }
     }
     
@@ -1825,6 +1882,20 @@ function gerarVersoCertificado(pdf, aluno, cfg) {
     if (CERT_UPLOADS.fundoVerso) {
         try {
             pdf.addImage(CERT_UPLOADS.fundoVerso, 'JPEG', 0, 0, pageWidth, pageHeight);
+            // Overlay escurecer/clarear
+            const fi = cfg.fundoImg || {};
+            const mode = fi.versoMode || 'clarear';
+            const opac = (fi.versoOpacidade || 50) / 100;
+            if (mode !== 'nenhum' && opac > 0) {
+                if (mode === 'escurecer') {
+                    pdf.setFillColor(0, 0, 0);
+                } else {
+                    pdf.setFillColor(255, 255, 255);
+                }
+                pdf.setGState(new pdf.GState({ opacity: opac }));
+                pdf.rect(0, 0, pageWidth, pageHeight, 'F');
+                pdf.setGState(new pdf.GState({ opacity: 1 }));
+            }
         } catch(e) { console.error('Erro fundo verso:', e); }
     }
     
