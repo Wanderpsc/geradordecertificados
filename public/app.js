@@ -155,6 +155,7 @@ function inicializarFormulario() {
     document.getElementById('btnLimparTodos').addEventListener('click', limparTodosAlunos);
     document.getElementById('btnExportarDados').addEventListener('click', exportarDados);
     document.getElementById('btnFazerBackup').addEventListener('click', fazerBackupCompleto);
+    document.getElementById('btnCadastroLote').addEventListener('click', abrirModalCadastroLote);
     
     // Verificar se precisa lembrar de fazer backup
     verificarLembreteBackup();
@@ -340,6 +341,251 @@ function limparTodosAlunos() {
         atualizarSelectAlunos();
         mostrarNotificacao('Todos os alunos foram removidos', 'success');
     }
+}
+
+// ==================== CADASTRO EM LOTE ====================
+const API_URL_ALUNOS = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:5000/api/alunos'
+    : 'https://gerador-certificados.onrender.com/api/alunos';
+
+function abrirModalCadastroLote() {
+    const modal = document.createElement('div');
+    modal.id = 'modal-cadastro-lote';
+    modal.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.8); display: flex; align-items: center;
+        justify-content: center; z-index: 10000;
+    `;
+    modal.innerHTML = `
+        <div style="background: white; padding: 28px; border-radius: 15px; max-width: 750px; width: 95%; box-shadow: 0 10px 40px rgba(0,0,0,0.3); max-height: 92vh; overflow-y: auto;">
+            <div style="text-align: center; margin-bottom: 16px;">
+                <div style="font-size: 50px;">📋</div>
+                <h2 style="color: #1e3a8a; margin-top: 8px;">Cadastro de Alunos em Lote</h2>
+                <p style="font-size: 13px; color: #666;">Cole os dados dos alunos no formato abaixo (separados por <strong>;</strong> ponto e vírgula)</p>
+            </div>
+
+            <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 14px; margin-bottom: 14px;">
+                <p style="font-size: 13px; font-weight: 600; color: #1e3a8a; margin-bottom: 6px;">Formato (uma linha por aluno):</p>
+                <code style="font-size: 11px; color: #334155; word-break: break-all; display: block; background: white; padding: 8px; border-radius: 6px;">
+                    Nome; RG; Órgão Emissor; CPF; Dia Nasc; Mês Nasc; Ano Nasc; Cidade Nasc; Estado Nasc; Nome Mãe; Nome Pai
+                </code>
+                <p style="font-size: 12px; color: #64748b; margin-top: 8px;">
+                    <strong>Exemplo:</strong><br>
+                    <span style="font-family: monospace; font-size: 11px;">Maria Silva; 1.234.567; SSP/PI; 123.456.789-00; 15; março; 2006; Curimatá; Piauí; Ana Silva; José Silva</span>
+                </p>
+                <p style="font-size: 12px; color: #64748b; margin-top: 6px;">
+                    📌 Campos opcionais ao final: <em>Data Confecção (AAAA-MM-DD); Resolução; Ano Conclusão; Nacionalidade</em>
+                </p>
+            </div>
+
+            <div style="margin-bottom: 14px;">
+                <label style="font-weight: 600; font-size: 14px; display: block; margin-bottom: 4px;">Dados dos Alunos</label>
+                <textarea id="lote-dados" rows="10" placeholder="Cole aqui os dados dos alunos, uma linha por aluno...
+Maria Silva; 1.234.567; SSP/PI; 123.456.789-00; 15; março; 2006; Curimatá; Piauí; Ana Silva; José Silva
+João Santos; 2.345.678; SSP/PI; 234.567.890-11; 20; janeiro; 2007; Teresina; Piauí; Maria Santos; Pedro Santos"
+                    style="width: 100%; padding: 12px; border: 2px solid #d1d5db; border-radius: 8px; font-size: 13px; font-family: monospace; resize: vertical;"></textarea>
+            </div>
+
+            <div id="lote-preview" style="display: none; margin-bottom: 14px;">
+                <h3 style="font-size: 14px; color: #1e3a8a; margin-bottom: 8px;">Pré-visualização (<span id="lote-count">0</span> alunos)</h3>
+                <div id="lote-preview-content" style="max-height: 200px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 12px;"></div>
+            </div>
+
+            <div id="lote-progresso" style="display: none; margin-bottom: 14px;">
+                <div style="background: #f3f4f6; border-radius: 8px; overflow: hidden; height: 24px;">
+                    <div id="lote-barra" style="background: #16a34a; height: 100%; width: 0%; transition: width 0.3s; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: 600;"></div>
+                </div>
+                <p id="lote-status" style="font-size: 13px; color: #666; margin-top: 6px; text-align: center;"></p>
+            </div>
+
+            <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                <button type="button" onclick="preVisualizarLote()"
+                    style="background: #2563eb; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-size: 15px; font-weight: bold;">
+                    🔍 Pré-visualizar
+                </button>
+                <button type="button" id="btn-enviar-lote" onclick="enviarCadastroLote()"
+                    style="background: #16a34a; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-size: 15px; font-weight: bold;">
+                    ✅ Cadastrar Todos
+                </button>
+                <button type="button" onclick="document.getElementById('modal-cadastro-lote').remove()"
+                    style="background: #6b7280; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-size: 15px;">
+                    Cancelar
+                </button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
+
+function parsearLinhaAluno(linha) {
+    const campos = linha.split(';').map(c => c.trim());
+    if (campos.length < 11) return null;
+
+    const mesesValidos = ['janeiro','fevereiro','março','abril','maio','junho',
+        'julho','agosto','setembro','outubro','novembro','dezembro'];
+    const mes = campos[5].toLowerCase();
+    if (!mesesValidos.includes(mes)) return null;
+
+    const cpf = campos[3];
+    if (!/^\d{3}\.\d{3}\.\d{3}-\d{2}$/.test(cpf)) return null;
+
+    const aluno = {
+        nome: campos[0],
+        rg: campos[1],
+        orgaoEmissor: campos[2],
+        cpf: cpf,
+        dataNascimento: {
+            dia: parseInt(campos[4]),
+            mes: mes,
+            ano: parseInt(campos[6])
+        },
+        naturalidade: {
+            cidade: campos[7],
+            estado: campos[8]
+        },
+        filiacao: {
+            mae: campos[9],
+            pai: campos[10]
+        },
+        nacionalidade: 'Brasileira'
+    };
+
+    // Campos opcionais
+    if (campos[11]) aluno.dataConfeccao = campos[11];
+    if (campos[12]) aluno.resolucao = campos[12];
+    if (campos[13]) aluno.anoConclusao = campos[13];
+    if (campos[14]) aluno.nacionalidade = campos[14];
+
+    return aluno;
+}
+
+function preVisualizarLote() {
+    const texto = document.getElementById('lote-dados').value.trim();
+    if (!texto) {
+        alert('Cole os dados dos alunos primeiro');
+        return;
+    }
+
+    const linhas = texto.split('\n').filter(l => l.trim());
+    const preview = document.getElementById('lote-preview');
+    const content = document.getElementById('lote-preview-content');
+    const count = document.getElementById('lote-count');
+
+    let html = '<table style="width: 100%; border-collapse: collapse;">';
+    html += '<thead><tr style="background: #f1f5f9;">';
+    html += '<th style="padding: 6px 8px; text-align: left; font-size: 11px; border-bottom: 1px solid #e5e7eb;">#</th>';
+    html += '<th style="padding: 6px 8px; text-align: left; font-size: 11px; border-bottom: 1px solid #e5e7eb;">Nome</th>';
+    html += '<th style="padding: 6px 8px; text-align: left; font-size: 11px; border-bottom: 1px solid #e5e7eb;">CPF</th>';
+    html += '<th style="padding: 6px 8px; text-align: left; font-size: 11px; border-bottom: 1px solid #e5e7eb;">Nascimento</th>';
+    html += '<th style="padding: 6px 8px; text-align: left; font-size: 11px; border-bottom: 1px solid #e5e7eb;">Status</th>';
+    html += '</tr></thead><tbody>';
+
+    let validos = 0;
+    linhas.forEach((linha, i) => {
+        const aluno = parsearLinhaAluno(linha);
+        const ok = aluno !== null;
+        if (ok) validos++;
+        html += `<tr style="background: ${ok ? '#f0fdf4' : '#fef2f2'};">`;
+        html += `<td style="padding: 5px 8px; font-size: 12px; border-bottom: 1px solid #f1f5f9;">${i + 1}</td>`;
+        html += `<td style="padding: 5px 8px; font-size: 12px; border-bottom: 1px solid #f1f5f9;">${ok ? aluno.nome : '<span style=color:#dc2626>Erro na linha</span>'}</td>`;
+        html += `<td style="padding: 5px 8px; font-size: 12px; border-bottom: 1px solid #f1f5f9;">${ok ? aluno.cpf : '-'}</td>`;
+        html += `<td style="padding: 5px 8px; font-size: 12px; border-bottom: 1px solid #f1f5f9;">${ok ? `${aluno.dataNascimento.dia}/${aluno.dataNascimento.mes}/${aluno.dataNascimento.ano}` : '-'}</td>`;
+        html += `<td style="padding: 5px 8px; font-size: 12px; border-bottom: 1px solid #f1f5f9;">${ok ? '<span style=color:#16a34a>✓ OK</span>' : '<span style=color:#dc2626>✗ Inválido</span>'}</td>`;
+        html += '</tr>';
+    });
+    html += '</tbody></table>';
+
+    count.textContent = `${validos}/${linhas.length}`;
+    content.innerHTML = html;
+    preview.style.display = 'block';
+}
+
+async function enviarCadastroLote() {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        mostrarNotificacao('Sessão expirada. Faça login novamente.', 'error');
+        return;
+    }
+
+    const texto = document.getElementById('lote-dados').value.trim();
+    if (!texto) {
+        alert('Cole os dados dos alunos primeiro');
+        return;
+    }
+
+    const linhas = texto.split('\n').filter(l => l.trim());
+    const alunos = [];
+    const erros = [];
+
+    linhas.forEach((linha, i) => {
+        const aluno = parsearLinhaAluno(linha);
+        if (aluno) {
+            alunos.push(aluno);
+        } else {
+            erros.push(i + 1);
+        }
+    });
+
+    if (alunos.length === 0) {
+        alert('Nenhum aluno válido encontrado. Verifique o formato dos dados.');
+        return;
+    }
+
+    if (erros.length > 0) {
+        if (!confirm(`⚠️ ${erros.length} linha(s) com erro (linhas: ${erros.join(', ')}) serão ignoradas.\n\nDeseja cadastrar os ${alunos.length} aluno(s) válidos?`)) {
+            return;
+        }
+    }
+
+    const btnEnviar = document.getElementById('btn-enviar-lote');
+    btnEnviar.disabled = true;
+    btnEnviar.textContent = '⏳ Cadastrando...';
+
+    const progresso = document.getElementById('lote-progresso');
+    const barra = document.getElementById('lote-barra');
+    const status = document.getElementById('lote-status');
+    progresso.style.display = 'block';
+
+    let sucesso = 0;
+    let falhas = 0;
+
+    for (let i = 0; i < alunos.length; i++) {
+        try {
+            const response = await fetch(API_URL_ALUNOS, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(alunos[i])
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                sucesso++;
+            } else {
+                falhas++;
+            }
+        } catch (error) {
+            falhas++;
+        }
+
+        const pct = Math.round(((i + 1) / alunos.length) * 100);
+        barra.style.width = pct + '%';
+        barra.textContent = pct + '%';
+        status.textContent = `Processando ${i + 1} de ${alunos.length}... (${sucesso} ok, ${falhas} erros)`;
+    }
+
+    status.textContent = `✅ Concluído! ${sucesso} cadastrado(s) com sucesso, ${falhas} erro(s).`;
+    barra.style.width = '100%';
+    barra.style.background = falhas > 0 ? '#f59e0b' : '#16a34a';
+
+    btnEnviar.disabled = false;
+    btnEnviar.textContent = '✅ Cadastrar Todos';
+
+    // Recarregar lista
+    await carregarAlunos();
+    mostrarNotificacao(`${sucesso} aluno(s) cadastrado(s) em lote!`, 'success');
 }
 
 function atualizarListaAlunos(filtro = '') {
