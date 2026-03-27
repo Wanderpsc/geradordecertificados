@@ -1,7 +1,7 @@
 // Detectar ambiente automaticamente
 const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
     ? 'http://localhost:5000/api'
-    : 'https://seu-app.onrender.com/api'; // TROCAR pela URL do seu backend no Render
+    : 'https://gerador-certificados.onrender.com/api';
 
 function switchTab(tab) {
     const tabs = document.querySelectorAll('.tab-login button');

@@ -18,4 +18,4 @@ services:
       - key: LICENSE_ENCRYPTION_KEY
         generateValue: true
       - key: ALLOWED_ORIGINS
-        value: https://gerador-certificados.onrender.com
+        value: https://gerador-certificados.onrender.com,https://gerador-certificados.surge.sh
