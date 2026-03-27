@@ -687,6 +687,178 @@ async function excluirClientesEmLote() {
     }
 }
 
+// Modal para registrar novo pagamento
+async function showModalPagamento() {
+    const token = localStorage.getItem('token');
+
+    // Carregar lista de clientes para o select
+    let clientesOptions = '<option value="">Carregando...</option>';
+    try {
+        const response = await fetch(`${API_URL}/admin/clientes?limite=100`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (response.ok) {
+            const data = await response.json();
+            const clientes = data.clientes || [];
+            clientesOptions = '<option value="">-- Selecione o cliente --</option>' +
+                clientes.map(c => `<option value="${c._id}">${c.nome} (${c.email})</option>`).join('');
+        }
+    } catch (e) {
+        clientesOptions = '<option value="">Erro ao carregar clientes</option>';
+    }
+
+    const modal = document.createElement('div');
+    modal.id = 'modal-novo-pagamento';
+    modal.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.8); display: flex; align-items: center;
+        justify-content: center; z-index: 10000;
+    `;
+    modal.innerHTML = `
+        <div style="background: white; padding: 30px; border-radius: 15px; max-width: 520px; width: 95%; box-shadow: 0 10px 40px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto;">
+            <div style="text-align: center; margin-bottom: 20px;">
+                <div style="font-size: 50px;">💰</div>
+                <h2 style="color: #1e3a8a; margin-top: 10px;">Novo Pagamento</h2>
+            </div>
+            <form id="form-novo-pagamento" onsubmit="enviarPagamento(event)" style="display: flex; flex-direction: column; gap: 14px;">
+                <div>
+                    <label style="font-weight: 600; font-size: 14px; display: block; margin-bottom: 4px;">Cliente *</label>
+                    <select id="pag-cliente" required style="width: 100%; padding: 10px; border: 2px solid #d1d5db; border-radius: 8px; font-size: 14px;">
+                        ${clientesOptions}
+                    </select>
+                </div>
+                <div>
+                    <label style="font-weight: 600; font-size: 14px; display: block; margin-bottom: 4px;">Tipo de Licença *</label>
+                    <select id="pag-tipo" required style="width: 100%; padding: 10px; border: 2px solid #d1d5db; border-radius: 8px; font-size: 14px;">
+                        <option value="">-- Selecione --</option>
+                        <option value="mensal">Mensal</option>
+                        <option value="anual">Anual</option>
+                        <option value="vitalicia">Vitalícia</option>
+                        <option value="renovacao">Renovação</option>
+                        <option value="upgrade">Upgrade</option>
+                    </select>
+                </div>
+                <div style="display: flex; gap: 12px;">
+                    <div style="flex: 1;">
+                        <label style="font-weight: 600; font-size: 14px; display: block; margin-bottom: 4px;">Valor (R$) *</label>
+                        <input type="number" id="pag-valor" step="0.01" min="0" required placeholder="0,00"
+                            style="width: 100%; padding: 10px; border: 2px solid #d1d5db; border-radius: 8px; font-size: 14px;"
+                            oninput="calcularValorFinal()">
+                    </div>
+                    <div style="flex: 1;">
+                        <label style="font-weight: 600; font-size: 14px; display: block; margin-bottom: 4px;">Desconto (R$)</label>
+                        <input type="number" id="pag-desconto" step="0.01" min="0" value="0" placeholder="0,00"
+                            style="width: 100%; padding: 10px; border: 2px solid #d1d5db; border-radius: 8px; font-size: 14px;"
+                            oninput="calcularValorFinal()">
+                    </div>
+                </div>
+                <div style="background: #f0fdf4; padding: 10px 14px; border-radius: 8px; text-align: center;">
+                    <span style="font-size: 13px; color: #666;">Valor Final: </span>
+                    <strong id="pag-valor-final-display" style="font-size: 18px; color: #16a34a;">R$ 0,00</strong>
+                </div>
+                <div>
+                    <label style="font-weight: 600; font-size: 14px; display: block; margin-bottom: 4px;">Método de Pagamento *</label>
+                    <select id="pag-metodo" required style="width: 100%; padding: 10px; border: 2px solid #d1d5db; border-radius: 8px; font-size: 14px;">
+                        <option value="">-- Selecione --</option>
+                        <option value="pix">PIX</option>
+                        <option value="cartao_credito">Cartão de Crédito</option>
+                        <option value="cartao_debito">Cartão de Débito</option>
+                        <option value="boleto">Boleto</option>
+                        <option value="transferencia">Transferência</option>
+                        <option value="dinheiro">Dinheiro</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="font-weight: 600; font-size: 14px; display: block; margin-bottom: 4px;">Status *</label>
+                    <select id="pag-status" required style="width: 100%; padding: 10px; border: 2px solid #d1d5db; border-radius: 8px; font-size: 14px;">
+                        <option value="pendente">Pendente</option>
+                        <option value="aprovado">Aprovado</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="font-weight: 600; font-size: 14px; display: block; margin-bottom: 4px;">Observações</label>
+                    <textarea id="pag-obs" rows="2" placeholder="Opcional..."
+                        style="width: 100%; padding: 10px; border: 2px solid #d1d5db; border-radius: 8px; font-size: 14px; resize: vertical;"></textarea>
+                </div>
+                <div style="display: flex; gap: 10px; justify-content: center; margin-top: 10px;">
+                    <button type="submit"
+                        style="background: #16a34a; color: white; border: none; padding: 12px 28px; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: bold;">
+                        ✅ Registrar
+                    </button>
+                    <button type="button" onclick="document.getElementById('modal-novo-pagamento').remove()"
+                        style="background: #6b7280; color: white; border: none; padding: 12px 28px; border-radius: 8px; cursor: pointer; font-size: 16px;">
+                        Cancelar
+                    </button>
+                </div>
+            </form>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
+
+// Calcular valor final em tempo real
+function calcularValorFinal() {
+    const valor = parseFloat(document.getElementById('pag-valor').value) || 0;
+    const desconto = parseFloat(document.getElementById('pag-desconto').value) || 0;
+    const final_val = Math.max(0, valor - desconto);
+    document.getElementById('pag-valor-final-display').textContent = `R$ ${final_val.toFixed(2).replace('.', ',')}`;
+}
+
+// Enviar novo pagamento ao backend
+async function enviarPagamento(event) {
+    event.preventDefault();
+    const token = localStorage.getItem('token');
+
+    const usuario = document.getElementById('pag-cliente').value;
+    const tipoProduto = document.getElementById('pag-tipo').value;
+    const valor = parseFloat(document.getElementById('pag-valor').value);
+    const desconto = parseFloat(document.getElementById('pag-desconto').value) || 0;
+    const valorFinal = Math.max(0, valor - desconto);
+    const metodoPagamento = document.getElementById('pag-metodo').value;
+    const status = document.getElementById('pag-status').value;
+    const observacoes = document.getElementById('pag-obs').value.trim();
+
+    if (!usuario || !tipoProduto || !valor || !metodoPagamento) {
+        alert('Preencha todos os campos obrigatórios');
+        return;
+    }
+
+    try {
+        const body = {
+            usuario,
+            tipoProduto,
+            valor,
+            desconto,
+            valorFinal,
+            metodoPagamento,
+            status,
+            dataPagamento: status === 'aprovado' ? new Date().toISOString() : undefined,
+            observacoes: observacoes || undefined
+        };
+
+        const response = await fetch(`${API_URL}/admin/pagamentos`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(body)
+        });
+
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.message || 'Erro ao registrar pagamento');
+        }
+
+        document.getElementById('modal-novo-pagamento').remove();
+        alert('✅ Pagamento registrado com sucesso!');
+        carregarPagamentos();
+    } catch (error) {
+        console.error('Erro ao registrar pagamento:', error);
+        alert('❌ Erro ao registrar pagamento: ' + error.message);
+    }
+}
+
 // Carregar Pagamentos
 async function carregarPagamentos() {
     

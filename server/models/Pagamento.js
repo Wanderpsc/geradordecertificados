@@ -9,8 +9,7 @@ const pagamentoSchema = new mongoose.Schema({
     },
     licenca: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Licenca',
-        required: true
+        ref: 'Licenca'
     },
     valor: {
         type: Number,
