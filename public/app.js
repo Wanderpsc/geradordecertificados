@@ -660,13 +660,95 @@ function atualizarSelectAlunos() {
     
     if (APP_STATE.alunos.length === 0) {
         select.innerHTML = '<option value="">-- Nenhum aluno cadastrado --</option>';
+    } else {
+        select.innerHTML = '<option value="">-- Selecione um aluno --</option>' +
+            APP_STATE.alunos.map(aluno => 
+                `<option value="${aluno.id}">${aluno.nome}${aluno.anoConclusao ? ' (' + aluno.anoConclusao + ')' : ''}</option>`
+            ).join('');
+    }
+
+    // Atualizar lista de alunos para geração em lote
+    atualizarListaAlunosLote();
+}
+
+function atualizarListaAlunosLote(filtro = '') {
+    const container = document.getElementById('listaAlunosLote');
+    if (!container) return;
+
+    let alunosFiltrados = APP_STATE.alunos;
+    if (filtro) {
+        const termo = filtro.toLowerCase();
+        alunosFiltrados = APP_STATE.alunos.filter(a =>
+            a.nome.toLowerCase().includes(termo) || (a.cpf && a.cpf.includes(termo))
+        );
+    }
+
+    if (alunosFiltrados.length === 0) {
+        container.innerHTML = `<p style="text-align: center; padding: 20px; color: #9ca3af;">${filtro ? 'Nenhum aluno encontrado' : 'Nenhum aluno cadastrado'}</p>`;
+        atualizarContadorLote();
         return;
     }
 
-    select.innerHTML = '<option value="">-- Selecione um aluno --</option>' +
-        APP_STATE.alunos.map(aluno => 
-            `<option value="${aluno.id}">${aluno.nome}${aluno.anoConclusao ? ' (' + aluno.anoConclusao + ')' : ''}</option>`
-        ).join('');
+    container.innerHTML = alunosFiltrados.map(aluno => {
+        const checked = APP_STATE.alunosSelecionadosLote && APP_STATE.alunosSelecionadosLote.has(aluno.id) ? 'checked' : '';
+        return `
+        <div style="display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-bottom: 1px solid #f1f5f9; cursor: pointer;"
+             onclick="toggleCheckLote(this, '${aluno.id}')">
+            <input type="checkbox" class="check-aluno-lote" data-id="${aluno.id}" ${checked}
+                style="width: 18px; height: 18px; cursor: pointer; flex-shrink: 0;" onclick="event.stopPropagation(); toggleAlunolote('${aluno.id}', this.checked)">
+            <div style="flex: 1; min-width: 0;">
+                <div style="font-weight: 600; font-size: 14px; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${aluno.nome}</div>
+                <div style="font-size: 12px; color: #6b7280;">CPF: ${aluno.cpf || '-'} | Conclusão: ${aluno.anoConclusao || '-'}</div>
+            </div>
+        </div>`;
+    }).join('');
+
+    atualizarContadorLote();
+}
+
+// Inicializar set de seleção
+if (!APP_STATE.alunosSelecionadosLote) {
+    APP_STATE.alunosSelecionadosLote = new Set();
+}
+
+function toggleCheckLote(el, id) {
+    const cb = el.querySelector('input[type=checkbox]');
+    cb.checked = !cb.checked;
+    toggleAlunolote(id, cb.checked);
+}
+
+function toggleAlunolote(id, checked) {
+    if (checked) {
+        APP_STATE.alunosSelecionadosLote.add(id);
+    } else {
+        APP_STATE.alunosSelecionadosLote.delete(id);
+    }
+    atualizarContadorLote();
+    // sincronizar checkbox "Selecionar Todos"
+    const checkAll = document.getElementById('checkTodosLote');
+    if (checkAll) {
+        checkAll.checked = APP_STATE.alunosSelecionadosLote.size === APP_STATE.alunos.length && APP_STATE.alunos.length > 0;
+    }
+}
+
+function toggleSelecionarTodosLote() {
+    const checkAll = document.getElementById('checkTodosLote');
+    if (checkAll.checked) {
+        APP_STATE.alunos.forEach(a => APP_STATE.alunosSelecionadosLote.add(a.id));
+    } else {
+        APP_STATE.alunosSelecionadosLote.clear();
+    }
+    // Recarregar com filtro atual
+    const filtro = document.getElementById('buscarAlunoLote')?.value || '';
+    atualizarListaAlunosLote(filtro);
+}
+
+function atualizarContadorLote() {
+    const el = document.getElementById('contadorSelecionadosLote');
+    if (el) {
+        const n = APP_STATE.alunosSelecionadosLote ? APP_STATE.alunosSelecionadosLote.size : 0;
+        el.textContent = `(${n} selecionado${n !== 1 ? 's' : ''})`;
+    }
 }
 
 // ==================== TEMPLATES ====================
@@ -689,6 +771,11 @@ function inicializarTemplates() {
     // Botões de geração
     document.getElementById('btnGerarIndividual').addEventListener('click', gerarCertificadoIndividual);
     document.getElementById('btnGerarLote').addEventListener('click', gerarCertificadosLote);
+
+    // Busca na lista de geração em lote
+    document.getElementById('buscarAlunoLote').addEventListener('input', (e) => {
+        atualizarListaAlunosLote(e.target.value);
+    });
 
     atualizarTemplateInfo();
 }
@@ -783,23 +870,27 @@ async function gerarCertificadoIndividual() {
 }
 
 async function gerarCertificadosLote() {
-    if (APP_STATE.alunos.length === 0) {
-        mostrarNotificacao('Nenhum aluno cadastrado!', 'error');
+    const selecionados = APP_STATE.alunosSelecionadosLote;
+    
+    if (!selecionados || selecionados.size === 0) {
+        mostrarNotificacao('Selecione pelo menos um aluno para gerar certificados!', 'error');
         return;
     }
 
-    if (!confirm(`Deseja gerar ${APP_STATE.alunos.length} certificado(s)?`)) {
+    const alunosParaGerar = APP_STATE.alunos.filter(a => selecionados.has(a.id));
+
+    if (!confirm(`Deseja gerar ${alunosParaGerar.length} certificado(s)?`)) {
         return;
     }
 
-    mostrarNotificacao('Gerando certificados em lote...', 'info');
+    mostrarNotificacao(`Gerando ${alunosParaGerar.length} certificado(s)...`, 'info');
 
-    for (let i = 0; i < APP_STATE.alunos.length; i++) {
-        await gerarCertificado(APP_STATE.alunos[i], true);
+    for (let i = 0; i < alunosParaGerar.length; i++) {
+        await gerarCertificado(alunosParaGerar[i], true);
         await new Promise(resolve => setTimeout(resolve, 500)); // Pausa entre gerações
     }
 
-    mostrarNotificacao(`${APP_STATE.alunos.length} certificado(s) gerado(s) com sucesso!`, 'success');
+    mostrarNotificacao(`${alunosParaGerar.length} certificado(s) gerado(s) com sucesso!`, 'success');
 }
 
 async function gerarCertificado(aluno, emLote = false) {
