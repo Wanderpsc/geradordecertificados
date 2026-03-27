@@ -894,4 +894,53 @@ exports.excluirClientesLote = async (req, res) => {
     }
 };
 
+// @desc    Excluir licença
+// @route   DELETE /api/admin/licencas/:id
+// @access  Private/Admin
+exports.excluirLicenca = async (req, res) => {
+    try {
+        const licenca = await Licenca.findById(req.params.id);
+        if (!licenca) {
+            return res.status(404).json({ success: false, message: 'Licença não encontrada' });
+        }
+        // Remover referência da licença no usuário
+        if (licenca.usuario) {
+            await Usuario.findByIdAndUpdate(licenca.usuario, { $unset: { licenca: 1 } });
+        }
+        await Licenca.findByIdAndDelete(req.params.id);
+        res.json({ success: true, message: 'Licença excluída com sucesso' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Erro ao excluir licença', error: error.message });
+    }
+};
+
+// @desc    Editar data de expiração da licença (renovação)
+// @route   PATCH /api/admin/licencas/:id/data
+// @access  Private/Admin
+exports.editarDataLicenca = async (req, res) => {
+    try {
+        const { dataExpiracao } = req.body;
+        if (!dataExpiracao) {
+            return res.status(400).json({ success: false, message: 'Informe a nova data de expiração' });
+        }
+        const novaData = new Date(dataExpiracao);
+        if (isNaN(novaData.getTime())) {
+            return res.status(400).json({ success: false, message: 'Data inválida' });
+        }
+        const licenca = await Licenca.findById(req.params.id);
+        if (!licenca) {
+            return res.status(404).json({ success: false, message: 'Licença não encontrada' });
+        }
+        licenca.dataExpiracao = novaData;
+        // Se a nova data for futura, reativar a licença
+        if (novaData > new Date()) {
+            licenca.status = 'ativa';
+        }
+        await licenca.save();
+        res.json({ success: true, message: 'Data de expiração atualizada com sucesso', licenca });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Erro ao atualizar data da licença', error: error.message });
+    }
+};
+
 module.exports = exports;

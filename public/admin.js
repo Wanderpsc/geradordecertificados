@@ -316,10 +316,10 @@ async function carregarLicencas() {
                     ${formatarData(licenca.dataExpiracao)}
                     ${!expirada ? `<br><small style="color: ${diasRestantes <= 7 ? '#dc2626' : '#6b7280'};">(${diasRestantes} dias)</small>` : ''}
                 </td>
-                <td>${licenca.limiteCertificados !== null ? licenca.limiteCertificados : '∞'}</td>
+                <td>${licenca.limiteCertificados !== null && licenca.limiteCertificados !== -1 ? licenca.limiteCertificados : '∞'}</td>
                 <td class="action-btns">
-                    <button class="btn btn-primary btn-sm" onclick="renovarLicenca('${cliente._id}')">Renovar</button>
-                    <button class="btn btn-warning btn-sm" onclick="editarLicenca('${cliente._id}')">Editar</button>
+                    <button class="btn btn-primary btn-sm" onclick="abrirEditarDataLicenca('${licenca._id}', '${licenca.dataExpiracao}')">📅 Renovar</button>
+                    <button class="btn btn-danger btn-sm" onclick="excluirLicenca('${licenca._id}', '${cliente.email}')">🗑️ Excluir</button>
                 </td>
             </tr>
         `;
@@ -334,14 +334,105 @@ async function carregarLicencas() {
     }
 }
 
-// Renovar licença
-async function renovarLicenca(clienteId) {
-    alert('Funcionalidade de renovação em desenvolvimento.\nEm breve você poderá renovar licenças diretamente por aqui!');
+// Abrir modal para editar data de expiração da licença
+function abrirEditarDataLicenca(licencaId, dataAtual) {
+    const dataFormatada = new Date(dataAtual).toISOString().split('T')[0];
+    
+    const modal = document.createElement('div');
+    modal.id = 'modal-editar-data';
+    modal.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.8); display: flex; align-items: center;
+        justify-content: center; z-index: 10000;
+    `;
+    modal.innerHTML = `
+        <div style="background: white; padding: 30px; border-radius: 15px; max-width: 450px; width: 90%; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
+            <div style="font-size: 60px; margin-bottom: 15px;">📅</div>
+            <h2 style="color: #1e3a8a; margin-bottom: 20px;">Renovar Licença</h2>
+            <p style="font-size: 14px; color: #666; margin-bottom: 15px;">Selecione a nova data de expiração:</p>
+            <input type="date" id="input-nova-data" value="${dataFormatada}" 
+                style="width: 100%; padding: 12px; font-size: 16px; border: 2px solid #d1d5db; border-radius: 8px; margin-bottom: 10px; text-align: center;">
+            <div style="display: flex; gap: 8px; justify-content: center; margin: 15px 0 20px;">
+                <button onclick="definirRenovacao(30)" style="background: #e0e7ff; color: #1e3a8a; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600;">+30 dias</button>
+                <button onclick="definirRenovacao(90)" style="background: #e0e7ff; color: #1e3a8a; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600;">+90 dias</button>
+                <button onclick="definirRenovacao(365)" style="background: #e0e7ff; color: #1e3a8a; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600;">+1 ano</button>
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button onclick="salvarDataLicenca('${licencaId}')"
+                    style="background: #16a34a; color: white; border: none; padding: 12px 28px; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: bold;">
+                    ✅ Salvar
+                </button>
+                <button onclick="document.getElementById('modal-editar-data').remove()"
+                    style="background: #6b7280; color: white; border: none; padding: 12px 28px; border-radius: 8px; cursor: pointer; font-size: 16px;">
+                    Cancelar
+                </button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
 }
 
-// Editar licença
-async function editarLicenca(clienteId) {
-    alert('Funcionalidade de edição em desenvolvimento.\nEm breve você poderá editar licenças diretamente por aqui!');
+// Atalho para definir data relativa
+function definirRenovacao(dias) {
+    const input = document.getElementById('input-nova-data');
+    const novaData = new Date();
+    novaData.setDate(novaData.getDate() + dias);
+    input.value = novaData.toISOString().split('T')[0];
+}
+
+// Salvar nova data de expiração
+async function salvarDataLicenca(licencaId) {
+    const novaData = document.getElementById('input-nova-data').value;
+    if (!novaData) {
+        alert('Selecione uma data válida');
+        return;
+    }
+    const token = localStorage.getItem('token');
+    try {
+        const response = await fetch(`${API_URL}/admin/licencas/${licencaId}/data`, {
+            method: 'PATCH',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ dataExpiracao: novaData })
+        });
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.message || 'Erro ao atualizar data');
+        }
+        document.getElementById('modal-editar-data').remove();
+        alert('✅ Data de expiração atualizada com sucesso!');
+        carregarLicencas();
+    } catch (error) {
+        console.error('Erro ao atualizar data:', error);
+        alert('Erro ao atualizar data da licença: ' + error.message);
+    }
+}
+
+// Excluir licença
+async function excluirLicenca(licencaId, email) {
+    if (!confirm(`⚠️ ATENÇÃO!\n\nDeseja realmente EXCLUIR a licença do cliente:\n${email}\n\nO cliente perderá o acesso aos recursos da licença.`)) {
+        return;
+    }
+    const token = localStorage.getItem('token');
+    try {
+        const response = await fetch(`${API_URL}/admin/licencas/${licencaId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.message || 'Erro ao excluir licença');
+        }
+        alert('✅ Licença excluída com sucesso!');
+        carregarLicencas();
+    } catch (error) {
+        console.error('Erro ao excluir licença:', error);
+        alert('Erro ao excluir licença: ' + error.message);
+    }
 }
 
 // Ver detalhes do cliente

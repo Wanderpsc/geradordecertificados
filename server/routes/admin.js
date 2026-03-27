@@ -8,6 +8,8 @@ const {
     resetarSenhaCliente,
     excluirCliente,
     excluirClientesLote,
+    excluirLicenca,
+    editarDataLicenca,
     registrarPagamento,
     listarPagamentos,
     aprovarPagamento,
@@ -38,6 +40,12 @@ router.delete('/clientes/:id', excluirCliente);
 
 // Pagamentos
 router.get('/pagamentos', listarPagamentos);
+
+// Licenças (admin)
+router.delete('/licencas/:id', excluirLicenca);
+router.patch('/licencas/:id/data', editarDataLicenca);
+
+// Pagamentos (continuação)
 router.post('/pagamentos', registrarPagamento);
 router.patch('/pagamentos/:id/aprovar', aprovarPagamento);
 router.patch('/pagamentos/:id/recusar', recusarPagamento);
