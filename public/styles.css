@@ -368,6 +368,66 @@ header p {
     border-top: 2px solid var(--border-color);
 }
 
+/* ===== EDITOR DE TEMPLATES ===== */
+.editor-tab-btn {
+    padding: 8px 16px;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    background: #fff;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    color: #6b7280;
+    transition: all 0.2s;
+}
+
+.editor-tab-btn:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+.editor-tab-btn.active {
+    background: var(--primary-color);
+    color: #fff;
+    border-color: var(--primary-color);
+}
+
+.editor-tab-content {
+    display: none;
+}
+
+.editor-tab-content.active {
+    display: block;
+}
+
+.editor-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 16px;
+}
+
+.editor-field label {
+    display: block;
+    font-weight: 600;
+    font-size: 13px;
+    color: #374151;
+    margin-bottom: 6px;
+}
+
+.editor-field .form-control {
+    width: 100%;
+}
+
+.editor-field textarea.form-control {
+    resize: vertical;
+    font-family: inherit;
+}
+
+.btn-sm {
+    padding: 5px 12px;
+    font-size: 12px;
+}
+
 .generate-options {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));

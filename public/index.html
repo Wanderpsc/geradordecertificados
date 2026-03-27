@@ -184,22 +184,345 @@
 
         <!-- Tab: Templates -->
         <div class="tab-content" id="templates">
+            <!-- Modelos Predefinidos -->
             <div class="card">
-                <h2>Modelos de Certificados</h2>
-                <p>Selecione um modelo padrão ou faça upload do seu próprio modelo</p>
+                <h2>🎨 Personalização de Certificados</h2>
+                <p style="margin-bottom: 15px; color: #6b7280;">Selecione um modelo base ou personalize completamente seu certificado</p>
                 
                 <div class="templates-grid" id="templatesGrid">
                     <!-- Templates serão carregados aqui -->
                 </div>
+            </div>
 
-                <div class="custom-template">
-                    <h3>Modelo Personalizado</h3>
-                    <p>Faça upload de uma imagem de fundo para seu certificado (PNG, JPG - Recomendado: 1920x1080px)</p>
-                    <input type="file" id="uploadTemplate" accept="image/*" style="display:none">
-                    <button class="btn btn-secondary" onclick="document.getElementById('uploadTemplate').click()">
-                        📤 Fazer Upload de Modelo
-                    </button>
-                    <div id="customTemplatePreview"></div>
+            <!-- Editor de Personalização -->
+            <div class="card" id="editorPersonalizacao" style="margin-top: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2>✏️ Editor de Modelo</h2>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn btn-secondary" onclick="resetarPersonalizacao()">↺ Resetar</button>
+                        <button class="btn btn-primary" onclick="salvarPersonalizacao()">💾 Salvar Modelo</button>
+                    </div>
+                </div>
+
+                <!-- Sub-abas do editor -->
+                <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 20px; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px;">
+                    <button class="editor-tab-btn active" data-editor-tab="tab-cabecalho" onclick="trocarEditorTab(this)">📋 Cabeçalho</button>
+                    <button class="editor-tab-btn" data-editor-tab="tab-emblema" onclick="trocarEditorTab(this)">🏛️ Emblema</button>
+                    <button class="editor-tab-btn" data-editor-tab="tab-frente" onclick="trocarEditorTab(this)">📄 Frente</button>
+                    <button class="editor-tab-btn" data-editor-tab="tab-verso" onclick="trocarEditorTab(this)">📃 Verso</button>
+                    <button class="editor-tab-btn" data-editor-tab="tab-rodape" onclick="trocarEditorTab(this)">📎 Rodapé</button>
+                    <button class="editor-tab-btn" data-editor-tab="tab-margens" onclick="trocarEditorTab(this)">📐 Margens</button>
+                    <button class="editor-tab-btn" data-editor-tab="tab-cores" onclick="trocarEditorTab(this)">🎨 Cores</button>
+                    <button class="editor-tab-btn" data-editor-tab="tab-uploads" onclick="trocarEditorTab(this)">📤 Uploads</button>
+                </div>
+
+                <!-- ===== SUB-ABA: CABEÇALHO ===== -->
+                <div class="editor-tab-content active" id="tab-cabecalho">
+                    <h3 style="margin-bottom: 15px; color: #1e3a8a;">Configurações do Cabeçalho</h3>
+                    <div class="editor-grid">
+                        <div class="editor-field">
+                            <label>Linha 1 (República)</label>
+                            <input type="text" id="certCabecalhoLinha1" class="form-control" value="REPÚBLICA FEDERATIVA DO BRASIL" oninput="atualizarPreviewCert()">
+                        </div>
+                        <div class="editor-field">
+                            <label>Linha 2 (Estado)</label>
+                            <input type="text" id="certCabecalhoLinha2" class="form-control" value="ESTADO DO PIAUÍ" oninput="atualizarPreviewCert()">
+                        </div>
+                        <div class="editor-field">
+                            <label>Linha 3 (Secretaria)</label>
+                            <input type="text" id="certCabecalhoLinha3" class="form-control" value="SECRETARIA DE ESTADO DA EDUCAÇÃO" oninput="atualizarPreviewCert()">
+                        </div>
+                        <div class="editor-field">
+                            <label>CNPJ</label>
+                            <input type="text" id="certCNPJ" class="form-control" value="01.902.400/0001-55" oninput="atualizarPreviewCert()">
+                        </div>
+                        <div class="editor-field">
+                            <label>INEP</label>
+                            <input type="text" id="certINEP" class="form-control" value="22076450" oninput="atualizarPreviewCert()">
+                        </div>
+                        <div class="editor-field">
+                            <label>Nome do Estabelecimento de Ensino</label>
+                            <input type="text" id="certNomeInstituicao" class="form-control" value="Centro Estadual de Tempo Integral Desembargador Amaral" oninput="atualizarPreviewCert()">
+                        </div>
+                        <div class="editor-field" style="grid-column: 1 / -1;">
+                            <label>Endereço</label>
+                            <input type="text" id="certEndereco" class="form-control" value="Praça Tiradentes – 96 – Centro – Curimatá – Piauí" oninput="atualizarPreviewCert()">
+                        </div>
+                        <div class="editor-field">
+                            <label>Tamanho da Fonte do Cabeçalho (pt)</label>
+                            <input type="number" id="certFonteCabecalho" class="form-control" value="14" min="8" max="24" oninput="atualizarPreviewCert()">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== SUB-ABA: EMBLEMA ===== -->
+                <div class="editor-tab-content" id="tab-emblema">
+                    <h3 style="margin-bottom: 15px; color: #1e3a8a;">Emblema / Brasão</h3>
+                    <div class="editor-grid">
+                        <div class="editor-field">
+                            <label>Tipo de Emblema</label>
+                            <select id="certEmblema" class="form-control" onchange="atualizarPreviewCert()">
+                                <option value="brasao-brasil">Brasão da República</option>
+                                <option value="custom">Emblema Personalizado</option>
+                                <option value="nenhum">Sem Emblema</option>
+                            </select>
+                        </div>
+                        <div class="editor-field">
+                            <label>Largura do Emblema (mm)</label>
+                            <input type="number" id="certEmblemaLargura" class="form-control" value="46" min="10" max="100" oninput="atualizarPreviewCert()">
+                        </div>
+                        <div class="editor-field">
+                            <label>Altura do Emblema (mm)</label>
+                            <input type="number" id="certEmblemaAltura" class="form-control" value="30" min="10" max="80" oninput="atualizarPreviewCert()">
+                        </div>
+                        <div class="editor-field">
+                            <label>Posição Y (mm do topo)</label>
+                            <input type="number" id="certEmblemaPosY" class="form-control" value="30" min="5" max="100" oninput="atualizarPreviewCert()">
+                        </div>
+                        <div class="editor-field" style="grid-column: 1 / -1;">
+                            <label>Upload de Emblema Personalizado</label>
+                            <input type="file" id="uploadEmblemaCustom" accept="image/png,image/jpeg,image/webp" class="form-control" onchange="handleUploadEmblema(event)">
+                            <div id="previewEmblemaCustom" style="margin-top: 10px;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== SUB-ABA: FRENTE ===== -->
+                <div class="editor-tab-content" id="tab-frente">
+                    <h3 style="margin-bottom: 15px; color: #1e3a8a;">Frente do Certificado</h3>
+                    <div class="editor-grid">
+                        <div class="editor-field" style="grid-column: 1 / -1;">
+                            <label>Resolução</label>
+                            <input type="text" id="certResolucao" class="form-control" value="Resolução CEE/PI" placeholder="Ex: Resolução CEE/PI Nº 123/2025" oninput="atualizarPreviewCert()">
+                        </div>
+                        <div class="editor-field" style="grid-column: 1 / -1;">
+                            <label>Título do Certificado</label>
+                            <input type="text" id="certTitulo" class="form-control" value="CERTIFICADO DE CONCLUSÃO DO ENSINO MÉDIO" oninput="atualizarPreviewCert()">
+                        </div>
+                        <div class="editor-field" style="grid-column: 1 / -1;">
+                            <label>Texto do Corpo (use {NOME}, {CPF}, {DIA}, {MES}, {ANO}, {CIDADE}, {ESTADO}, {NACIONALIDADE}, {MAE}, {PAI}, {ANO_CONCLUSAO})</label>
+                            <textarea id="certCorpoTexto" class="form-control" rows="5" oninput="atualizarPreviewCert()">A Direção da Instituição de Ensino {INSTITUICAO}, no uso de suas atribuições legais, confere a {NOME} CPF {CPF}, nascido(a) em {DIA} de {MES} de {ANO}, natural de {CIDADE}, Estado de(o) {ESTADO} de nacionalidade {NACIONALIDADE}, filho(a) de {MAE} e de {PAI} o presente certificado por ter concluído no ano de {ANO_CONCLUSAO} o ENSINO MÉDIO, para que possa gozar de todos os direitos e prerrogativas concedidos pelas leis do País.</textarea>
+                        </div>
+                        <div class="editor-field">
+                            <label>Fonte do Corpo</label>
+                            <select id="certFonteCorpo" class="form-control" onchange="atualizarPreviewCert()">
+                                <option value="times" selected>Times New Roman</option>
+                                <option value="helvetica">Helvetica</option>
+                                <option value="courier">Courier</option>
+                            </select>
+                        </div>
+                        <div class="editor-field">
+                            <label>Tamanho da Fonte do Corpo (pt)</label>
+                            <input type="number" id="certFonteCorpoTam" class="form-control" value="14" min="8" max="20" oninput="atualizarPreviewCert()">
+                        </div>
+                        <div class="editor-field">
+                            <label>Tamanho da Fonte do Título (pt)</label>
+                            <input type="number" id="certFonteTituloTam" class="form-control" value="16" min="10" max="28" oninput="atualizarPreviewCert()">
+                        </div>
+                        <div class="editor-field">
+                            <label>Assinatura 1 (Cargo)</label>
+                            <input type="text" id="certAssinatura1" class="form-control" value="SECRETÁRIO(A)" oninput="atualizarPreviewCert()">
+                        </div>
+                        <div class="editor-field">
+                            <label>Assinatura 2 (Cargo)</label>
+                            <input type="text" id="certAssinatura2" class="form-control" value="DIRETOR(A)" oninput="atualizarPreviewCert()">
+                        </div>
+                        <div class="editor-field">
+                            <label>Assinatura 3 (Cargo)</label>
+                            <input type="text" id="certAssinatura3" class="form-control" value="CONCLUDENTE" oninput="atualizarPreviewCert()">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== SUB-ABA: VERSO ===== -->
+                <div class="editor-tab-content" id="tab-verso">
+                    <h3 style="margin-bottom: 15px; color: #1e3a8a;">Verso do Certificado</h3>
+                    <div class="editor-grid">
+                        <div class="editor-field">
+                            <label>Município</label>
+                            <input type="text" id="certVersoMunicipio" class="form-control" value="Curimatá" oninput="atualizarPreviewCert()">
+                        </div>
+                        <div class="editor-field">
+                            <label>UF</label>
+                            <input type="text" id="certVersoUF" class="form-control" value="Piauí" oninput="atualizarPreviewCert()">
+                        </div>
+                        <div class="editor-field" style="grid-column: 1 / -1;">
+                            <label>Título do Verso</label>
+                            <input type="text" id="certVersoTitulo" class="form-control" value="CERTIFICADO DE CONCLUSÃO DO ENSINO MÉDIO" oninput="atualizarPreviewCert()">
+                        </div>
+                        <div class="editor-field">
+                            <label>Exibir Tabela de Observações</label>
+                            <select id="certVersoObservacoes" class="form-control" onchange="atualizarPreviewCert()">
+                                <option value="sim">Sim</option>
+                                <option value="nao">Não</option>
+                            </select>
+                        </div>
+                        <div class="editor-field">
+                            <label>Incluir Bordas no Verso</label>
+                            <select id="certVersoBordas" class="form-control" onchange="atualizarPreviewCert()">
+                                <option value="sim">Sim</option>
+                                <option value="nao">Não</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== SUB-ABA: RODAPÉ ===== -->
+                <div class="editor-tab-content" id="tab-rodape">
+                    <h3 style="margin-bottom: 15px; color: #1e3a8a;">Configurações do Rodapé</h3>
+                    <div class="editor-grid">
+                        <div class="editor-field">
+                            <label>Exibir Rodapé</label>
+                            <select id="certRodapeExibir" class="form-control" onchange="atualizarPreviewCert()">
+                                <option value="sim">Sim</option>
+                                <option value="nao">Não</option>
+                            </select>
+                        </div>
+                        <div class="editor-field" style="grid-column: 1 / -1;">
+                            <label>Texto do Rodapé (linha 1)</label>
+                            <input type="text" id="certRodapeLinha1" class="form-control" value="" placeholder="Ex: Documento emitido eletronicamente" oninput="atualizarPreviewCert()">
+                        </div>
+                        <div class="editor-field" style="grid-column: 1 / -1;">
+                            <label>Texto do Rodapé (linha 2)</label>
+                            <input type="text" id="certRodapeLinha2" class="form-control" value="" placeholder="Ex: Valide em www.escola.edu.br/validar" oninput="atualizarPreviewCert()">
+                        </div>
+                        <div class="editor-field">
+                            <label>Tamanho da Fonte do Rodapé (pt)</label>
+                            <input type="number" id="certRodapeFonte" class="form-control" value="8" min="6" max="14" oninput="atualizarPreviewCert()">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== SUB-ABA: MARGENS ===== -->
+                <div class="editor-tab-content" id="tab-margens">
+                    <h3 style="margin-bottom: 15px; color: #1e3a8a;">Margens e Bordas</h3>
+                    <div class="editor-grid">
+                        <div class="editor-field">
+                            <label>Margem Esquerda (mm)</label>
+                            <input type="number" id="certMargemEsq" class="form-control" value="20" min="5" max="50" oninput="atualizarPreviewCert()">
+                        </div>
+                        <div class="editor-field">
+                            <label>Margem Direita (mm)</label>
+                            <input type="number" id="certMargemDir" class="form-control" value="20" min="5" max="50" oninput="atualizarPreviewCert()">
+                        </div>
+                        <div class="editor-field">
+                            <label>Margem Superior (mm)</label>
+                            <input type="number" id="certMargemSup" class="form-control" value="15" min="5" max="50" oninput="atualizarPreviewCert()">
+                        </div>
+                        <div class="editor-field">
+                            <label>Margem Inferior (mm)</label>
+                            <input type="number" id="certMargemInf" class="form-control" value="15" min="5" max="50" oninput="atualizarPreviewCert()">
+                        </div>
+                        <div class="editor-field">
+                            <label>Espessura da Borda (mm)</label>
+                            <input type="number" id="certBordaEspessura" class="form-control" value="7" min="0" max="15" step="0.5" oninput="atualizarPreviewCert()">
+                        </div>
+                        <div class="editor-field">
+                            <label>Exibir Bordas Decorativas</label>
+                            <select id="certBordaExibir" class="form-control" onchange="atualizarPreviewCert()">
+                                <option value="sim">Sim</option>
+                                <option value="nao">Não</option>
+                            </select>
+                        </div>
+                        <div class="editor-field">
+                            <label>Orientação</label>
+                            <select id="certOrientacao" class="form-control" onchange="atualizarPreviewCert()">
+                                <option value="landscape" selected>Paisagem (A4)</option>
+                                <option value="portrait">Retrato (A4)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== SUB-ABA: CORES ===== -->
+                <div class="editor-tab-content" id="tab-cores">
+                    <h3 style="margin-bottom: 15px; color: #1e3a8a;">Esquema de Cores</h3>
+                    <div class="editor-grid">
+                        <div class="editor-field">
+                            <label>Cor Principal (Cabeçalho/Título)</label>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <input type="color" id="certCorPrincipal" value="#1e3a8a" onchange="atualizarPreviewCert()" style="width: 50px; height: 40px; border: none; cursor: pointer;">
+                                <input type="text" id="certCorPrincipalHex" class="form-control" value="#1e3a8a" style="flex: 1;" oninput="sincronizarCor('certCorPrincipal', this.value)">
+                            </div>
+                        </div>
+                        <div class="editor-field">
+                            <label>Cor Secundária (Degradê)</label>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <input type="color" id="certCorSecundaria" value="#3b82f6" onchange="atualizarPreviewCert()" style="width: 50px; height: 40px; border: none; cursor: pointer;">
+                                <input type="text" id="certCorSecundariaHex" class="form-control" value="#3b82f6" style="flex: 1;" oninput="sincronizarCor('certCorSecundaria', this.value)">
+                            </div>
+                        </div>
+                        <div class="editor-field">
+                            <label>Cor do Texto do Corpo</label>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <input type="color" id="certCorTexto" value="#000000" onchange="atualizarPreviewCert()" style="width: 50px; height: 40px; border: none; cursor: pointer;">
+                                <input type="text" id="certCorTextoHex" class="form-control" value="#000000" style="flex: 1;" oninput="sincronizarCor('certCorTexto', this.value)">
+                            </div>
+                        </div>
+                        <div class="editor-field">
+                            <label>Cor das Assinaturas</label>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <input type="color" id="certCorAssinatura" value="#1e3a8a" onchange="atualizarPreviewCert()" style="width: 50px; height: 40px; border: none; cursor: pointer;">
+                                <input type="text" id="certCorAssinaturaHex" class="form-control" value="#1e3a8a" style="flex: 1;" oninput="sincronizarCor('certCorAssinatura', this.value)">
+                            </div>
+                        </div>
+                        <div class="editor-field">
+                            <label>Cor de Fundo</label>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <input type="color" id="certCorFundo" value="#ffffff" onchange="atualizarPreviewCert()" style="width: 50px; height: 40px; border: none; cursor: pointer;">
+                                <input type="text" id="certCorFundoHex" class="form-control" value="#ffffff" style="flex: 1;" oninput="sincronizarCor('certCorFundo', this.value)">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== SUB-ABA: UPLOADS ===== -->
+                <div class="editor-tab-content" id="tab-uploads">
+                    <h3 style="margin-bottom: 15px; color: #1e3a8a;">Uploads de Imagem</h3>
+                    <div class="editor-grid">
+                        <div class="editor-field">
+                            <label>Imagem de Fundo da Frente (PNG/JPG)</label>
+                            <input type="file" id="uploadFundoFrente" accept="image/*" class="form-control" onchange="handleUploadFundo(event, 'frente')">
+                            <div id="previewFundoFrente" style="margin-top: 10px;"></div>
+                            <button class="btn btn-danger btn-sm" onclick="removerUpload('fundoFrente')" style="margin-top: 5px; display: none;" id="btnRemoverFundoFrente">✗ Remover Fundo</button>
+                        </div>
+                        <div class="editor-field">
+                            <label>Imagem de Fundo do Verso (PNG/JPG)</label>
+                            <input type="file" id="uploadFundoVerso" accept="image/*" class="form-control" onchange="handleUploadFundo(event, 'verso')">
+                            <div id="previewFundoVerso" style="margin-top: 10px;"></div>
+                            <button class="btn btn-danger btn-sm" onclick="removerUpload('fundoVerso')" style="margin-top: 5px; display: none;" id="btnRemoverFundoVerso">✗ Remover Fundo</button>
+                        </div>
+                        <div class="editor-field" style="grid-column: 1 / -1;">
+                            <label>Borda Horizontal Personalizada (PNG)</label>
+                            <input type="file" id="uploadBordaH" accept="image/png" class="form-control" onchange="handleUploadBordaCustom(event, 'horizontal')">
+                            <div id="previewBordaH" style="margin-top: 10px;"></div>
+                            <button class="btn btn-danger btn-sm" onclick="removerUpload('bordaH')" style="margin-top: 5px; display: none;" id="btnRemoverBordaH">✗ Remover Borda H</button>
+                        </div>
+                        <div class="editor-field" style="grid-column: 1 / -1;">
+                            <label>Borda Vertical Personalizada (PNG)</label>
+                            <input type="file" id="uploadBordaV" accept="image/png" class="form-control" onchange="handleUploadBordaCustom(event, 'vertical')">
+                            <div id="previewBordaV" style="margin-top: 10px;"></div>
+                            <button class="btn btn-danger btn-sm" onclick="removerUpload('bordaV')" style="margin-top: 5px; display: none;" id="btnRemoverBordaV">✗ Remover Borda V</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pré-visualização -->
+            <div class="card" style="margin-top: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h2>👁️ Pré-visualização</h2>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn btn-secondary" onclick="alternarPreviewLado()">🔄 Frente / Verso</button>
+                        <button class="btn btn-primary" onclick="gerarModeloPreview()">📄 Gerar PDF do Modelo</button>
+                    </div>
+                </div>
+                <p style="margin-bottom: 10px; color: #6b7280; font-size: 13px;">Visualização aproximada com dados fictícios. Clique em "Gerar PDF" para resultado exato.</p>
+                <div id="previewContainer" style="display: flex; justify-content: center; background: #f1f5f9; border-radius: 12px; padding: 20px; min-height: 300px; overflow: auto;">
+                    <canvas id="previewCanvas" style="max-width: 100%; box-shadow: 0 4px 20px rgba(0,0,0,0.15); border-radius: 4px;"></canvas>
+                </div>
+                <div style="text-align: center; margin-top: 10px;">
+                    <span id="previewLadoLabel" style="font-size: 13px; color: #6b7280; font-weight: 600;">Mostrando: FRENTE</span>
                 </div>
             </div>
         </div>
