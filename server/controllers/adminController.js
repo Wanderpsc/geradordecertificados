@@ -387,7 +387,7 @@ exports.listarPagamentos = async (req, res) => {
 // @access  Private/Admin
 exports.emitirNotaFiscal = async (req, res) => {
     try {
-        const { pagamentoId, dadosPrestador, observacoes } = req.body;
+        const { pagamentoId, dadosPrestador, descricaoServico, impostos, observacoes } = req.body;
 
         const pagamento = await Pagamento.findById(pagamentoId)
             .populate('usuario');
@@ -415,6 +415,10 @@ exports.emitirNotaFiscal = async (req, res) => {
 
         const numero = await NotaFiscal.gerarNumero();
 
+        const issValor = impostos?.iss || 0;
+        const valorTotalImpostos = issValor + (impostos?.pis || 0) + (impostos?.cofins || 0) + (impostos?.inss || 0) + (impostos?.ir || 0) + (impostos?.csll || 0);
+        const valorLiquido = pagamento.valorFinal - valorTotalImpostos;
+
         const notaFiscal = await NotaFiscal.create({
             numero,
             pagamento: pagamento._id,
@@ -422,17 +426,26 @@ exports.emitirNotaFiscal = async (req, res) => {
             prestador: dadosPrestador,
             tomador: {
                 nome: pagamento.usuario.nome,
-                cpfCnpj: '', // Adicionar ao cadastro do usuário
-                endereco: '',
-                cidade: '',
-                estado: '',
-                cep: '',
+                cpfCnpj: pagamento.usuario.cpf || pagamento.usuario.cnpj || '',
+                endereco: pagamento.usuario.endereco || '',
+                cidade: pagamento.usuario.cidade || '',
+                estado: pagamento.usuario.estado || '',
+                cep: pagamento.usuario.cep || '',
                 email: pagamento.usuario.email,
-                telefone: pagamento.usuario.telefone
+                telefone: pagamento.usuario.telefone || ''
             },
-            descricaoServico: `Licença ${pagamento.tipoProduto} - Software Gerador de Certificados`,
+            descricaoServico: descricaoServico || `Licença ${pagamento.tipoProduto} - Software Gerador de Certificados`,
             valorServico: pagamento.valorFinal,
-            valorLiquido: pagamento.valorFinal,
+            impostos: {
+                iss: issValor,
+                pis: impostos?.pis || 0,
+                cofins: impostos?.cofins || 0,
+                inss: impostos?.inss || 0,
+                ir: impostos?.ir || 0,
+                csll: impostos?.csll || 0
+            },
+            valorTotalImpostos,
+            valorLiquido,
             dataCompetencia: pagamento.dataPagamento,
             observacoes
         });

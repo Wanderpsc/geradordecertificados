@@ -976,6 +976,281 @@ async function recusarPagamento(pagamentoId) {
     }
 }
 
+// Dados do prestador (Prefeitura Municipal de Curimatá)
+const DADOS_PRESTADOR = {
+    razaoSocial: 'Wander Pires Silva Coelho',
+    nomeFantasia: 'Gerador de Certificados Escolares',
+    cnpj: '06.554.273/0001-64',
+    cpf: '036.236.556-35',
+    inscricaoMunicipal: '',
+    endereco: 'Avenida Curimatá-PI',
+    cidade: 'Curimatá',
+    estado: 'PI',
+    cep: '64960-000',
+    telefone: '',
+    email: 'wanderpsc@gmail.com',
+    // Dados ISS
+    prefeitura: 'Prefeitura Municipal de Curimatá',
+    cnpjPrefeitura: '06.554.273/0001-64',
+    enderecoPrefeitura: 'Praça Abdias Albuquerque, 427, Centro, Curimatá/PI, CEP 64960-000',
+    aliquotaISS: 5.00, // 5% - alíquota padrão ISS Curimatá/PI (Simples Nacional, serviço de TI - item 1.07 LC 116/2003)
+    codigoServico: '1.07', // Suporte técnico em informática / software
+    descricaoServico: 'Licenciamento de uso de software - Gerador de Certificados e Históricos Escolares'
+};
+
+// Modal para emitir nota fiscal
+async function showModalNotaFiscal() {
+    const token = localStorage.getItem('token');
+
+    // Buscar pagamentos aprovados sem NF
+    let pagamentosOptions = '<option value="">Carregando...</option>';
+    try {
+        const response = await fetch(`${API_URL}/admin/pagamentos`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (response.ok) {
+            const data = await response.json();
+            const pagamentos = (data.pagamentos || []).filter(p => p.status === 'aprovado' && !p.notaFiscal);
+            if (pagamentos.length === 0) {
+                pagamentosOptions = '<option value="">Nenhum pagamento aprovado sem NF</option>';
+            } else {
+                pagamentosOptions = '<option value="">-- Selecione o pagamento --</option>' +
+                    pagamentos.map(p => `<option value="${p._id}" data-valor="${p.valorFinal}" data-tipo="${p.tipoProduto}" data-cliente="${p.usuario?.nome || '-'}">
+                        ${formatarData(p.dataPagamento)} - ${p.usuario?.nome || '-'} - ${p.tipoProduto} - ${formatarMoeda(p.valorFinal)}
+                    </option>`).join('');
+            }
+        }
+    } catch (e) {
+        pagamentosOptions = '<option value="">Erro ao carregar pagamentos</option>';
+    }
+
+    const modal = document.createElement('div');
+    modal.id = 'modal-nota-fiscal';
+    modal.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.8); display: flex; align-items: center;
+        justify-content: center; z-index: 10000;
+    `;
+    modal.innerHTML = `
+        <div style="background: white; padding: 30px; border-radius: 15px; max-width: 620px; width: 95%; box-shadow: 0 10px 40px rgba(0,0,0,0.3); max-height: 92vh; overflow-y: auto;">
+            <div style="text-align: center; margin-bottom: 18px;">
+                <div style="font-size: 50px;">📄</div>
+                <h2 style="color: #1e3a8a; margin-top: 8px;">Emitir Nota Fiscal de Serviço</h2>
+                <p style="font-size: 13px; color: #666;">NFS-e - ISS Prefeitura de Curimatá/PI</p>
+            </div>
+            <form id="form-nota-fiscal" onsubmit="enviarNotaFiscal(event)" style="display: flex; flex-direction: column; gap: 14px;">
+                
+                <div>
+                    <label style="font-weight: 600; font-size: 14px; display: block; margin-bottom: 4px;">Pagamento Vinculado *</label>
+                    <select id="nf-pagamento" required onchange="preencherDadosNF()"
+                        style="width: 100%; padding: 10px; border: 2px solid #d1d5db; border-radius: 8px; font-size: 13px;">
+                        ${pagamentosOptions}
+                    </select>
+                </div>
+
+                <fieldset style="border: 2px solid #e5e7eb; border-radius: 10px; padding: 14px;">
+                    <legend style="font-weight: 700; color: #1e3a8a; padding: 0 8px; font-size: 14px;">Prestador de Serviço</legend>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div>
+                            <label style="font-size: 12px; color: #666;">Nome/Razão Social</label>
+                            <input type="text" id="nf-prestador-nome" value="${DADOS_PRESTADOR.razaoSocial}" readonly
+                                style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 13px; background: #f9fafb;">
+                        </div>
+                        <div>
+                            <label style="font-size: 12px; color: #666;">CPF</label>
+                            <input type="text" id="nf-prestador-cpf" value="${DADOS_PRESTADOR.cpf}" readonly
+                                style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 13px; background: #f9fafb;">
+                        </div>
+                        <div style="grid-column: span 2;">
+                            <label style="font-size: 12px; color: #666;">Endereço</label>
+                            <input type="text" id="nf-prestador-endereco" value="${DADOS_PRESTADOR.endereco}, ${DADOS_PRESTADOR.cidade}/${DADOS_PRESTADOR.estado} - CEP ${DADOS_PRESTADOR.cep}" readonly
+                                style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 13px; background: #f9fafb;">
+                        </div>
+                    </div>
+                </fieldset>
+
+                <fieldset style="border: 2px solid #e5e7eb; border-radius: 10px; padding: 14px;">
+                    <legend style="font-weight: 700; color: #1e3a8a; padding: 0 8px; font-size: 14px;">Recolhimento ISS</legend>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div style="grid-column: span 2;">
+                            <label style="font-size: 12px; color: #666;">Prefeitura</label>
+                            <input type="text" value="${DADOS_PRESTADOR.prefeitura} - CNPJ ${DADOS_PRESTADOR.cnpjPrefeitura}" readonly
+                                style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 13px; background: #f9fafb;">
+                        </div>
+                        <div style="grid-column: span 2;">
+                            <label style="font-size: 12px; color: #666;">Endereço Prefeitura</label>
+                            <input type="text" value="${DADOS_PRESTADOR.enderecoPrefeitura}" readonly
+                                style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 13px; background: #f9fafb;">
+                        </div>
+                        <div>
+                            <label style="font-size: 12px; color: #666;">Código do Serviço (LC 116/2003)</label>
+                            <input type="text" value="${DADOS_PRESTADOR.codigoServico} - Software / TI" readonly
+                                style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 13px; background: #f9fafb;">
+                        </div>
+                        <div>
+                            <label style="font-size: 12px; color: #666;">Alíquota ISS</label>
+                            <input type="text" value="${DADOS_PRESTADOR.aliquotaISS}%" readonly
+                                style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 13px; background: #f9fafb;">
+                        </div>
+                    </div>
+                </fieldset>
+
+                <fieldset style="border: 2px solid #e5e7eb; border-radius: 10px; padding: 14px;">
+                    <legend style="font-weight: 700; color: #16a34a; padding: 0 8px; font-size: 14px;">Valores</legend>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+                        <div>
+                            <label style="font-size: 12px; color: #666;">Valor Serviço</label>
+                            <input type="text" id="nf-valor-servico" value="R$ 0,00" readonly
+                                style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px; font-weight: 600; background: #f9fafb; text-align: center;">
+                        </div>
+                        <div>
+                            <label style="font-size: 12px; color: #666;">ISS (${DADOS_PRESTADOR.aliquotaISS}%)</label>
+                            <input type="text" id="nf-valor-iss" value="R$ 0,00" readonly
+                                style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px; background: #f9fafb; text-align: center; color: #dc2626;">
+                        </div>
+                        <div>
+                            <label style="font-size: 12px; color: #666;">Valor Líquido</label>
+                            <input type="text" id="nf-valor-liquido" value="R$ 0,00" readonly
+                                style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px; font-weight: 700; background: #f0fdf4; text-align: center; color: #16a34a;">
+                        </div>
+                    </div>
+                </fieldset>
+
+                <div>
+                    <label style="font-weight: 600; font-size: 14px; display: block; margin-bottom: 4px;">Descrição do Serviço</label>
+                    <textarea id="nf-descricao" rows="2"
+                        style="width: 100%; padding: 10px; border: 2px solid #d1d5db; border-radius: 8px; font-size: 13px; resize: vertical;">${DADOS_PRESTADOR.descricaoServico}</textarea>
+                </div>
+
+                <div>
+                    <label style="font-weight: 600; font-size: 14px; display: block; margin-bottom: 4px;">Observações</label>
+                    <textarea id="nf-obs" rows="2" placeholder="Opcional..."
+                        style="width: 100%; padding: 10px; border: 2px solid #d1d5db; border-radius: 8px; font-size: 13px; resize: vertical;"></textarea>
+                </div>
+
+                <div style="display: flex; gap: 10px; justify-content: center; margin-top: 8px;">
+                    <button type="submit"
+                        style="background: #16a34a; color: white; border: none; padding: 12px 28px; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: bold;">
+                        📄 Emitir Nota Fiscal
+                    </button>
+                    <button type="button" onclick="document.getElementById('modal-nota-fiscal').remove()"
+                        style="background: #6b7280; color: white; border: none; padding: 12px 28px; border-radius: 8px; cursor: pointer; font-size: 16px;">
+                        Cancelar
+                    </button>
+                </div>
+            </form>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
+
+// Preencher valores ao selecionar pagamento
+function preencherDadosNF() {
+    const select = document.getElementById('nf-pagamento');
+    const option = select.options[select.selectedIndex];
+    const valor = parseFloat(option.dataset.valor) || 0;
+    const tipo = option.dataset.tipo || '';
+    const iss = valor * (DADOS_PRESTADOR.aliquotaISS / 100);
+    const liquido = valor - iss;
+
+    document.getElementById('nf-valor-servico').value = formatarMoeda(valor);
+    document.getElementById('nf-valor-iss').value = formatarMoeda(iss);
+    document.getElementById('nf-valor-liquido').value = formatarMoeda(liquido);
+
+    if (tipo) {
+        document.getElementById('nf-descricao').value =
+            `Licença ${tipo} - ${DADOS_PRESTADOR.descricaoServico}`;
+    }
+}
+
+// Enviar nota fiscal ao backend
+async function enviarNotaFiscal(event) {
+    event.preventDefault();
+    const token = localStorage.getItem('token');
+
+    const pagamentoId = document.getElementById('nf-pagamento').value;
+    if (!pagamentoId) {
+        alert('Selecione um pagamento');
+        return;
+    }
+
+    const select = document.getElementById('nf-pagamento');
+    const option = select.options[select.selectedIndex];
+    const valor = parseFloat(option.dataset.valor) || 0;
+    const iss = valor * (DADOS_PRESTADOR.aliquotaISS / 100);
+
+    const dadosPrestador = {
+        razaoSocial: DADOS_PRESTADOR.razaoSocial,
+        nomeFantasia: DADOS_PRESTADOR.nomeFantasia,
+        cnpj: DADOS_PRESTADOR.cnpjPrefeitura,
+        inscricaoMunicipal: DADOS_PRESTADOR.inscricaoMunicipal,
+        endereco: DADOS_PRESTADOR.endereco,
+        cidade: DADOS_PRESTADOR.cidade,
+        estado: DADOS_PRESTADOR.estado,
+        cep: DADOS_PRESTADOR.cep,
+        telefone: DADOS_PRESTADOR.telefone,
+        email: DADOS_PRESTADOR.email
+    };
+
+    const observacoes = document.getElementById('nf-obs').value.trim();
+
+    try {
+        const response = await fetch(`${API_URL}/admin/notas-fiscais`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                pagamentoId,
+                dadosPrestador,
+                descricaoServico: document.getElementById('nf-descricao').value,
+                impostos: { iss },
+                observacoes: observacoes || undefined
+            })
+        });
+
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.message || 'Erro ao emitir nota fiscal');
+        }
+
+        document.getElementById('modal-nota-fiscal').remove();
+        alert('✅ Nota Fiscal emitida com sucesso!');
+        carregarNotasFiscais();
+    } catch (error) {
+        console.error('Erro ao emitir nota fiscal:', error);
+        alert('❌ Erro ao emitir nota fiscal: ' + error.message);
+    }
+}
+
+// Cancelar nota fiscal
+async function cancelarNota(notaId) {
+    const motivo = prompt('Motivo do cancelamento:');
+    if (!motivo) return;
+
+    const token = localStorage.getItem('token');
+    try {
+        const response = await fetch(`${API_URL}/admin/notas-fiscais/${notaId}/cancelar`, {
+            method: 'PATCH',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ motivo })
+        });
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.message || 'Erro ao cancelar nota');
+        }
+        alert('✅ Nota fiscal cancelada.');
+        carregarNotasFiscais();
+    } catch (error) {
+        console.error('Erro ao cancelar nota:', error);
+        alert('❌ Erro: ' + error.message);
+    }
+}
+
 // Carregar Notas Fiscais
 async function carregarNotasFiscais() {
     
