@@ -1,3 +1,8 @@
+// ==================== URL DA API ====================
+const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:5000/api'
+    : 'https://gerador-certificados.onrender.com/api';
+
 // ==================== ESTADO DA APLICAÇÃO ====================
 const APP_STATE = {
     alunos: JSON.parse(localStorage.getItem('alunos')) || [],
@@ -201,8 +206,8 @@ async function cadastrarAluno() {
     try {
         const isEdicao = APP_STATE.alunoEditando !== null;
         const url = isEdicao 
-            ? `http://localhost:5000/api/alunos/${APP_STATE.alunoEditando}`
-            : 'http://localhost:5000/api/alunos';
+            ? `${API_URL}/alunos/${APP_STATE.alunoEditando}`
+            : `${API_URL}/alunos`;
         const method = isEdicao ? 'PUT' : 'POST';
 
         const response = await fetch(url, {
@@ -236,7 +241,7 @@ async function carregarAlunos() {
     if (!token) return;
 
     try {
-        const response = await fetch('http://localhost:5000/api/alunos', {
+        const response = await fetch(`${API_URL}/alunos`, {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
@@ -310,7 +315,7 @@ async function excluirAluno(id, mostrarMensagem = true) {
         const nome = APP_STATE.alunos[index].nome;
         
         try {
-            const response = await fetch(`http://localhost:5000/api/alunos/${id}`, {
+            const response = await fetch(`${API_URL}/alunos/${id}`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -348,9 +353,6 @@ function limparTodosAlunos() {
 }
 
 // ==================== CADASTRO EM LOTE ====================
-const API_URL_ALUNOS = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-    ? 'http://localhost:5000/api/alunos'
-    : 'https://gerador-certificados.onrender.com/api/alunos';
 
 function abrirModalCadastroLote() {
     const modal = document.createElement('div');
@@ -555,7 +557,7 @@ async function enviarCadastroLote() {
 
     for (let i = 0; i < alunos.length; i++) {
         try {
-            const response = await fetch(API_URL_ALUNOS, {
+            const response = await fetch(`${API_URL}/alunos`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -2248,7 +2250,7 @@ async function carregarDadosAssinatura() {
     const token = localStorage.getItem('token');
     
     try {
-        const response = await fetch('http://localhost:5000/api/auth/me', {
+        const response = await fetch(`${API_URL}/auth/me`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         

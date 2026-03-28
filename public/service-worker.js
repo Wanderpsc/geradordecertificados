@@ -1,5 +1,5 @@
 // Service Worker para PWA
-const CACHE_NAME = 'certificados-v3'; // Mudei versão para forçar atualização
+const CACHE_NAME = 'certificados-v4';
 const urlsToCache = [
   '/login.html',
   '/index.html',
@@ -9,25 +9,23 @@ const urlsToCache = [
   '/admin.js'
 ];
 
-// Instalar Service Worker
+// Instalar Service Worker - ativa imediatamente
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => {
-        console.log('Cache aberto');
-        return cache.addAll(urlsToCache);
-      })
+      .then((cache) => cache.addAll(urlsToCache))
   );
 });
 
-// Ativar Service Worker
+// Ativar Service Worker - assume controle imediatamente
 self.addEventListener('activate', (event) => {
+  self.clients.claim();
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
           if (cacheName !== CACHE_NAME) {
-            console.log('Removendo cache antigo:', cacheName);
             return caches.delete(cacheName);
           }
         })
@@ -36,18 +34,23 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Interceptar requisições
+// Interceptar requisições - network-first (sempre busca atualização)
 self.addEventListener('fetch', (event) => {
   event.respondWith(
-    caches.match(event.request)
+    fetch(event.request)
       .then((response) => {
-        // Cache hit - retorna resposta do cache
-        if (response) {
-          return response;
+        // Salvar cópia no cache para uso offline
+        if (response.status === 200) {
+          const responseClone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseClone);
+          });
         }
-        // Clone da requisição
-        return fetch(event.request);
-      }
-    )
+        return response;
+      })
+      .catch(() => {
+        // Sem rede - usar cache como fallback
+        return caches.match(event.request);
+      })
   );
 });
