@@ -920,6 +920,15 @@ function trocarEditorTab(btn) {
     const tabId = btn.dataset.editorTab;
     const tabContent = document.getElementById(tabId);
     if (tabContent) tabContent.classList.add('active');
+
+    // Sincronizar o preview com a sub-aba selecionada
+    if (tabId === 'tab-frente' || tabId === 'tab-cabecalho' || tabId === 'tab-emblema') {
+        previewLado = 'frente';
+        atualizarPreviewCert();
+    } else if (tabId === 'tab-verso') {
+        previewLado = 'verso';
+        atualizarPreviewCert();
+    }
 }
 
 function sincronizarCor(colorInputId, hexValue) {
