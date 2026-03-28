@@ -200,6 +200,7 @@
                     <h2>✏️ Editor de Modelo</h2>
                     <div style="display: flex; gap: 10px;">
                         <button class="btn btn-secondary" onclick="resetarPersonalizacao()">↺ Resetar</button>
+                        <button class="btn btn-success" onclick="aplicarAlteracoes()">✔ Aplicar Alterações</button>
                         <button class="btn btn-primary" onclick="salvarPersonalizacao()">💾 Salvar Modelo</button>
                     </div>
                 </div>
@@ -309,6 +310,15 @@
                                 <option value="times" selected>Times New Roman</option>
                                 <option value="helvetica">Helvetica</option>
                                 <option value="courier">Courier</option>
+                            </select>
+                        </div>
+                        <div class="editor-field">
+                            <label>Alinhamento do Texto</label>
+                            <select id="certAlinhamento" class="form-control" onchange="atualizarPreviewCert()">
+                                <option value="justify" selected>Justificado</option>
+                                <option value="center">Centralizado</option>
+                                <option value="left">À Esquerda</option>
+                                <option value="right">À Direita</option>
                             </select>
                         </div>
                         <div class="editor-field">
@@ -511,6 +521,12 @@
                                 <label>Intensidade: <span id="lblFundoVersoIntensidade">50</span>%</label>
                                 <input type="range" id="certFundoVersoOpacidade" min="0" max="90" value="50" class="form-control" style="padding: 0;" oninput="document.getElementById('lblFundoVersoIntensidade').textContent=this.value; atualizarPreviewCert()">
                             </div>
+                        </div>
+                        <div class="editor-field" style="grid-column: 1 / -1;">
+                            <label>Borda Completa (imagem única horizontal+vertical - PNG/JPG)</label>
+                            <input type="file" id="uploadBordaCompleta" accept="image/png,image/jpeg,image/webp" class="form-control" onchange="handleUploadBordaCompleta(event)">
+                            <div id="previewBordaCompleta" style="margin-top: 10px;"></div>
+                            <button class="btn btn-danger btn-sm" onclick="removerUpload('bordaCompleta')" style="margin-top: 5px; display: none;" id="btnRemoverBordaCompleta">✗ Remover Borda Completa</button>
                         </div>
                         <div class="editor-field" style="grid-column: 1 / -1;">
                             <label>Borda Horizontal Personalizada (PNG)</label>

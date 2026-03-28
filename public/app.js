@@ -789,6 +789,7 @@ function obterConfigCert() {
             fonte: document.getElementById('certFonteCorpo')?.value || 'times',
             fonteTam: parseInt(document.getElementById('certFonteCorpoTam')?.value) || 14,
             tituloTam: parseInt(document.getElementById('certFonteTituloTam')?.value) || 16,
+            alinhamento: document.getElementById('certAlinhamento')?.value || 'justify',
             assinatura1: document.getElementById('certAssinatura1')?.value || 'SECRETÁRIO(A)',
             assinatura2: document.getElementById('certAssinatura2')?.value || 'DIRETOR(A)',
             assinatura3: document.getElementById('certAssinatura3')?.value || 'CONCLUDENTE'
@@ -852,6 +853,7 @@ function aplicarConfigNosInputs(cfg) {
         ['certFonteCorpo', cfg.frente.fonte],
         ['certFonteCorpoTam', cfg.frente.fonteTam],
         ['certFonteTituloTam', cfg.frente.tituloTam],
+        ['certAlinhamento', cfg.frente.alinhamento || 'justify'],
         ['certAssinatura1', cfg.frente.assinatura1],
         ['certAssinatura2', cfg.frente.assinatura2],
         ['certAssinatura3', cfg.frente.assinatura3],
@@ -934,6 +936,12 @@ function salvarPersonalizacao() {
     mostrarNotificacao('Modelo personalizado salvo com sucesso!', 'success');
 }
 
+function aplicarAlteracoes() {
+    CERT_CONFIG = obterConfigCert();
+    atualizarPreviewCert();
+    mostrarNotificacao('Alterações aplicadas! Veja o preview abaixo.', 'success');
+}
+
 function resetarPersonalizacao() {
     if (!confirm('Resetar todas as personalizações para os valores padrão?')) return;
     localStorage.removeItem('certConfig');
@@ -992,6 +1000,20 @@ function handleUploadBordaCustom(event, tipo) {
     reader.readAsDataURL(file);
 }
 
+function handleUploadBordaCompleta(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        CERT_UPLOADS.bordaCompleta = e.target.result;
+        document.getElementById('previewBordaCompleta').innerHTML = `<img src="${e.target.result}" style="max-height: 80px; border-radius: 8px;">`;
+        document.getElementById('btnRemoverBordaCompleta').style.display = 'inline-block';
+        atualizarPreviewCert();
+        mostrarNotificacao('Borda completa carregada!', 'success');
+    };
+    reader.readAsDataURL(file);
+}
+
 function removerUpload(tipo) {
     if (tipo === 'fundoFrente') {
         delete CERT_UPLOADS.fundoFrente;
@@ -1013,6 +1035,11 @@ function removerUpload(tipo) {
         document.getElementById('previewBordaV').innerHTML = '';
         document.getElementById('btnRemoverBordaV').style.display = 'none';
         document.getElementById('uploadBordaV').value = '';
+    } else if (tipo === 'bordaCompleta') {
+        delete CERT_UPLOADS.bordaCompleta;
+        document.getElementById('previewBordaCompleta').innerHTML = '';
+        document.getElementById('btnRemoverBordaCompleta').style.display = 'none';
+        document.getElementById('uploadBordaCompleta').value = '';
     }
     atualizarPreviewCert();
 }
@@ -1075,13 +1102,19 @@ function desenharPreviewFrente(ctx, cfg, sx, sy, pw, ph) {
 
     // Bordas decorativas simuladas
     if (cfg.margens.bordaExibir === 'sim' && bordaEsp > 0) {
-        ctx.fillStyle = cfg.cores.principal;
-        ctx.globalAlpha = 0.3;
-        ctx.fillRect(0, 0, bordaEsp * sx, ph); // esq
-        ctx.fillRect(pw - bordaEsp * sx, 0, bordaEsp * sx, ph); // dir
-        ctx.fillRect(0, 0, pw, bordaEsp * sy); // sup
-        ctx.fillRect(0, ph - bordaEsp * sy, pw, bordaEsp * sy); // inf
-        ctx.globalAlpha = 1;
+        if (CERT_UPLOADS.bordaCompleta) {
+            const imgB = new Image();
+            imgB.src = CERT_UPLOADS.bordaCompleta;
+            try { ctx.drawImage(imgB, 0, 0, pw, ph); } catch(e) {}
+        } else {
+            ctx.fillStyle = cfg.cores.principal;
+            ctx.globalAlpha = 0.3;
+            ctx.fillRect(0, 0, bordaEsp * sx, ph); // esq
+            ctx.fillRect(pw - bordaEsp * sx, 0, bordaEsp * sx, ph); // dir
+            ctx.fillRect(0, 0, pw, bordaEsp * sy); // sup
+            ctx.fillRect(0, ph - bordaEsp * sy, pw, bordaEsp * sy); // inf
+            ctx.globalAlpha = 1;
+        }
     }
 
     // Emblema placeholder
@@ -1184,7 +1217,7 @@ function desenharPreviewFrente(ctx, cfg, sx, sy, pw, ph) {
         .replace('{MAE}', 'Ana da Silva').replace('{PAI}', 'José da Silva')
         .replace('{ANO_CONCLUSAO}', '2025');
 
-    wrapText(ctx, textoPreview, margemEsq, yBase, maxW, cfg.frente.fonteTam * sy / 2.5);
+    wrapText(ctx, textoPreview, margemEsq, yBase, maxW, cfg.frente.fonteTam * sy / 2.5, cfg.frente.alinhamento || 'justify');
 
     // Linhas de assinatura
     const assY = ph - 60 * sy / 2;
@@ -1234,13 +1267,19 @@ function desenharPreviewVerso(ctx, cfg, sx, sy, pw, ph) {
 
     // Bordas
     if (cfg.verso.bordas === 'sim' && cfg.margens.bordaExibir === 'sim' && bordaEsp > 0) {
-        ctx.fillStyle = cfg.cores.principal;
-        ctx.globalAlpha = 0.3;
-        ctx.fillRect(0, 0, bordaEsp * sx, ph);
-        ctx.fillRect(pw - bordaEsp * sx, 0, bordaEsp * sx, ph);
-        ctx.fillRect(0, 0, pw, bordaEsp * sy);
-        ctx.fillRect(0, ph - bordaEsp * sy, pw, bordaEsp * sy);
-        ctx.globalAlpha = 1;
+        if (CERT_UPLOADS.bordaCompleta) {
+            const imgB = new Image();
+            imgB.src = CERT_UPLOADS.bordaCompleta;
+            try { ctx.drawImage(imgB, 0, 0, pw, ph); } catch(e) {}
+        } else {
+            ctx.fillStyle = cfg.cores.principal;
+            ctx.globalAlpha = 0.3;
+            ctx.fillRect(0, 0, bordaEsp * sx, ph);
+            ctx.fillRect(pw - bordaEsp * sx, 0, bordaEsp * sx, ph);
+            ctx.fillRect(0, 0, pw, bordaEsp * sy);
+            ctx.fillRect(0, ph - bordaEsp * sy, pw, bordaEsp * sy);
+            ctx.globalAlpha = 1;
+        }
     }
 
     // Cabeçalho do verso
@@ -1297,21 +1336,50 @@ function desenharPreviewVerso(ctx, cfg, sx, sy, pw, ph) {
     ctx.fillText('Área para Histórico Escolar', mx + tabelaW * 0.325, yPos + tabelaH / 2);
 }
 
-function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+function wrapText(ctx, text, x, y, maxWidth, lineHeight, alinhamento) {
     const words = text.split(' ');
+    let lines = [];
     let line = '';
     for (let n = 0; n < words.length; n++) {
         const testLine = line + words[n] + ' ';
         const metrics = ctx.measureText(testLine);
         if (metrics.width > maxWidth && n > 0) {
-            ctx.fillText(line.trim(), x, y);
+            lines.push(line.trim());
             line = words[n] + ' ';
-            y += lineHeight;
         } else {
             line = testLine;
         }
     }
-    ctx.fillText(line.trim(), x, y);
+    lines.push(line.trim());
+
+    const align = alinhamento || 'left';
+    for (let i = 0; i < lines.length; i++) {
+        const l = lines[i];
+        if (align === 'center') {
+            ctx.fillText(l, x + maxWidth / 2 - ctx.measureText(l).width / 2, y);
+        } else if (align === 'right') {
+            ctx.fillText(l, x + maxWidth - ctx.measureText(l).width, y);
+        } else if (align === 'justify' && i < lines.length - 1) {
+            const palavras = l.split(' ');
+            if (palavras.length <= 1) {
+                ctx.fillText(l, x, y);
+            } else {
+                let largPalavras = 0;
+                palavras.forEach(p => largPalavras += ctx.measureText(p).width);
+                const espExtra = (maxWidth - largPalavras) / (palavras.length - 1);
+                let xP = x;
+                palavras.forEach(p => {
+                    ctx.fillText(p, xP, y);
+                    xP += ctx.measureText(p).width + espExtra;
+                });
+                y += lineHeight;
+                continue;
+            }
+        } else {
+            ctx.fillText(l, x, y);
+        }
+        y += lineHeight;
+    }
 }
 
 function alternarPreviewLado() {
@@ -1385,6 +1453,12 @@ function inicializarTemplates() {
     if (CERT_UPLOADS.emblemaCustom) {
         const prev = document.getElementById('previewEmblemaCustom');
         if (prev) prev.innerHTML = `<img src="${CERT_UPLOADS.emblemaCustom}" style="max-height: 60px; border-radius: 8px;">`;
+    }
+    if (CERT_UPLOADS.bordaCompleta) {
+        const prev = document.getElementById('previewBordaCompleta');
+        const btn = document.getElementById('btnRemoverBordaCompleta');
+        if (prev) prev.innerHTML = `<img src="${CERT_UPLOADS.bordaCompleta}" style="max-height: 80px; border-radius: 8px;">`;
+        if (btn) btn.style.display = 'inline-block';
     }
 
     // Gerar preview inicial
@@ -1549,20 +1623,27 @@ async function gerarFrenteCertificado(pdf, aluno, cfg) {
     
     // Bordas decorativas
     if (cfg.margens.bordaExibir === 'sim' && bordaEspessura > 0) {
-        const bordaV = CERT_UPLOADS.bordaVertical || (typeof BORDA_VERTICAL !== 'undefined' ? BORDA_VERTICAL : null);
-        const bordaH = CERT_UPLOADS.bordaHorizontal || (typeof BORDA_HORIZONTAL !== 'undefined' ? BORDA_HORIZONTAL : null);
+        // Borda completa tem prioridade
+        if (CERT_UPLOADS.bordaCompleta) {
+            try {
+                pdf.addImage(CERT_UPLOADS.bordaCompleta, 'PNG', 0, 0, pageWidth, pageHeight);
+            } catch(e) { console.error('Erro borda completa:', e); }
+        } else {
+            const bordaV = CERT_UPLOADS.bordaVertical || (typeof BORDA_VERTICAL !== 'undefined' ? BORDA_VERTICAL : null);
+            const bordaH = CERT_UPLOADS.bordaHorizontal || (typeof BORDA_HORIZONTAL !== 'undefined' ? BORDA_HORIZONTAL : null);
         
-        if (bordaV) {
-            try {
-                pdf.addImage(bordaV, 'PNG', 0, 0, bordaEspessura, pageHeight);
-                pdf.addImage(bordaV, 'PNG', pageWidth - bordaEspessura, 0, bordaEspessura, pageHeight);
-            } catch(e) { console.error('Erro borda vertical:', e); }
-        }
-        if (bordaH) {
-            try {
-                pdf.addImage(bordaH, 'PNG', 0, 0, pageWidth, bordaEspessura);
-                pdf.addImage(bordaH, 'PNG', 0, pageHeight - bordaEspessura, pageWidth, bordaEspessura);
-            } catch(e) { console.error('Erro borda horizontal:', e); }
+            if (bordaV) {
+                try {
+                    pdf.addImage(bordaV, 'PNG', 0, 0, bordaEspessura, pageHeight);
+                    pdf.addImage(bordaV, 'PNG', pageWidth - bordaEspessura, 0, bordaEspessura, pageHeight);
+                } catch(e) { console.error('Erro borda vertical:', e); }
+            }
+            if (bordaH) {
+                try {
+                    pdf.addImage(bordaH, 'PNG', 0, 0, pageWidth, bordaEspessura);
+                    pdf.addImage(bordaH, 'PNG', 0, pageHeight - bordaEspessura, pageWidth, bordaEspessura);
+                } catch(e) { console.error('Erro borda horizontal:', e); }
+            }
         }
     }
     
@@ -1779,10 +1860,55 @@ async function gerarFrenteCertificado(pdf, aluno, cfg) {
         });
     });
     
-    // Renderizar com justificação
+    // Renderizar texto com alinhamento configurável
+    const alinhamento = cfg.frente.alinhamento || 'justify';
     let posX = margemEsq;
     let linhaAtual = [];
     let yPos = yBase;
+
+    // Função auxiliar para renderizar uma linha com o alinhamento escolhido
+    function renderizarLinha(linha, ultimaLinha) {
+        let larguraUsada = 0;
+        linha.forEach(p => {
+            pdf.setFont(fonteCorpo, p.negrito ? 'bolditalic' : 'italic');
+            larguraUsada += pdf.getTextWidth(p.palavra);
+        });
+        const espacoPadrao = pdf.getTextWidth(' ');
+        const larguraComEspacos = larguraUsada + (linha.length - 1) * espacoPadrao;
+
+        let xAtual;
+        if (alinhamento === 'justify' && !ultimaLinha && linha.length > 1) {
+            const espacoExtra = (larguraTexto - larguraUsada) / (linha.length - 1);
+            xAtual = margemEsq;
+            linha.forEach(p => {
+                pdf.setFont(fonteCorpo, p.negrito ? 'bolditalic' : 'italic');
+                pdf.text(p.palavra, xAtual, yPos);
+                xAtual += pdf.getTextWidth(p.palavra) + espacoExtra;
+            });
+        } else if (alinhamento === 'center') {
+            xAtual = margemEsq + (larguraTexto - larguraComEspacos) / 2;
+            linha.forEach(p => {
+                pdf.setFont(fonteCorpo, p.negrito ? 'bolditalic' : 'italic');
+                pdf.text(p.palavra, xAtual, yPos);
+                xAtual += pdf.getTextWidth(p.palavra) + espacoPadrao;
+            });
+        } else if (alinhamento === 'right') {
+            xAtual = margemDir - larguraComEspacos;
+            linha.forEach(p => {
+                pdf.setFont(fonteCorpo, p.negrito ? 'bolditalic' : 'italic');
+                pdf.text(p.palavra, xAtual, yPos);
+                xAtual += pdf.getTextWidth(p.palavra) + espacoPadrao;
+            });
+        } else {
+            // left ou última linha do justify
+            xAtual = margemEsq;
+            linha.forEach(p => {
+                pdf.setFont(fonteCorpo, p.negrito ? 'bolditalic' : 'italic');
+                pdf.text(p.palavra, xAtual, yPos);
+                xAtual += pdf.getTextWidth(p.palavra) + espacoPadrao;
+            });
+        }
+    }
     
     for (let i = 0; i < palavrasFormatadas.length; i++) {
         const item = palavrasFormatadas[i];
@@ -1790,22 +1916,7 @@ async function gerarFrenteCertificado(pdf, aluno, cfg) {
         const larguraPalavra = pdf.getTextWidth(item.palavra + ' ');
         
         if (posX + larguraPalavra > margemDir && linhaAtual.length > 0) {
-            const espTotal = larguraTexto;
-            let larguraUsada = 0;
-            linhaAtual.forEach(p => {
-                pdf.setFont(fonteCorpo, p.negrito ? 'bolditalic' : 'italic');
-                larguraUsada += pdf.getTextWidth(p.palavra);
-            });
-            
-            const espacoExtra = (espTotal - larguraUsada) / (linhaAtual.length - 1 || 1);
-            let xAtual = margemEsq;
-            
-            linhaAtual.forEach((p) => {
-                pdf.setFont(fonteCorpo, p.negrito ? 'bolditalic' : 'italic');
-                pdf.text(p.palavra, xAtual, yPos);
-                xAtual += pdf.getTextWidth(p.palavra) + espacoExtra;
-            });
-            
+            renderizarLinha(linhaAtual, false);
             yPos += espacamentoLinha;
             posX = margemEsq;
             linhaAtual = [];
@@ -1815,13 +1926,10 @@ async function gerarFrenteCertificado(pdf, aluno, cfg) {
         posX += larguraPalavra;
     }
     
-    // Última linha (não justificada)
-    posX = margemEsq;
-    linhaAtual.forEach(p => {
-        pdf.setFont(fonteCorpo, p.negrito ? 'bolditalic' : 'italic');
-        pdf.text(p.palavra, posX, yPos);
-        posX += pdf.getTextWidth(p.palavra + ' ');
-    });
+    // Última linha
+    if (linhaAtual.length > 0) {
+        renderizarLinha(linhaAtual, true);
+    }
     
     // Data de confecção
     yPos += 12;
@@ -1903,20 +2011,26 @@ function gerarVersoCertificado(pdf, aluno, cfg) {
     
     // Bordas
     if (cfg.verso.bordas === 'sim' && cfg.margens.bordaExibir === 'sim' && bordaEspessura > 0) {
-        const bordaV = CERT_UPLOADS.bordaVertical || (typeof BORDA_VERTICAL !== 'undefined' ? BORDA_VERTICAL : null);
-        const bordaH = CERT_UPLOADS.bordaHorizontal || (typeof BORDA_HORIZONTAL !== 'undefined' ? BORDA_HORIZONTAL : null);
+        if (CERT_UPLOADS.bordaCompleta) {
+            try {
+                pdf.addImage(CERT_UPLOADS.bordaCompleta, 'PNG', 0, 0, pageWidth, pageHeight);
+            } catch(e) { console.error('Erro borda completa verso:', e); }
+        } else {
+            const bordaV = CERT_UPLOADS.bordaVertical || (typeof BORDA_VERTICAL !== 'undefined' ? BORDA_VERTICAL : null);
+            const bordaH = CERT_UPLOADS.bordaHorizontal || (typeof BORDA_HORIZONTAL !== 'undefined' ? BORDA_HORIZONTAL : null);
         
-        if (bordaV) {
-            try {
-                pdf.addImage(bordaV, 'PNG', 0, 0, bordaEspessura, pageHeight);
-                pdf.addImage(bordaV, 'PNG', pageWidth - bordaEspessura, 0, bordaEspessura, pageHeight);
-            } catch(e) { console.error('Erro borda vertical verso:', e); }
-        }
-        if (bordaH) {
-            try {
-                pdf.addImage(bordaH, 'PNG', 0, 0, pageWidth, bordaEspessura);
-                pdf.addImage(bordaH, 'PNG', 0, pageHeight - bordaEspessura, pageWidth, bordaEspessura);
-            } catch(e) { console.error('Erro borda horizontal verso:', e); }
+            if (bordaV) {
+                try {
+                    pdf.addImage(bordaV, 'PNG', 0, 0, bordaEspessura, pageHeight);
+                    pdf.addImage(bordaV, 'PNG', pageWidth - bordaEspessura, 0, bordaEspessura, pageHeight);
+                } catch(e) { console.error('Erro borda vertical verso:', e); }
+            }
+            if (bordaH) {
+                try {
+                    pdf.addImage(bordaH, 'PNG', 0, 0, pageWidth, bordaEspessura);
+                    pdf.addImage(bordaH, 'PNG', 0, pageHeight - bordaEspessura, pageWidth, bordaEspessura);
+                } catch(e) { console.error('Erro borda horizontal verso:', e); }
+            }
         }
     }
     
