@@ -214,7 +214,6 @@
                     <button class="editor-tab-btn" data-editor-tab="tab-rodape" onclick="trocarEditorTab(this)">📎 Rodapé</button>
                     <button class="editor-tab-btn" data-editor-tab="tab-margens" onclick="trocarEditorTab(this)">📐 Margens</button>
                     <button class="editor-tab-btn" data-editor-tab="tab-cores" onclick="trocarEditorTab(this)">🎨 Cores</button>
-                    <button class="editor-tab-btn" data-editor-tab="tab-uploads" onclick="trocarEditorTab(this)">📤 Uploads</button>
                 </div>
 
                 <!-- ===== SUB-ABA: CABEÇALHO ===== -->
@@ -442,53 +441,8 @@
                             </select>
                         </div>
                     </div>
-                </div>
 
-                <!-- ===== SUB-ABA: CORES ===== -->
-                <div class="editor-tab-content" id="tab-cores">
-                    <h3 style="margin-bottom: 15px; color: #1e3a8a;">Esquema de Cores</h3>
-                    <div class="editor-grid">
-                        <div class="editor-field">
-                            <label>Cor Principal (Cabeçalho/Título)</label>
-                            <div style="display: flex; gap: 10px; align-items: center;">
-                                <input type="color" id="certCorPrincipal" value="#1e3a8a" onchange="atualizarPreviewCert()" style="width: 50px; height: 40px; border: none; cursor: pointer;">
-                                <input type="text" id="certCorPrincipalHex" class="form-control" value="#1e3a8a" style="flex: 1;" oninput="sincronizarCor('certCorPrincipal', this.value)">
-                            </div>
-                        </div>
-                        <div class="editor-field">
-                            <label>Cor Secundária (Degradê)</label>
-                            <div style="display: flex; gap: 10px; align-items: center;">
-                                <input type="color" id="certCorSecundaria" value="#3b82f6" onchange="atualizarPreviewCert()" style="width: 50px; height: 40px; border: none; cursor: pointer;">
-                                <input type="text" id="certCorSecundariaHex" class="form-control" value="#3b82f6" style="flex: 1;" oninput="sincronizarCor('certCorSecundaria', this.value)">
-                            </div>
-                        </div>
-                        <div class="editor-field">
-                            <label>Cor do Texto do Corpo</label>
-                            <div style="display: flex; gap: 10px; align-items: center;">
-                                <input type="color" id="certCorTexto" value="#000000" onchange="atualizarPreviewCert()" style="width: 50px; height: 40px; border: none; cursor: pointer;">
-                                <input type="text" id="certCorTextoHex" class="form-control" value="#000000" style="flex: 1;" oninput="sincronizarCor('certCorTexto', this.value)">
-                            </div>
-                        </div>
-                        <div class="editor-field">
-                            <label>Cor das Assinaturas</label>
-                            <div style="display: flex; gap: 10px; align-items: center;">
-                                <input type="color" id="certCorAssinatura" value="#1e3a8a" onchange="atualizarPreviewCert()" style="width: 50px; height: 40px; border: none; cursor: pointer;">
-                                <input type="text" id="certCorAssinaturaHex" class="form-control" value="#1e3a8a" style="flex: 1;" oninput="sincronizarCor('certCorAssinatura', this.value)">
-                            </div>
-                        </div>
-                        <div class="editor-field">
-                            <label>Cor de Fundo</label>
-                            <div style="display: flex; gap: 10px; align-items: center;">
-                                <input type="color" id="certCorFundo" value="#ffffff" onchange="atualizarPreviewCert()" style="width: 50px; height: 40px; border: none; cursor: pointer;">
-                                <input type="text" id="certCorFundoHex" class="form-control" value="#ffffff" style="flex: 1;" oninput="sincronizarCor('certCorFundo', this.value)">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ===== SUB-ABA: UPLOADS ===== -->
-                <div class="editor-tab-content" id="tab-uploads">
-                    <h3 style="margin-bottom: 15px; color: #1e3a8a;">Uploads de Imagem</h3>
+                    <h3 style="margin-top: 25px; margin-bottom: 15px; color: #1e3a8a;">📤 Uploads de Imagem</h3>
                     <div class="editor-grid">
                         <div class="editor-field">
                             <label>Imagem de Fundo da Frente (PNG/JPG)</label>
@@ -542,6 +496,47 @@
                         </div>
                     </div>
                 </div>
+                <div class="editor-tab-content" id="tab-cores">
+                    <h3 style="margin-bottom: 15px; color: #1e3a8a;">Esquema de Cores</h3>
+                    <div class="editor-grid">
+                        <div class="editor-field">
+                            <label>Cor Principal (Cabeçalho/Título)</label>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <input type="color" id="certCorPrincipal" value="#1e3a8a" onchange="atualizarPreviewCert()" style="width: 50px; height: 40px; border: none; cursor: pointer;">
+                                <input type="text" id="certCorPrincipalHex" class="form-control" value="#1e3a8a" style="flex: 1;" oninput="sincronizarCor('certCorPrincipal', this.value)">
+                            </div>
+                        </div>
+                        <div class="editor-field">
+                            <label>Cor Secundária (Degradê)</label>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <input type="color" id="certCorSecundaria" value="#3b82f6" onchange="atualizarPreviewCert()" style="width: 50px; height: 40px; border: none; cursor: pointer;">
+                                <input type="text" id="certCorSecundariaHex" class="form-control" value="#3b82f6" style="flex: 1;" oninput="sincronizarCor('certCorSecundaria', this.value)">
+                            </div>
+                        </div>
+                        <div class="editor-field">
+                            <label>Cor do Texto do Corpo</label>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <input type="color" id="certCorTexto" value="#000000" onchange="atualizarPreviewCert()" style="width: 50px; height: 40px; border: none; cursor: pointer;">
+                                <input type="text" id="certCorTextoHex" class="form-control" value="#000000" style="flex: 1;" oninput="sincronizarCor('certCorTexto', this.value)">
+                            </div>
+                        </div>
+                        <div class="editor-field">
+                            <label>Cor das Assinaturas</label>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <input type="color" id="certCorAssinatura" value="#1e3a8a" onchange="atualizarPreviewCert()" style="width: 50px; height: 40px; border: none; cursor: pointer;">
+                                <input type="text" id="certCorAssinaturaHex" class="form-control" value="#1e3a8a" style="flex: 1;" oninput="sincronizarCor('certCorAssinatura', this.value)">
+                            </div>
+                        </div>
+                        <div class="editor-field">
+                            <label>Cor de Fundo</label>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <input type="color" id="certCorFundo" value="#ffffff" onchange="atualizarPreviewCert()" style="width: 50px; height: 40px; border: none; cursor: pointer;">
+                                <input type="text" id="certCorFundoHex" class="form-control" value="#ffffff" style="flex: 1;" oninput="sincronizarCor('certCorFundo', this.value)">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
 
             <!-- Pré-visualização -->
