@@ -23,7 +23,7 @@
     "licenciamento",
     "educacao"
   ],
-  "author": "",
+  "author": "Wander Pires Silva Coelho <wanderpsc@gmail.com>",
   "license": "PROPRIETARY",
   "dependencies": {
     "express": "^4.18.2",

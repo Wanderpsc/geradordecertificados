@@ -1,3 +1,10 @@
+/**
+ * GERADOR DE CERTIFICADOS PROFISSIONAL
+ * © 2026 Wander Pires Silva Coelho (wanderpsc@gmail.com)
+ * Todos os direitos reservados. Software proprietário.
+ * Protegido por Lei 9.610/98, Lei 9.609/98 e Art. 184 CP.
+ * Reprodução, cópia ou engenharia reversa proibidas.
+ */
 // ==================== URL DA API ====================
 const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
     ? 'http://localhost:5000/api'
@@ -125,6 +132,11 @@ function navegarParaTab(targetTab, atualizarHash = true) {
         // Ao entrar na aba gerar, atualizar a lista de alunos com checkbox
         if (targetTab === 'gerar' && typeof atualizarListaAlunosLote === 'function') {
             atualizarListaAlunosLote();
+        }
+
+        // Ao entrar na aba usuários, carregar sub-usuários
+        if (targetTab === 'usuarios' && typeof carregarSubUsuarios === 'function') {
+            carregarSubUsuarios();
         }
     }
 }
@@ -3153,13 +3165,291 @@ function logout() {
     }
 }
 
-// Carregar dados da assinatura quando a aba for aberta
+// ==================== GERENCIAR SUB-USUÁRIOS ====================
+async function carregarSubUsuarios() {
+    const token = localStorage.getItem('token');
+    const container = document.getElementById('listaSubUsuarios');
+    if (!container) return;
+
+    try {
+        const res = await fetch(`${API_URL}/subusuarios`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.mensagem || 'Erro ao carregar usuários');
+
+        if (!data.subUsuarios || data.subUsuarios.length === 0) {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 40px; color: #9ca3af;">
+                    <p style="font-size: 48px; margin-bottom: 10px;">👥</p>
+                    <p>Nenhum usuário cadastrado ainda.</p>
+                    <p style="font-size: 13px;">Clique em "➕ Novo Usuário" para criar o primeiro.</p>
+                </div>`;
+            return;
+        }
+
+        const permNomes = {
+            cadastrarAlunos: '📝 Cadastrar',
+            editarAlunos: '✏️ Editar',
+            excluirAlunos: '🗑️ Excluir',
+            gerarCertificados: '📄 Certificados',
+            editarModelos: '🎨 Modelos',
+            verLogs: '📋 Logs'
+        };
+
+        container.innerHTML = data.subUsuarios.map(u => {
+            const perms = Object.entries(u.permissoes || {})
+                .filter(([, v]) => v)
+                .map(([k]) => `<span class="badge-permissao">${permNomes[k] || k}</span>`)
+                .join('');
+
+            return `
+            <div class="sub-usuario-card ${u.ativo ? '' : 'inativo'}">
+                <div class="sub-usuario-info">
+                    <h4>${u.nome} <span class="badge-ativo ${u.ativo ? 'ativo' : 'inativo'}">${u.ativo ? 'Ativo' : 'Bloqueado'}</span></h4>
+                    <p>📧 ${u.email} · 💼 ${u.cargo || 'Funcionário'}</p>
+                    <div style="margin-top: 6px;">${perms || '<span style="color:#9ca3af;font-size:12px;">Sem permissões</span>'}</div>
+                    ${u.ultimoAcesso ? `<p style="font-size:11px;color:#94a3b8;margin-top:4px;">Último acesso: ${new Date(u.ultimoAcesso).toLocaleString('pt-BR')}</p>` : ''}
+                </div>
+                <div class="sub-usuario-acoes">
+                    <button onclick="editarSubUsuario('${u._id}')" style="background:#eff6ff;color:#1d4ed8;" title="Editar">✏️ Editar</button>
+                    <button onclick="resetarSenhaSubUsuario('${u._id}','${u.nome}')" style="background:#fef3c7;color:#92400e;" title="Resetar Senha">🔑 Senha</button>
+                    <button onclick="toggleSubUsuario('${u._id}',${u.ativo},'${u.nome}')" style="background:${u.ativo ? '#fee2e2' : '#d1fae5'};color:${u.ativo ? '#991b1b' : '#065f46'};" title="${u.ativo ? 'Bloquear' : 'Desbloquear'}">
+                        ${u.ativo ? '🚫 Bloquear' : '✅ Ativar'}
+                    </button>
+                    <button onclick="excluirSubUsuario('${u._id}','${u.nome}')" style="background:#fee2e2;color:#991b1b;" title="Excluir">🗑️</button>
+                </div>
+            </div>`;
+        }).join('');
+    } catch (err) {
+        container.innerHTML = `<p style="color:#ef4444;text-align:center;">❌ ${err.message}</p>`;
+    }
+}
+
+function abrirFormSubUsuario() {
+    document.getElementById('formSubUsuario').style.display = 'block';
+    document.getElementById('formSubUsuarioTitulo').textContent = '➕ Novo Usuário';
+    document.getElementById('subUsuarioEditId').value = '';
+    document.getElementById('subNome').value = '';
+    document.getElementById('subEmail').value = '';
+    document.getElementById('subCargo').value = 'Funcionário';
+    document.getElementById('subSenha').value = '';
+    document.getElementById('permCadastrarAlunos').checked = true;
+    document.getElementById('permEditarAlunos').checked = true;
+    document.getElementById('permExcluirAlunos').checked = false;
+    document.getElementById('permGerarCertificados').checked = true;
+    document.getElementById('permEditarModelos').checked = false;
+    document.getElementById('permVerLogs').checked = false;
+}
+
+function fecharFormSubUsuario() {
+    document.getElementById('formSubUsuario').style.display = 'none';
+}
+
+async function salvarSubUsuario() {
+    const token = localStorage.getItem('token');
+    const editId = document.getElementById('subUsuarioEditId').value;
+    const nome = document.getElementById('subNome').value.trim();
+    const email = document.getElementById('subEmail').value.trim();
+    const cargo = document.getElementById('subCargo').value.trim();
+    const senha = document.getElementById('subSenha').value.trim();
+
+    if (!nome || !email) {
+        alert('Nome e e-mail são obrigatórios.');
+        return;
+    }
+
+    const permissoes = {
+        cadastrarAlunos: document.getElementById('permCadastrarAlunos').checked,
+        editarAlunos: document.getElementById('permEditarAlunos').checked,
+        excluirAlunos: document.getElementById('permExcluirAlunos').checked,
+        gerarCertificados: document.getElementById('permGerarCertificados').checked,
+        editarModelos: document.getElementById('permEditarModelos').checked,
+        verLogs: document.getElementById('permVerLogs').checked
+    };
+
+    const body = { nome, email, cargo, permissoes };
+    if (!editId && senha) body.senha = senha;
+
+    try {
+        const url = editId ? `${API_URL}/subusuarios/${editId}` : `${API_URL}/subusuarios`;
+        const method = editId ? 'PUT' : 'POST';
+
+        const res = await fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify(body)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.mensagem || 'Erro ao salvar');
+
+        if (data.senhaGerada) {
+            alert(`✅ Usuário criado com sucesso!\n\n📧 Email: ${email}\n🔑 Senha gerada: ${data.senhaGerada}\n\n⚠️ Anote esta senha, ela não será exibida novamente!`);
+        } else {
+            alert(`✅ Usuário ${editId ? 'atualizado' : 'criado'} com sucesso!`);
+        }
+
+        fecharFormSubUsuario();
+        carregarSubUsuarios();
+    } catch (err) {
+        alert('❌ ' + err.message);
+    }
+}
+
+async function editarSubUsuario(id) {
+    const token = localStorage.getItem('token');
+    try {
+        const res = await fetch(`${API_URL}/subusuarios`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.mensagem);
+
+        const usuario = data.subUsuarios.find(u => u._id === id);
+        if (!usuario) { alert('Usuário não encontrado.'); return; }
+
+        document.getElementById('formSubUsuario').style.display = 'block';
+        document.getElementById('formSubUsuarioTitulo').textContent = '✏️ Editar Usuário';
+        document.getElementById('subUsuarioEditId').value = id;
+        document.getElementById('subNome').value = usuario.nome;
+        document.getElementById('subEmail').value = usuario.email;
+        document.getElementById('subCargo').value = usuario.cargo || 'Funcionário';
+        document.getElementById('subSenha').value = '';
+
+        const p = usuario.permissoes || {};
+        document.getElementById('permCadastrarAlunos').checked = !!p.cadastrarAlunos;
+        document.getElementById('permEditarAlunos').checked = !!p.editarAlunos;
+        document.getElementById('permExcluirAlunos').checked = !!p.excluirAlunos;
+        document.getElementById('permGerarCertificados').checked = !!p.gerarCertificados;
+        document.getElementById('permEditarModelos').checked = !!p.editarModelos;
+        document.getElementById('permVerLogs').checked = !!p.verLogs;
+
+        document.getElementById('formSubUsuario').scrollIntoView({ behavior: 'smooth' });
+    } catch (err) {
+        alert('❌ ' + err.message);
+    }
+}
+
+async function toggleSubUsuario(id, atualmenteAtivo, nome) {
+    const acao = atualmenteAtivo ? 'bloquear' : 'desbloquear';
+    if (!confirm(`Deseja ${acao} o usuário "${nome}"?`)) return;
+
+    const token = localStorage.getItem('token');
+    try {
+        const res = await fetch(`${API_URL}/subusuarios/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ ativo: !atualmenteAtivo })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.mensagem);
+        alert(`✅ Usuário ${!atualmenteAtivo ? 'ativado' : 'bloqueado'} com sucesso!`);
+        carregarSubUsuarios();
+    } catch (err) {
+        alert('❌ ' + err.message);
+    }
+}
+
+async function resetarSenhaSubUsuario(id, nome) {
+    if (!confirm(`Resetar a senha do usuário "${nome}"?\nUma nova senha será gerada.`)) return;
+
+    const token = localStorage.getItem('token');
+    try {
+        const res = await fetch(`${API_URL}/subusuarios/${id}/resetar-senha`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({})
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.mensagem);
+        alert(`✅ Senha resetada com sucesso!\n\n🔑 Nova senha: ${data.novaSenha}\n\n⚠️ Anote esta senha, ela não será exibida novamente!`);
+    } catch (err) {
+        alert('❌ ' + err.message);
+    }
+}
+
+async function excluirSubUsuario(id, nome) {
+    if (!confirm(`⚠️ Excluir permanentemente o usuário "${nome}"?\nEsta ação não pode ser desfeita.`)) return;
+
+    const token = localStorage.getItem('token');
+    try {
+        const res = await fetch(`${API_URL}/subusuarios/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.mensagem);
+        alert('✅ Usuário excluído com sucesso!');
+        carregarSubUsuarios();
+    } catch (err) {
+        alert('❌ ' + err.message);
+    }
+}
+
+async function carregarLogsEscola(pagina = 1) {
+    const token = localStorage.getItem('token');
+    const section = document.getElementById('logsEscolaSection');
+    const conteudo = document.getElementById('logsEscolaConteudo');
+    const paginacao = document.getElementById('logsPaginacao');
+    section.style.display = 'block';
+    conteudo.innerHTML = '<p style="color:#9ca3af;text-align:center;">Carregando logs...</p>';
+
+    try {
+        const res = await fetch(`${API_URL}/subusuarios/logs?pagina=${pagina}&limite=20`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.mensagem);
+
+        if (!data.logs || data.logs.length === 0) {
+            conteudo.innerHTML = '<p style="color:#9ca3af;text-align:center;">Nenhum log encontrado.</p>';
+            paginacao.innerHTML = '';
+            return;
+        }
+
+        conteudo.innerHTML = `
+            <div style="background:#f8fafc;border-radius:8px;overflow:hidden;border:1px solid #e2e8f0;">
+                <div class="log-row" style="background:#e2e8f0;font-weight:600;font-size:12px;text-transform:uppercase;color:#475569;">
+                    <span>Data/Hora</span><span>Usuário</span><span>Ação</span><span>Nível</span>
+                </div>
+                ${data.logs.map(log => `
+                    <div class="log-row">
+                        <span>${new Date(log.criadoEm || log.createdAt).toLocaleString('pt-BR')}</span>
+                        <span>${log.usuario?.nome || log.usuario?.email || 'Sistema'}</span>
+                        <span>${log.acao || ''} ${log.descricao ? '— ' + log.descricao : ''}</span>
+                        <span><span class="log-nivel ${log.nivel || 'INFO'}">${log.nivel || 'INFO'}</span></span>
+                    </div>
+                `).join('')}
+            </div>`;
+
+        const totalPaginas = data.totalPaginas || 1;
+        if (totalPaginas > 1) {
+            let btns = '';
+            for (let i = 1; i <= totalPaginas; i++) {
+                btns += `<button class="btn" onclick="carregarLogsEscola(${i})" style="padding:6px 14px;font-size:13px;background:${i === pagina ? '#3b82f6' : '#e2e8f0'};color:${i === pagina ? '#fff' : '#374151'};">${i}</button>`;
+            }
+            paginacao.innerHTML = btns;
+        } else {
+            paginacao.innerHTML = '';
+        }
+
+        section.scrollIntoView({ behavior: 'smooth' });
+    } catch (err) {
+        conteudo.innerHTML = `<p style="color:#ef4444;text-align:center;">❌ ${err.message}</p>`;
+        paginacao.innerHTML = '';
+    }
+}
+
+// Carregar dados da assinatura/usuários quando a aba for aberta
 document.addEventListener('DOMContentLoaded', () => {
     const tabBtns = document.querySelectorAll('.tab-btn');
     tabBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             if (btn.dataset.tab === 'assinatura') {
                 carregarDadosAssinatura();
+            }
+            if (btn.dataset.tab === 'usuarios') {
+                carregarSubUsuarios();
             }
         });
     });

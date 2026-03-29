@@ -1,5 +1,8 @@
+/**
+ * © 2026 Wander Pires Silva Coelho - Software Proprietário
+ */
 // Service Worker para PWA
-const CACHE_NAME = 'certificados-v14';
+const CACHE_NAME = 'certificados-v16';
 const urlsToCache = [
   '/login.html',
   '/index.html',

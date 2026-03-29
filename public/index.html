@@ -4,7 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gerador de Certificados Escolares</title>
+    <meta name="author" content="Wander Pires Silva Coelho">
+    <meta name="copyright" content="© 2026 Wander Pires Silva Coelho. Todos os direitos reservados.">
     <link rel="stylesheet" href="styles.css">
+    <script src="protection.js"></script>
     
     <!-- Verificação de autenticação - DEVE EXECUTAR ANTES DE CARREGAR A PÁGINA -->
     <script>
@@ -42,6 +45,7 @@
             <button class="tab-btn" data-tab="lista">Lista de Alunos</button>
             <button class="tab-btn" data-tab="templates">Modelos</button>
             <button class="tab-btn" data-tab="gerar">Gerar Certificados</button>
+            <button class="tab-btn" data-tab="usuarios">👥 Gerenciar Usuários</button>
             <button class="tab-btn" data-tab="assinatura">📊 Minha Assinatura</button>
         </nav>
 
@@ -906,6 +910,96 @@
             <!-- Canvas para geração de certificados -->
             <div id="canvasContainer" style="display:none;">
                 <canvas id="certificadoCanvas"></canvas>
+            </div>
+        </div>
+
+        <!-- Tab: Gerenciar Usuários -->
+        <div class="tab-content" id="usuarios">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 20px;">
+                    <h2 style="margin: 0;">👥 Gerenciar Usuários</h2>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn" onclick="abrirFormSubUsuario()" style="background: #10b981;">➕ Novo Usuário</button>
+                        <button class="btn" onclick="carregarLogsEscola(1)" style="background: #6366f1;">📋 Ver Logs</button>
+                    </div>
+                </div>
+                <p style="color: #6b7280; margin-bottom: 20px;">Gerencie os usuários da sua escola — crie contas, defina permissões e acompanhe atividades.</p>
+
+                <!-- Formulário Criar/Editar Sub-Usuário -->
+                <div id="formSubUsuario" style="display: none; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 25px; margin-bottom: 25px;">
+                    <h3 id="formSubUsuarioTitulo" style="margin-top: 0;">➕ Novo Usuário</h3>
+                    <input type="hidden" id="subUsuarioEditId" value="">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div>
+                            <label class="form-label">Nome Completo *</label>
+                            <input type="text" id="subNome" class="form-control" placeholder="Nome do usuário">
+                        </div>
+                        <div>
+                            <label class="form-label">E-mail *</label>
+                            <input type="email" id="subEmail" class="form-control" placeholder="email@exemplo.com">
+                        </div>
+                        <div>
+                            <label class="form-label">Cargo</label>
+                            <input type="text" id="subCargo" class="form-control" placeholder="Ex: Secretária, Coordenador" value="Funcionário">
+                        </div>
+                        <div>
+                            <label class="form-label">Senha (deixe em branco para gerar automaticamente)</label>
+                            <input type="text" id="subSenha" class="form-control" placeholder="Senha será gerada automaticamente">
+                        </div>
+                    </div>
+
+                    <h4 style="margin-top: 20px; margin-bottom: 10px;">🔒 Permissões</h4>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px;">
+                        <label class="permissao-check">
+                            <input type="checkbox" id="permCadastrarAlunos" checked>
+                            <span>📝 Cadastrar Alunos</span>
+                        </label>
+                        <label class="permissao-check">
+                            <input type="checkbox" id="permEditarAlunos" checked>
+                            <span>✏️ Editar Alunos</span>
+                        </label>
+                        <label class="permissao-check">
+                            <input type="checkbox" id="permExcluirAlunos">
+                            <span>🗑️ Excluir Alunos</span>
+                        </label>
+                        <label class="permissao-check">
+                            <input type="checkbox" id="permGerarCertificados" checked>
+                            <span>📄 Gerar Certificados</span>
+                        </label>
+                        <label class="permissao-check">
+                            <input type="checkbox" id="permEditarModelos">
+                            <span>🎨 Editar Modelos</span>
+                        </label>
+                        <label class="permissao-check">
+                            <input type="checkbox" id="permVerLogs">
+                            <span>📋 Ver Logs</span>
+                        </label>
+                    </div>
+
+                    <div style="display: flex; gap: 10px; margin-top: 20px;">
+                        <button class="btn" onclick="salvarSubUsuario()" style="background: #10b981;">💾 Salvar</button>
+                        <button class="btn" onclick="fecharFormSubUsuario()" style="background: #6b7280;">Cancelar</button>
+                    </div>
+                </div>
+
+                <!-- Tabela de Usuários -->
+                <div id="listaSubUsuarios">
+                    <div style="text-align: center; padding: 40px; color: #9ca3af;">
+                        <p>Carregando usuários...</p>
+                    </div>
+                </div>
+
+                <!-- Seção de Logs -->
+                <div id="logsEscolaSection" style="display: none; margin-top: 30px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3 style="margin: 0;">📋 Logs de Atividades</h3>
+                        <button class="btn" onclick="document.getElementById('logsEscolaSection').style.display='none'" style="background: #6b7280; padding: 6px 14px; font-size: 13px;">✕ Fechar Logs</button>
+                    </div>
+                    <div id="logsEscolaConteudo">
+                        <p style="color: #9ca3af;">Carregando logs...</p>
+                    </div>
+                    <div id="logsPaginacao" style="display: flex; justify-content: center; gap: 10px; margin-top: 15px;"></div>
+                </div>
             </div>
         </div>
 
