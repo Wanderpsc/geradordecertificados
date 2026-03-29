@@ -1273,8 +1273,8 @@ function desenharPreviewFrente(ctx, cfg, sx, sy, pw, ph, imgs) {
         if (imgs && imgs.emblema) {
             const natW = imgs.emblema.naturalWidth;
             const natH = imgs.emblema.naturalHeight;
-            const ratio = Math.min(emW / natW, emH / natH);
-            const drawW = natW * ratio;
+            const ratio = emW / natW;
+            const drawW = emW;
             const drawH = natH * ratio;
             ctx.drawImage(imgs.emblema, emX - drawW / 2, emY - drawH / 2, drawW, drawH);
         } else {
@@ -1874,8 +1874,8 @@ async function gerarFrenteCertificado(pdf, aluno, cfg) {
                 tmpImg.src = imgEmblema;
                 const natW = tmpImg.naturalWidth || brasaoLargura;
                 const natH = tmpImg.naturalHeight || brasaoAltura;
-                const ratio = Math.min(brasaoLargura / natW, brasaoAltura / natH);
-                const drawW = natW * ratio;
+                const ratio = brasaoLargura / natW;
+                const drawW = brasaoLargura;
                 const drawH = natH * ratio;
                 const fmt = detectarFormatoImagem(imgEmblema);
                 pdf.addImage(imgEmblema, fmt, brasaoX - drawW / 2, brasaoY - drawH / 2, drawW, drawH);
