@@ -164,7 +164,9 @@ function inicializarFormulario() {
     document.getElementById('btnLimparTodos').addEventListener('click', limparTodosAlunos);
     document.getElementById('btnExportarDados').addEventListener('click', exportarDados);
     document.getElementById('btnFazerBackup').addEventListener('click', fazerBackupCompleto);
-    document.getElementById('btnCadastroLote').addEventListener('click', abrirModalCadastroLote);
+    document.getElementById('btnCadastroLoteCadastro').addEventListener('click', abrirModalCadastroLote);
+    document.getElementById('btnImprimirLista').addEventListener('click', imprimirListaAlunos);
+    document.getElementById('btnImprimirListaCadastro').addEventListener('click', imprimirListaAlunos);
     
     // Verificar se precisa lembrar de fazer backup
     verificarLembreteBackup();
@@ -604,8 +606,7 @@ function atualizarListaAlunos(filtro = '') {
         const termo = filtro.toLowerCase();
         alunosFiltrados = APP_STATE.alunos.filter(aluno => 
             aluno.nome.toLowerCase().includes(termo) ||
-            aluno.curso.toLowerCase().includes(termo) ||
-            aluno.cpf.includes(termo)
+            (aluno.cpf && aluno.cpf.includes(termo))
         );
     }
 
@@ -659,6 +660,58 @@ function atualizarListaAlunos(filtro = '') {
             ${aluno.observacoes ? `<p style="margin-top: 10px; color: #64748b;"><strong>Obs:</strong> ${aluno.observacoes}</p>` : ''}
         </div>
     `).join('');
+}
+
+// ==================== IMPRIMIR LISTA DE ALUNOS ====================
+function imprimirListaAlunos() {
+    if (APP_STATE.alunos.length === 0) {
+        mostrarNotificacao('Nenhum aluno cadastrado para imprimir!', 'error');
+        return;
+    }
+
+    const janela = window.open('', '_blank');
+    const dataAtual = new Date().toLocaleDateString('pt-BR');
+
+    let linhas = APP_STATE.alunos.map((aluno, idx) => `
+        <tr>
+            <td>${idx + 1}</td>
+            <td>${aluno.nome || ''}</td>
+            <td>${aluno.cpf || ''}</td>
+            <td>${aluno.rg || ''}</td>
+            <td>${aluno.diaNascimento || ''}/${aluno.mesNascimento || ''}/${aluno.anoNascimento || ''}</td>
+            <td>${aluno.cidadeNascimento || ''} - ${aluno.estadoNascimento || ''}</td>
+            <td>${aluno.anoConclusao || ''}</td>
+        </tr>
+    `).join('');
+
+    janela.document.write(`
+        <!DOCTYPE html>
+        <html><head><title>Lista de Alunos</title>
+        <style>
+            body { font-family: Arial, sans-serif; padding: 20px; }
+            h1 { text-align: center; color: #1e3a8a; margin-bottom: 5px; }
+            .info { text-align: center; color: #666; margin-bottom: 20px; font-size: 14px; }
+            table { width: 100%; border-collapse: collapse; font-size: 12px; }
+            th { background: #1e3a8a; color: white; padding: 8px 6px; text-align: left; }
+            td { padding: 6px; border-bottom: 1px solid #ddd; }
+            tr:nth-child(even) { background: #f8f9fa; }
+            .total { margin-top: 15px; font-weight: bold; font-size: 14px; }
+            @media print { body { padding: 0; } }
+        </style>
+        </head><body>
+        <h1>Lista de Alunos Cadastrados</h1>
+        <p class="info">Data: ${dataAtual} | Total: ${APP_STATE.alunos.length} aluno(s)</p>
+        <table>
+            <thead><tr>
+                <th>#</th><th>Nome</th><th>CPF</th><th>RG</th><th>Nascimento</th><th>Naturalidade</th><th>Conclusão</th>
+            </tr></thead>
+            <tbody>${linhas}</tbody>
+        </table>
+        <p class="total">Total de alunos: ${APP_STATE.alunos.length}</p>
+        </body></html>
+    `);
+    janela.document.close();
+    setTimeout(() => janela.print(), 500);
 }
 
 function atualizarSelectAlunos() {
@@ -826,8 +879,24 @@ function obterConfigCert() {
         fundoImg: {
             frenteMode: document.getElementById('certFundoFrenteMode')?.value || 'clarear',
             frenteOpacidade: parseInt(document.getElementById('certFundoFrenteOpacidade')?.value) || 50,
+            frenteLargura: parseInt(document.getElementById('certFundoFrenteLargura')?.value) || 100,
+            frenteAltura: parseInt(document.getElementById('certFundoFrenteAltura')?.value) || 100,
             versoMode: document.getElementById('certFundoVersoMode')?.value || 'clarear',
-            versoOpacidade: parseInt(document.getElementById('certFundoVersoOpacidade')?.value) || 50
+            versoOpacidade: parseInt(document.getElementById('certFundoVersoOpacidade')?.value) || 50,
+            versoLargura: parseInt(document.getElementById('certFundoVersoLargura')?.value) || 100,
+            versoAltura: parseInt(document.getElementById('certFundoVersoAltura')?.value) || 100
+        },
+        formatacao: {
+            fonteCabecalho: document.getElementById('certFmtFonteCabecalho')?.value || 'helvetica',
+            estiloCabecalho: document.getElementById('certFmtEstiloCabecalho')?.value || 'bold',
+            fonteTitulo: document.getElementById('certFmtFonteTitulo')?.value || 'times',
+            estiloTitulo: document.getElementById('certFmtEstiloTitulo')?.value || 'bolditalic',
+            estiloCorpo: document.getElementById('certFmtEstiloCorpo')?.value || 'italic',
+            fonteAssinatura: document.getElementById('certFmtFonteAssinatura')?.value || 'helvetica',
+            transformCabecalho: document.getElementById('certFmtTransformCabecalho')?.value || 'uppercase',
+            transformTitulo: document.getElementById('certFmtTransformTitulo')?.value || 'uppercase',
+            espacoLinha: parseFloat(document.getElementById('certFmtEspacoLinha')?.value) || 8,
+            espacoLetras: parseFloat(document.getElementById('certFmtEspacoLetras')?.value) || 0
         }
     };
 }
@@ -885,8 +954,22 @@ function aplicarConfigNosInputs(cfg) {
         ['certCorFundoHex', cfg.cores.fundo],
         ['certFundoFrenteMode', cfg.fundoImg ? cfg.fundoImg.frenteMode : 'clarear'],
         ['certFundoFrenteOpacidade', cfg.fundoImg ? cfg.fundoImg.frenteOpacidade : 50],
+        ['certFundoFrenteLargura', cfg.fundoImg ? cfg.fundoImg.frenteLargura : 100],
+        ['certFundoFrenteAltura', cfg.fundoImg ? cfg.fundoImg.frenteAltura : 100],
         ['certFundoVersoMode', cfg.fundoImg ? cfg.fundoImg.versoMode : 'clarear'],
-        ['certFundoVersoOpacidade', cfg.fundoImg ? cfg.fundoImg.versoOpacidade : 50]
+        ['certFundoVersoOpacidade', cfg.fundoImg ? cfg.fundoImg.versoOpacidade : 50],
+        ['certFundoVersoLargura', cfg.fundoImg ? cfg.fundoImg.versoLargura : 100],
+        ['certFundoVersoAltura', cfg.fundoImg ? cfg.fundoImg.versoAltura : 100],
+        ['certFmtFonteCabecalho', cfg.formatacao ? cfg.formatacao.fonteCabecalho : 'helvetica'],
+        ['certFmtEstiloCabecalho', cfg.formatacao ? cfg.formatacao.estiloCabecalho : 'bold'],
+        ['certFmtFonteTitulo', cfg.formatacao ? cfg.formatacao.fonteTitulo : 'times'],
+        ['certFmtEstiloTitulo', cfg.formatacao ? cfg.formatacao.estiloTitulo : 'bolditalic'],
+        ['certFmtEstiloCorpo', cfg.formatacao ? cfg.formatacao.estiloCorpo : 'italic'],
+        ['certFmtFonteAssinatura', cfg.formatacao ? cfg.formatacao.fonteAssinatura : 'helvetica'],
+        ['certFmtTransformCabecalho', cfg.formatacao ? cfg.formatacao.transformCabecalho : 'uppercase'],
+        ['certFmtTransformTitulo', cfg.formatacao ? cfg.formatacao.transformTitulo : 'uppercase'],
+        ['certFmtEspacoLinha', cfg.formatacao ? cfg.formatacao.espacoLinha : 8],
+        ['certFmtEspacoLetras', cfg.formatacao ? cfg.formatacao.espacoLetras : 0]
     ];
     sets.forEach(([id, val]) => {
         const el = document.getElementById(id);
@@ -1060,8 +1143,19 @@ function hexParaRgb(hex) {
     return { r, g, b };
 }
 
+// ==================== CARREGAR IMAGEM ASYNC ====================
+function carregarImagem(src) {
+    return new Promise((resolve) => {
+        if (!src) { resolve(null); return; }
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => resolve(null);
+        img.src = src;
+    });
+}
+
 // ==================== PRÉ-VISUALIZAÇÃO NO CANVAS ====================
-function atualizarPreviewCert() {
+async function atualizarPreviewCert() {
     const canvas = document.getElementById('previewCanvas');
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -1078,29 +1172,43 @@ function atualizarPreviewCert() {
     const sy = ph / (isLandscape ? 210 : 297);
 
     // Fundo
-    const bgColor = hexParaRgb(cfg.cores.fundo);
     ctx.fillStyle = cfg.cores.fundo;
     ctx.fillRect(0, 0, pw, ph);
 
+    // Pré-carregar todas as imagens necessárias
+    const imgs = {};
     if (previewLado === 'frente') {
-        desenharPreviewFrente(ctx, cfg, sx, sy, pw, ph);
+        if (CERT_UPLOADS.fundoFrente) imgs.fundo = await carregarImagem(CERT_UPLOADS.fundoFrente);
+        if (cfg.emblema.tipo === 'custom' && CERT_UPLOADS.emblemaCustom) {
+            imgs.emblema = await carregarImagem(CERT_UPLOADS.emblemaCustom);
+        } else if (cfg.emblema.tipo === 'brasao-brasil' && typeof BRASAO_BRASIL !== 'undefined') {
+            imgs.emblema = await carregarImagem(BRASAO_BRASIL);
+        }
+        if (CERT_UPLOADS.bordaCompleta) imgs.bordaCompleta = await carregarImagem(CERT_UPLOADS.bordaCompleta);
+        desenharPreviewFrente(ctx, cfg, sx, sy, pw, ph, imgs);
     } else {
-        desenharPreviewVerso(ctx, cfg, sx, sy, pw, ph);
+        if (CERT_UPLOADS.fundoVerso) imgs.fundo = await carregarImagem(CERT_UPLOADS.fundoVerso);
+        if (CERT_UPLOADS.bordaCompleta) imgs.bordaCompleta = await carregarImagem(CERT_UPLOADS.bordaCompleta);
+        desenharPreviewVerso(ctx, cfg, sx, sy, pw, ph, imgs);
     }
 
     document.getElementById('previewLadoLabel').textContent = 'Mostrando: ' + (previewLado === 'frente' ? 'FRENTE' : 'VERSO');
 }
 
-function desenharPreviewFrente(ctx, cfg, sx, sy, pw, ph) {
+function desenharPreviewFrente(ctx, cfg, sx, sy, pw, ph, imgs) {
     const pageWidth = pw / sx; // em mm
     const bordaEsp = cfg.margens.bordaEspessura;
 
     // Fundo de imagem com overlay
-    if (CERT_UPLOADS.fundoFrente) {
-        const img = new Image();
-        img.src = CERT_UPLOADS.fundoFrente;
-        try { ctx.drawImage(img, 0, 0, pw, ph); } catch(e) {}
+    if (imgs && imgs.fundo) {
         const fi = cfg.fundoImg || {};
+        const largPct = (fi.frenteLargura || 100) / 100;
+        const altPct = (fi.frenteAltura || 100) / 100;
+        const imgW = pw * largPct;
+        const imgH = ph * altPct;
+        const imgX = (pw - imgW) / 2;
+        const imgY = (ph - imgH) / 2;
+        ctx.drawImage(imgs.fundo, imgX, imgY, imgW, imgH);
         const mode = fi.frenteMode || 'clarear';
         const opac = (fi.frenteOpacidade || 50) / 100;
         if (mode !== 'nenhum' && opac > 0) {
@@ -1111,10 +1219,8 @@ function desenharPreviewFrente(ctx, cfg, sx, sy, pw, ph) {
 
     // Bordas decorativas simuladas
     if (cfg.margens.bordaExibir === 'sim' && bordaEsp > 0) {
-        if (CERT_UPLOADS.bordaCompleta) {
-            const imgB = new Image();
-            imgB.src = CERT_UPLOADS.bordaCompleta;
-            try { ctx.drawImage(imgB, 0, 0, pw, ph); } catch(e) {}
+        if (imgs && imgs.bordaCompleta) {
+            ctx.drawImage(imgs.bordaCompleta, 0, 0, pw, ph);
         } else {
             ctx.fillStyle = cfg.cores.principal;
             ctx.globalAlpha = 0.3;
@@ -1126,35 +1232,40 @@ function desenharPreviewFrente(ctx, cfg, sx, sy, pw, ph) {
         }
     }
 
-    // Emblema placeholder
+    // Emblema
     if (cfg.emblema.tipo !== 'nenhum') {
         const emX = pw / 2;
         const emY = cfg.emblema.posY * sy;
         const emW = cfg.emblema.largura * sx;
         const emH = cfg.emblema.altura * sy;
-        ctx.fillStyle = '#d4a843';
-        ctx.globalAlpha = 0.4;
-        ctx.fillRect(emX - emW / 2, emY - emH / 2, emW, emH);
-        ctx.globalAlpha = 1;
-        ctx.fillStyle = '#8b6914';
-        ctx.font = 'bold 14px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('🏛️ BRASÃO', emX, emY + 5);
+        if (imgs && imgs.emblema) {
+            ctx.drawImage(imgs.emblema, emX - emW / 2, emY - emH / 2, emW, emH);
+        } else {
+            ctx.fillStyle = '#d4a843';
+            ctx.globalAlpha = 0.4;
+            ctx.fillRect(emX - emW / 2, emY - emH / 2, emW, emH);
+            ctx.globalAlpha = 1;
+            ctx.fillStyle = '#8b6914';
+            ctx.font = 'bold 14px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('BRASÃO', emX, emY + 5);
+        }
     }
 
     // Cabeçalho
     const corPrincipal = cfg.cores.principal;
     const fontTam = cfg.cabecalho.fonteTam;
+    const fmt = cfg.formatacao || {};
     ctx.fillStyle = corPrincipal;
-    ctx.font = `bold ${fontTam * sx / 2.1}px serif`;
+    ctx.font = `${fmtCanvasStyle(fmt.estiloCabecalho || 'bold')} ${fontTam * sx / 2.1}px ${fmtCanvasFamily(fmt.fonteCabecalho || 'helvetica')}`;
     ctx.textAlign = 'center';
 
     let yBase = (cfg.emblema.posY + cfg.emblema.altura / 2 + 10) * sy;
-    ctx.fillText(cfg.cabecalho.linha1, pw / 2, yBase);
+    ctx.fillText(fmtTransformText(cfg.cabecalho.linha1, fmt.transformCabecalho || 'uppercase'), pw / 2, yBase);
     yBase += fontTam * sy / 2.5;
-    ctx.fillText(cfg.cabecalho.linha2, pw / 2, yBase);
+    ctx.fillText(fmtTransformText(cfg.cabecalho.linha2, fmt.transformCabecalho || 'uppercase'), pw / 2, yBase);
     yBase += fontTam * sy / 2.5;
-    ctx.fillText(cfg.cabecalho.linha3, pw / 2, yBase);
+    ctx.fillText(fmtTransformText(cfg.cabecalho.linha3, fmt.transformCabecalho || 'uppercase'), pw / 2, yBase);
 
     // CNPJ / INEP
     yBase += fontTam * sy / 2;
@@ -1202,13 +1313,13 @@ function desenharPreviewFrente(ctx, cfg, sx, sy, pw, ph) {
     // Título
     yBase += 16 * sy / 2;
     ctx.fillStyle = corPrincipal;
-    ctx.font = `bold italic ${cfg.frente.tituloTam * sx / 2.1}px serif`;
-    ctx.fillText(cfg.frente.titulo, pw / 2, yBase);
+    ctx.font = `${fmtCanvasStyle(fmt.estiloTitulo || 'bolditalic')} ${cfg.frente.tituloTam * sx / 2.1}px ${fmtCanvasFamily(fmt.fonteTitulo || 'times')}`;
+    ctx.fillText(fmtTransformText(cfg.frente.titulo, fmt.transformTitulo || 'uppercase'), pw / 2, yBase);
 
     // Corpo resumido
     yBase += 26 * sy / 2;
     ctx.fillStyle = cfg.cores.texto;
-    ctx.font = `italic ${cfg.frente.fonteTam * sx / 2.3}px ${cfg.frente.fonte === 'times' ? 'serif' : 'sans-serif'}`;
+    ctx.font = `${fmtCanvasStyle(fmt.estiloCorpo || 'italic')} ${cfg.frente.fonteTam * sx / 2.3}px ${fmtCanvasFamily(cfg.frente.fonte || 'times')}`;
     ctx.textAlign = 'left';
     const margemEsq = cfg.margens.esq * sx;
     const margemDir = pw - cfg.margens.dir * sx;
@@ -1226,7 +1337,7 @@ function desenharPreviewFrente(ctx, cfg, sx, sy, pw, ph) {
         .replace('{MAE}', 'Ana da Silva').replace('{PAI}', 'José da Silva')
         .replace('{ANO_CONCLUSAO}', '2025');
 
-    wrapText(ctx, textoPreview, margemEsq, yBase, maxW, cfg.frente.fonteTam * sy / 2.5, cfg.frente.alinhamento || 'justify');
+    wrapText(ctx, textoPreview, margemEsq, yBase, maxW, (fmt.espacoLinha || 8) * sy / 2.5, cfg.frente.alinhamento || 'justify');
 
     // Linhas de assinatura
     const assY = ph - 60 * sy / 2;
@@ -1234,7 +1345,7 @@ function desenharPreviewFrente(ctx, cfg, sx, sy, pw, ph) {
     ctx.lineWidth = 1;
     ctx.textAlign = 'center';
     ctx.fillStyle = cfg.cores.assinatura;
-    ctx.font = `${9 * sx / 2.2}px sans-serif`;
+    ctx.font = `${9 * sx / 2.2}px ${fmtCanvasFamily(fmt.fonteAssinatura || 'helvetica')}`;
 
     ctx.beginPath(); ctx.moveTo(pw * 0.08, assY); ctx.lineTo(pw * 0.42, assY); ctx.stroke();
     ctx.fillText(cfg.frente.assinatura1, pw * 0.25, assY + 14);
@@ -1257,15 +1368,19 @@ function desenharPreviewFrente(ctx, cfg, sx, sy, pw, ph) {
     }
 }
 
-function desenharPreviewVerso(ctx, cfg, sx, sy, pw, ph) {
+function desenharPreviewVerso(ctx, cfg, sx, sy, pw, ph, imgs) {
     const bordaEsp = cfg.margens.bordaEspessura;
 
     // Fundo de imagem com overlay
-    if (CERT_UPLOADS.fundoVerso) {
-        const img = new Image();
-        img.src = CERT_UPLOADS.fundoVerso;
-        try { ctx.drawImage(img, 0, 0, pw, ph); } catch(e) {}
+    if (imgs && imgs.fundo) {
         const fi = cfg.fundoImg || {};
+        const largPct = (fi.versoLargura || 100) / 100;
+        const altPct = (fi.versoAltura || 100) / 100;
+        const imgW = pw * largPct;
+        const imgH = ph * altPct;
+        const imgX = (pw - imgW) / 2;
+        const imgY = (ph - imgH) / 2;
+        ctx.drawImage(imgs.fundo, imgX, imgY, imgW, imgH);
         const mode = fi.versoMode || 'clarear';
         const opac = (fi.versoOpacidade || 50) / 100;
         if (mode !== 'nenhum' && opac > 0) {
@@ -1276,10 +1391,8 @@ function desenharPreviewVerso(ctx, cfg, sx, sy, pw, ph) {
 
     // Bordas
     if (cfg.verso.bordas === 'sim' && cfg.margens.bordaExibir === 'sim' && bordaEsp > 0) {
-        if (CERT_UPLOADS.bordaCompleta) {
-            const imgB = new Image();
-            imgB.src = CERT_UPLOADS.bordaCompleta;
-            try { ctx.drawImage(imgB, 0, 0, pw, ph); } catch(e) {}
+        if (imgs && imgs.bordaCompleta) {
+            ctx.drawImage(imgs.bordaCompleta, 0, 0, pw, ph);
         } else {
             ctx.fillStyle = cfg.cores.principal;
             ctx.globalAlpha = 0.3;
@@ -1312,10 +1425,11 @@ function desenharPreviewVerso(ctx, cfg, sx, sy, pw, ph) {
 
     // Título
     yPos += 20;
+    const fmt = cfg.formatacao || {};
     ctx.fillStyle = cfg.cores.principal;
-    ctx.font = `bold italic ${13 * sx / 2.1}px serif`;
+    ctx.font = `${fmtCanvasStyle(fmt.estiloTitulo || 'bolditalic')} ${13 * sx / 2.1}px ${fmtCanvasFamily(fmt.fonteTitulo || 'times')}`;
     ctx.textAlign = 'center';
-    ctx.fillText(cfg.verso.titulo, pw / 2, yPos);
+    ctx.fillText(fmtTransformText(cfg.verso.titulo, fmt.transformTitulo || 'uppercase'), pw / 2, yPos);
 
     // Tabela placeholder
     yPos += 15;
@@ -1343,6 +1457,23 @@ function desenharPreviewVerso(ctx, cfg, sx, sy, pw, ph) {
     ctx.fillStyle = '#9ca3af';
     ctx.font = `italic ${10 * sx / 2.2}px sans-serif`;
     ctx.fillText('Área para Histórico Escolar', mx + tabelaW * 0.325, yPos + tabelaH / 2);
+}
+
+function fmtCanvasFamily(fonte) {
+    if (fonte === 'courier') return 'monospace';
+    if (fonte === 'helvetica') return 'sans-serif';
+    return 'serif';
+}
+
+function fmtCanvasStyle(estilo) {
+    if (estilo === 'bolditalic') return 'bold italic';
+    return estilo; // bold, italic, normal
+}
+
+function fmtTransformText(text, transform) {
+    if (transform === 'uppercase') return text.toUpperCase();
+    if (transform === 'capitalize') return text.replace(/\b\w/g, c => c.toUpperCase());
+    return text;
 }
 
 function wrapText(ctx, text, x, y, maxWidth, lineHeight, alinhamento) {
@@ -1612,9 +1743,15 @@ async function gerarFrenteCertificado(pdf, aluno, cfg) {
     // Fundo personalizado
     if (CERT_UPLOADS.fundoFrente) {
         try {
-            pdf.addImage(CERT_UPLOADS.fundoFrente, 'JPEG', 0, 0, pageWidth, pageHeight);
-            // Overlay escurecer/clarear
             const fi = cfg.fundoImg || {};
+            const largPct = (fi.frenteLargura || 100) / 100;
+            const altPct = (fi.frenteAltura || 100) / 100;
+            const imgW = pageWidth * largPct;
+            const imgH = pageHeight * altPct;
+            const imgX = (pageWidth - imgW) / 2;
+            const imgY = (pageHeight - imgH) / 2;
+            pdf.addImage(CERT_UPLOADS.fundoFrente, 'JPEG', imgX, imgY, imgW, imgH);
+            // Overlay escurecer/clarear
             const mode = fi.frenteMode || 'clarear';
             const opac = (fi.frenteOpacidade || 50) / 100;
             if (mode !== 'nenhum' && opac > 0) {
@@ -1679,16 +1816,17 @@ async function gerarFrenteCertificado(pdf, aluno, cfg) {
     
     // Cabeçalho
     const fontTamCab = cfg.cabecalho.fonteTam;
+    const fmt = cfg.formatacao || {};
     pdf.setTextColor(corP.r, corP.g, corP.b);
-    pdf.setFont('helvetica', 'bold');
+    pdf.setFont(fmt.fonteCabecalho || 'helvetica', fmt.estiloCabecalho || 'bold');
     pdf.setFontSize(fontTamCab);
     
     let yBase = cfg.emblema.posY + cfg.emblema.altura / 2 + 6;
-    pdf.text(cfg.cabecalho.linha1, pageWidth / 2, yBase, { align: 'center' });
+    pdf.text(fmtTransformText(cfg.cabecalho.linha1, fmt.transformCabecalho || 'uppercase'), pageWidth / 2, yBase, { align: 'center' });
     yBase += fontTamCab * 0.45;
-    pdf.text(cfg.cabecalho.linha2, pageWidth / 2, yBase, { align: 'center' });
+    pdf.text(fmtTransformText(cfg.cabecalho.linha2, fmt.transformCabecalho || 'uppercase'), pageWidth / 2, yBase, { align: 'center' });
     yBase += fontTamCab * 0.45;
-    pdf.text(cfg.cabecalho.linha3, pageWidth / 2, yBase, { align: 'center' });
+    pdf.text(fmtTransformText(cfg.cabecalho.linha3, fmt.transformCabecalho || 'uppercase'), pageWidth / 2, yBase, { align: 'center' });
     
     // CNPJ e INEP
     yBase += fontTamCab * 0.4;
@@ -1752,22 +1890,22 @@ async function gerarFrenteCertificado(pdf, aluno, cfg) {
     
     // Título
     yBase += 8;
-    pdf.setFont('times', 'bolditalic');
+    pdf.setFont(fmt.fonteTitulo || 'times', fmt.estiloTitulo || 'bolditalic');
     pdf.setFontSize(cfg.frente.tituloTam);
     pdf.setTextColor(corP.r, corP.g, corP.b);
-    pdf.text(cfg.frente.titulo, pageWidth / 2, yBase, { align: 'center' });
+    pdf.text(fmtTransformText(cfg.frente.titulo, fmt.transformTitulo || 'uppercase'), pageWidth / 2, yBase, { align: 'center' });
     
     // Corpo do texto
     yBase += 17;
     const fonteCorpo = cfg.frente.fonte || 'times';
-    pdf.setFont(fonteCorpo, 'italic');
+    pdf.setFont(fonteCorpo, fmt.estiloCorpo || 'italic');
     pdf.setFontSize(cfg.frente.fonteTam);
     pdf.setTextColor(corT.r, corT.g, corT.b);
     
     const margemEsq = cfg.margens.esq;
     const margemDir = pageWidth - cfg.margens.dir;
     const larguraTexto = margemDir - margemEsq;
-    const espacamentoLinha = 8;
+    const espacamentoLinha = fmt.espacoLinha || 8;
     
     // Montar texto do corpo usando template ou padrão
     let corpoTemplate = cfg.frente.corpoTexto || '';
@@ -1876,10 +2014,12 @@ async function gerarFrenteCertificado(pdf, aluno, cfg) {
     let yPos = yBase;
 
     // Função auxiliar para renderizar uma linha com o alinhamento escolhido
+    const estiloCorpoBase = fmt.estiloCorpo || 'italic';
+    const estiloCorpoNeg = estiloCorpoBase === 'italic' ? 'bolditalic' : estiloCorpoBase === 'normal' ? 'bold' : estiloCorpoBase === 'bold' ? 'bold' : 'bolditalic';
     function renderizarLinha(linha, ultimaLinha) {
         let larguraUsada = 0;
         linha.forEach(p => {
-            pdf.setFont(fonteCorpo, p.negrito ? 'bolditalic' : 'italic');
+            pdf.setFont(fonteCorpo, p.negrito ? estiloCorpoNeg : estiloCorpoBase);
             larguraUsada += pdf.getTextWidth(p.palavra);
         });
         const espacoPadrao = pdf.getTextWidth(' ');
@@ -1890,21 +2030,21 @@ async function gerarFrenteCertificado(pdf, aluno, cfg) {
             const espacoExtra = (larguraTexto - larguraUsada) / (linha.length - 1);
             xAtual = margemEsq;
             linha.forEach(p => {
-                pdf.setFont(fonteCorpo, p.negrito ? 'bolditalic' : 'italic');
+                pdf.setFont(fonteCorpo, p.negrito ? estiloCorpoNeg : estiloCorpoBase);
                 pdf.text(p.palavra, xAtual, yPos);
                 xAtual += pdf.getTextWidth(p.palavra) + espacoExtra;
             });
         } else if (alinhamento === 'center') {
             xAtual = margemEsq + (larguraTexto - larguraComEspacos) / 2;
             linha.forEach(p => {
-                pdf.setFont(fonteCorpo, p.negrito ? 'bolditalic' : 'italic');
+                pdf.setFont(fonteCorpo, p.negrito ? estiloCorpoNeg : estiloCorpoBase);
                 pdf.text(p.palavra, xAtual, yPos);
                 xAtual += pdf.getTextWidth(p.palavra) + espacoPadrao;
             });
         } else if (alinhamento === 'right') {
             xAtual = margemDir - larguraComEspacos;
             linha.forEach(p => {
-                pdf.setFont(fonteCorpo, p.negrito ? 'bolditalic' : 'italic');
+                pdf.setFont(fonteCorpo, p.negrito ? estiloCorpoNeg : estiloCorpoBase);
                 pdf.text(p.palavra, xAtual, yPos);
                 xAtual += pdf.getTextWidth(p.palavra) + espacoPadrao;
             });
@@ -1912,7 +2052,7 @@ async function gerarFrenteCertificado(pdf, aluno, cfg) {
             // left ou última linha do justify
             xAtual = margemEsq;
             linha.forEach(p => {
-                pdf.setFont(fonteCorpo, p.negrito ? 'bolditalic' : 'italic');
+                pdf.setFont(fonteCorpo, p.negrito ? estiloCorpoNeg : estiloCorpoBase);
                 pdf.text(p.palavra, xAtual, yPos);
                 xAtual += pdf.getTextWidth(p.palavra) + espacoPadrao;
             });
@@ -1921,7 +2061,7 @@ async function gerarFrenteCertificado(pdf, aluno, cfg) {
     
     for (let i = 0; i < palavrasFormatadas.length; i++) {
         const item = palavrasFormatadas[i];
-        pdf.setFont(fonteCorpo, item.negrito ? 'bolditalic' : 'italic');
+        pdf.setFont(fonteCorpo, item.negrito ? estiloCorpoNeg : estiloCorpoBase);
         const larguraPalavra = pdf.getTextWidth(item.palavra + ' ');
         
         if (posX + larguraPalavra > margemDir && linhaAtual.length > 0) {
@@ -1961,7 +2101,7 @@ async function gerarFrenteCertificado(pdf, aluno, cfg) {
     pdf.line(25, yPos, 130, yPos);
     pdf.line(167, yPos, 272, yPos);
     
-    pdf.setFont('helvetica', 'normal');
+    pdf.setFont(fmt.fonteAssinatura || 'helvetica', 'normal');
     pdf.setFontSize(9);
     pdf.setTextColor(corA.r, corA.g, corA.b);
     pdf.text(cfg.frente.assinatura1, 77.5, yPos + 5, { align: 'center' });
@@ -2000,9 +2140,15 @@ function gerarVersoCertificado(pdf, aluno, cfg) {
     // Fundo personalizado
     if (CERT_UPLOADS.fundoVerso) {
         try {
-            pdf.addImage(CERT_UPLOADS.fundoVerso, 'JPEG', 0, 0, pageWidth, pageHeight);
-            // Overlay escurecer/clarear
             const fi = cfg.fundoImg || {};
+            const largPct = (fi.versoLargura || 100) / 100;
+            const altPct = (fi.versoAltura || 100) / 100;
+            const imgW = pageWidth * largPct;
+            const imgH = pageHeight * altPct;
+            const imgX = (pageWidth - imgW) / 2;
+            const imgY = (pageHeight - imgH) / 2;
+            pdf.addImage(CERT_UPLOADS.fundoVerso, 'JPEG', imgX, imgY, imgW, imgH);
+            // Overlay escurecer/clarear
             const mode = fi.versoMode || 'clarear';
             const opac = (fi.versoOpacidade || 50) / 100;
             if (mode !== 'nenhum' && opac > 0) {
@@ -2166,9 +2312,10 @@ function gerarVersoCertificado(pdf, aluno, cfg) {
     
     // Título
     yPos += 10;
-    pdf.setFont('times', 'bolditalic');
+    const fmtV = cfg.formatacao || {};
+    pdf.setFont(fmtV.fonteTitulo || 'times', fmtV.estiloTitulo || 'bolditalic');
     pdf.setFontSize(13);
-    pdf.text(cfg.verso.titulo, pageWidth / 2, yPos, { align: 'center' });
+    pdf.text(fmtTransformText(cfg.verso.titulo, fmtV.transformTitulo || 'uppercase'), pageWidth / 2, yPos, { align: 'center' });
     
     // Tabela
     yPos += 8;

@@ -156,9 +156,13 @@
 
                     <div class="form-actions">
                         <button type="submit" class="btn btn-primary">✓ Cadastrar Aluno</button>
+                        <button type="button" class="btn btn-success" id="btnCadastroLoteCadastro">📋 Cadastro em Lote</button>
                         <button type="button" class="btn btn-secondary" id="btnLimpar">✗ Limpar Campos</button>
                     </div>
                 </form>
+                <div style="margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button class="btn btn-info" id="btnImprimirListaCadastro">🖨️ Imprimir Lista de Alunos</button>
+                </div>
             </div>
         </div>
 
@@ -168,7 +172,6 @@
                 <div class="header-actions">
                     <h2>Alunos Cadastrados (<span id="totalAlunos">0</span>)</h2>
                     <div>
-                        <button class="btn btn-primary" id="btnCadastroLote">📋 Cadastro em Lote</button>
                         <button class="btn btn-info" id="btnImprimirLista">🖨️ Imprimir Lista</button>
                         <button class="btn btn-success" id="btnFazerBackup">💾 Fazer Backup Completo</button>
                         <button class="btn btn-warning" id="btnExportarDados">📥 Exportar Dados</button>
@@ -213,6 +216,7 @@
                     <button class="editor-tab-btn" data-editor-tab="tab-verso" onclick="trocarEditorTab(this)">📃 Verso</button>
                     <button class="editor-tab-btn" data-editor-tab="tab-rodape" onclick="trocarEditorTab(this)">📎 Rodapé</button>
                     <button class="editor-tab-btn" data-editor-tab="tab-margens" onclick="trocarEditorTab(this)">📐 Margens</button>
+                    <button class="editor-tab-btn" data-editor-tab="tab-formatacao" onclick="trocarEditorTab(this)">🔤 Formatação</button>
                     <button class="editor-tab-btn" data-editor-tab="tab-cores" onclick="trocarEditorTab(this)">🎨 Cores</button>
                 </div>
 
@@ -341,6 +345,36 @@
                             <input type="text" id="certAssinatura3" class="form-control" value="CONCLUDENTE" oninput="atualizarPreviewCert()">
                         </div>
                     </div>
+
+                    <h3 style="margin-top: 25px; margin-bottom: 15px; color: #1e3a8a;">🖼️ Plano de Fundo da Frente</h3>
+                    <div class="editor-grid">
+                        <div class="editor-field" style="grid-column: 1 / -1;">
+                            <label>Imagem de Fundo da Frente (PNG/JPG)</label>
+                            <input type="file" id="uploadFundoFrente" accept="image/*" class="form-control" onchange="handleUploadFundo(event, 'frente')">
+                            <div id="previewFundoFrente" style="margin-top: 10px;"></div>
+                            <button class="btn btn-danger btn-sm" onclick="removerUpload('fundoFrente')" style="margin-top: 5px; display: none;" id="btnRemoverFundoFrente">✗ Remover Fundo</button>
+                        </div>
+                        <div class="editor-field">
+                            <label>Largura da Imagem (%)</label>
+                            <input type="number" id="certFundoFrenteLargura" class="form-control" value="100" min="10" max="200" oninput="atualizarPreviewCert()">
+                        </div>
+                        <div class="editor-field">
+                            <label>Altura da Imagem (%)</label>
+                            <input type="number" id="certFundoFrenteAltura" class="form-control" value="100" min="10" max="200" oninput="atualizarPreviewCert()">
+                        </div>
+                        <div class="editor-field">
+                            <label>Efeito sobre a imagem</label>
+                            <select id="certFundoFrenteMode" class="form-control" onchange="atualizarPreviewCert()">
+                                <option value="nenhum">Nenhum (original)</option>
+                                <option value="escurecer">Escurecer</option>
+                                <option value="clarear" selected>Clarear</option>
+                            </select>
+                        </div>
+                        <div class="editor-field">
+                            <label>Intensidade: <span id="lblFundoFrenteIntensidade">50</span>%</label>
+                            <input type="range" id="certFundoFrenteOpacidade" min="0" max="90" value="50" class="form-control" style="padding: 0;" oninput="document.getElementById('lblFundoFrenteIntensidade').textContent=this.value; atualizarPreviewCert()">
+                        </div>
+                    </div>
                 </div>
 
                 <!-- ===== SUB-ABA: VERSO ===== -->
@@ -372,6 +406,36 @@
                                 <option value="sim">Sim</option>
                                 <option value="nao">Não</option>
                             </select>
+                        </div>
+                    </div>
+
+                    <h3 style="margin-top: 25px; margin-bottom: 15px; color: #1e3a8a;">🖼️ Plano de Fundo do Verso</h3>
+                    <div class="editor-grid">
+                        <div class="editor-field" style="grid-column: 1 / -1;">
+                            <label>Imagem de Fundo do Verso (PNG/JPG)</label>
+                            <input type="file" id="uploadFundoVerso" accept="image/*" class="form-control" onchange="handleUploadFundo(event, 'verso')">
+                            <div id="previewFundoVerso" style="margin-top: 10px;"></div>
+                            <button class="btn btn-danger btn-sm" onclick="removerUpload('fundoVerso')" style="margin-top: 5px; display: none;" id="btnRemoverFundoVerso">✗ Remover Fundo</button>
+                        </div>
+                        <div class="editor-field">
+                            <label>Largura da Imagem (%)</label>
+                            <input type="number" id="certFundoVersoLargura" class="form-control" value="100" min="10" max="200" oninput="atualizarPreviewCert()">
+                        </div>
+                        <div class="editor-field">
+                            <label>Altura da Imagem (%)</label>
+                            <input type="number" id="certFundoVersoAltura" class="form-control" value="100" min="10" max="200" oninput="atualizarPreviewCert()">
+                        </div>
+                        <div class="editor-field">
+                            <label>Efeito sobre a imagem</label>
+                            <select id="certFundoVersoMode" class="form-control" onchange="atualizarPreviewCert()">
+                                <option value="nenhum">Nenhum (original)</option>
+                                <option value="escurecer">Escurecer</option>
+                                <option value="clarear" selected>Clarear</option>
+                            </select>
+                        </div>
+                        <div class="editor-field">
+                            <label>Intensidade: <span id="lblFundoVersoIntensidade">50</span>%</label>
+                            <input type="range" id="certFundoVersoOpacidade" min="0" max="90" value="50" class="form-control" style="padding: 0;" oninput="document.getElementById('lblFundoVersoIntensidade').textContent=this.value; atualizarPreviewCert()">
                         </div>
                     </div>
                 </div>
@@ -442,40 +506,8 @@
                         </div>
                     </div>
 
-                    <h3 style="margin-top: 25px; margin-bottom: 15px; color: #1e3a8a;">📤 Uploads de Imagem</h3>
+                    <h3 style="margin-top: 25px; margin-bottom: 15px; color: #1e3a8a;">📤 Bordas Personalizadas</h3>
                     <div class="editor-grid">
-                        <div class="editor-field">
-                            <label>Imagem de Fundo da Frente (PNG/JPG)</label>
-                            <input type="file" id="uploadFundoFrente" accept="image/*" class="form-control" onchange="handleUploadFundo(event, 'frente')">
-                            <div id="previewFundoFrente" style="margin-top: 10px;"></div>
-                            <button class="btn btn-danger btn-sm" onclick="removerUpload('fundoFrente')" style="margin-top: 5px; display: none;" id="btnRemoverFundoFrente">✗ Remover Fundo</button>
-                            <div style="margin-top: 10px;">
-                                <label>Efeito sobre a imagem</label>
-                                <select id="certFundoFrenteMode" class="form-control" onchange="atualizarPreviewCert()" style="margin-bottom: 6px;">
-                                    <option value="nenhum">Nenhum (original)</option>
-                                    <option value="escurecer">Escurecer</option>
-                                    <option value="clarear" selected>Clarear</option>
-                                </select>
-                                <label>Intensidade: <span id="lblFundoFrenteIntensidade">50</span>%</label>
-                                <input type="range" id="certFundoFrenteOpacidade" min="0" max="90" value="50" class="form-control" style="padding: 0;" oninput="document.getElementById('lblFundoFrenteIntensidade').textContent=this.value; atualizarPreviewCert()">
-                            </div>
-                        </div>
-                        <div class="editor-field">
-                            <label>Imagem de Fundo do Verso (PNG/JPG)</label>
-                            <input type="file" id="uploadFundoVerso" accept="image/*" class="form-control" onchange="handleUploadFundo(event, 'verso')">
-                            <div id="previewFundoVerso" style="margin-top: 10px;"></div>
-                            <button class="btn btn-danger btn-sm" onclick="removerUpload('fundoVerso')" style="margin-top: 5px; display: none;" id="btnRemoverFundoVerso">✗ Remover Fundo</button>
-                            <div style="margin-top: 10px;">
-                                <label>Efeito sobre a imagem</label>
-                                <select id="certFundoVersoMode" class="form-control" onchange="atualizarPreviewCert()" style="margin-bottom: 6px;">
-                                    <option value="nenhum">Nenhum (original)</option>
-                                    <option value="escurecer">Escurecer</option>
-                                    <option value="clarear" selected>Clarear</option>
-                                </select>
-                                <label>Intensidade: <span id="lblFundoVersoIntensidade">50</span>%</label>
-                                <input type="range" id="certFundoVersoOpacidade" min="0" max="90" value="50" class="form-control" style="padding: 0;" oninput="document.getElementById('lblFundoVersoIntensidade').textContent=this.value; atualizarPreviewCert()">
-                            </div>
-                        </div>
                         <div class="editor-field" style="grid-column: 1 / -1;">
                             <label>Borda Completa (imagem única horizontal+vertical - PNG/JPG)</label>
                             <input type="file" id="uploadBordaCompleta" accept="image/png,image/jpeg,image/webp" class="form-control" onchange="handleUploadBordaCompleta(event)">
@@ -493,6 +525,86 @@
                             <input type="file" id="uploadBordaV" accept="image/png" class="form-control" onchange="handleUploadBordaCustom(event, 'vertical')">
                             <div id="previewBordaV" style="margin-top: 10px;"></div>
                             <button class="btn btn-danger btn-sm" onclick="removerUpload('bordaV')" style="margin-top: 5px; display: none;" id="btnRemoverBordaV">✗ Remover Borda V</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="editor-tab-content" id="tab-formatacao">
+                    <h3 style="margin-bottom: 15px; color: #1e3a8a;">Formatação de Texto</h3>
+                    <div class="editor-grid">
+                        <div class="editor-field">
+                            <label>Fonte do Cabeçalho</label>
+                            <select id="certFmtFonteCabecalho" class="form-control" onchange="atualizarPreviewCert()">
+                                <option value="helvetica">Helvetica (sem serifa)</option>
+                                <option value="times">Times (serifada)</option>
+                                <option value="courier">Courier (monoespaçada)</option>
+                            </select>
+                        </div>
+                        <div class="editor-field">
+                            <label>Estilo do Cabeçalho</label>
+                            <select id="certFmtEstiloCabecalho" class="form-control" onchange="atualizarPreviewCert()">
+                                <option value="bold">Negrito</option>
+                                <option value="normal">Normal</option>
+                                <option value="italic">Itálico</option>
+                                <option value="bolditalic">Negrito Itálico</option>
+                            </select>
+                        </div>
+                        <div class="editor-field">
+                            <label>Fonte do Título</label>
+                            <select id="certFmtFonteTitulo" class="form-control" onchange="atualizarPreviewCert()">
+                                <option value="times" selected>Times (serifada)</option>
+                                <option value="helvetica">Helvetica (sem serifa)</option>
+                                <option value="courier">Courier (monoespaçada)</option>
+                            </select>
+                        </div>
+                        <div class="editor-field">
+                            <label>Estilo do Título</label>
+                            <select id="certFmtEstiloTitulo" class="form-control" onchange="atualizarPreviewCert()">
+                                <option value="bolditalic">Negrito Itálico</option>
+                                <option value="bold">Negrito</option>
+                                <option value="italic">Itálico</option>
+                                <option value="normal">Normal</option>
+                            </select>
+                        </div>
+                        <div class="editor-field">
+                            <label>Estilo do Corpo</label>
+                            <select id="certFmtEstiloCorpo" class="form-control" onchange="atualizarPreviewCert()">
+                                <option value="italic">Itálico</option>
+                                <option value="normal">Normal</option>
+                                <option value="bold">Negrito</option>
+                                <option value="bolditalic">Negrito Itálico</option>
+                            </select>
+                        </div>
+                        <div class="editor-field">
+                            <label>Fonte das Assinaturas</label>
+                            <select id="certFmtFonteAssinatura" class="form-control" onchange="atualizarPreviewCert()">
+                                <option value="helvetica">Helvetica (sem serifa)</option>
+                                <option value="times">Times (serifada)</option>
+                                <option value="courier">Courier (monoespaçada)</option>
+                            </select>
+                        </div>
+                        <div class="editor-field">
+                            <label>Transformação do Cabeçalho</label>
+                            <select id="certFmtTransformCabecalho" class="form-control" onchange="atualizarPreviewCert()">
+                                <option value="uppercase">MAIÚSCULAS</option>
+                                <option value="none">Sem alteração</option>
+                                <option value="capitalize">Primeira Letra Maiúscula</option>
+                            </select>
+                        </div>
+                        <div class="editor-field">
+                            <label>Transformação do Título</label>
+                            <select id="certFmtTransformTitulo" class="form-control" onchange="atualizarPreviewCert()">
+                                <option value="uppercase">MAIÚSCULAS</option>
+                                <option value="none">Sem alteração</option>
+                                <option value="capitalize">Primeira Letra Maiúscula</option>
+                            </select>
+                        </div>
+                        <div class="editor-field">
+                            <label>Espaçamento entre Linhas (corpo)</label>
+                            <input type="number" id="certFmtEspacoLinha" class="form-control" value="8" min="4" max="20" step="0.5" oninput="atualizarPreviewCert()">
+                        </div>
+                        <div class="editor-field">
+                            <label>Espaçamento entre Letras (px)</label>
+                            <input type="number" id="certFmtEspacoLetras" class="form-control" value="0" min="-2" max="10" step="0.5" oninput="atualizarPreviewCert()">
                         </div>
                     </div>
                 </div>
