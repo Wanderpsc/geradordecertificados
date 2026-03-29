@@ -852,7 +852,13 @@ function obterConfigCert() {
             uf: document.getElementById('certVersoUF')?.value || 'Piauí',
             titulo: document.getElementById('certVersoTitulo')?.value || 'CERTIFICADO DE CONCLUSÃO DO ENSINO MÉDIO',
             observacoes: document.getElementById('certVersoObservacoes')?.value || 'sim',
-            bordas: document.getElementById('certVersoBordas')?.value || 'sim'
+            bordas: document.getElementById('certVersoBordas')?.value || 'sim',
+            fonteCabecalho: document.getElementById('certVersoFonteCabecalho')?.value || 'helvetica',
+            fonteCabecalhoTam: parseInt(document.getElementById('certVersoFonteCabecalhoTam')?.value) || 7,
+            fonteTitulo: document.getElementById('certVersoFonteTitulo')?.value || 'times',
+            fonteTituloTam: parseInt(document.getElementById('certVersoFonteTituloTam')?.value) || 13,
+            estiloTitulo: document.getElementById('certVersoEstiloTitulo')?.value || 'bolditalic',
+            alinhamentoTitulo: document.getElementById('certVersoAlinhamentoTitulo')?.value || 'center'
         },
         rodape: {
             exibir: document.getElementById('certRodapeExibir')?.value || 'sim',
@@ -931,6 +937,12 @@ function aplicarConfigNosInputs(cfg) {
         ['certVersoTitulo', cfg.verso.titulo],
         ['certVersoObservacoes', cfg.verso.observacoes],
         ['certVersoBordas', cfg.verso.bordas],
+        ['certVersoFonteCabecalho', cfg.verso.fonteCabecalho],
+        ['certVersoFonteCabecalhoTam', cfg.verso.fonteCabecalhoTam],
+        ['certVersoFonteTitulo', cfg.verso.fonteTitulo],
+        ['certVersoFonteTituloTam', cfg.verso.fonteTituloTam],
+        ['certVersoEstiloTitulo', cfg.verso.estiloTitulo],
+        ['certVersoAlinhamentoTitulo', cfg.verso.alinhamentoTitulo],
         ['certRodapeExibir', cfg.rodape.exibir],
         ['certRodapeLinha1', cfg.rodape.linha1],
         ['certRodapeLinha2', cfg.rodape.linha2],
@@ -1432,7 +1444,9 @@ function desenharPreviewVerso(ctx, cfg, sx, sy, pw, ph, imgs) {
     // Cabeçalho do verso
     let yPos = 30 * sy;
     ctx.fillStyle = cfg.cores.texto;
-    ctx.font = `bold ${7 * sx / 2}px sans-serif`;
+    const versoCabFonte = cfg.verso.fonteCabecalho || 'helvetica';
+    const versoCabTam = cfg.verso.fonteCabecalhoTam || 7;
+    ctx.font = `bold ${versoCabTam * sx / 2}px ${fmtCanvasFamily(versoCabFonte)}`;
     ctx.textAlign = 'left';
     const mx = 15 * sx;
 
@@ -1450,11 +1464,15 @@ function desenharPreviewVerso(ctx, cfg, sx, sy, pw, ph, imgs) {
 
     // Título
     yPos += 20;
-    const fmt = cfg.formatacao || {};
+    const versoTituloFonte = cfg.verso.fonteTitulo || 'times';
+    const versoTituloTam = cfg.verso.fonteTituloTam || 13;
+    const versoTituloEstilo = cfg.verso.estiloTitulo || 'bolditalic';
+    const versoTituloAlign = cfg.verso.alinhamentoTitulo || 'center';
     ctx.fillStyle = cfg.cores.principal;
-    ctx.font = `${fmtCanvasStyle(fmt.estiloTitulo || 'bolditalic')} ${13 * sx / 2.1}px ${fmtCanvasFamily(fmt.fonteTitulo || 'times')}`;
-    ctx.textAlign = 'center';
-    ctx.fillText(fmtTransformText(cfg.verso.titulo, fmt.transformTitulo || 'uppercase'), pw / 2, yPos);
+    ctx.font = `${fmtCanvasStyle(versoTituloEstilo)} ${versoTituloTam * sx / 2.1}px ${fmtCanvasFamily(versoTituloFonte)}`;
+    ctx.textAlign = versoTituloAlign;
+    const tituloX = versoTituloAlign === 'center' ? pw / 2 : (versoTituloAlign === 'right' ? pw - 15 * sx : 15 * sx);
+    ctx.fillText(fmtTransformText(cfg.verso.titulo, 'uppercase'), tituloX, yPos);
 
     // Tabela placeholder
     yPos += 15;
@@ -2244,131 +2262,137 @@ function gerarVersoCertificado(pdf, aluno, cfg) {
     
     // Cabeçalho do verso
     pdf.setTextColor(corP.r, corP.g, corP.b);
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(7);
+    const versoCabFonte = cfg.verso.fonteCabecalho || 'helvetica';
+    const versoCabTam = cfg.verso.fonteCabecalhoTam || 7;
+    pdf.setFont(versoCabFonte, 'normal');
+    pdf.setFontSize(versoCabTam);
     
     let yPos = 25;
     let posX = 15;
     
     pdf.text('ESTABELECIMENTO DE ENSINO:', posX, yPos);
-    pdf.setFont('helvetica', 'bold');
+    pdf.setFont(versoCabFonte, 'bold');
     posX += pdf.getTextWidth('ESTABELECIMENTO DE ENSINO: ');
     pdf.text(cfg.cabecalho.nomeInstituicao.toUpperCase(), posX, yPos);
     
-    pdf.setFont('helvetica', 'normal');
+    pdf.setFont(versoCabFonte, 'normal');
     posX = 195;
     pdf.text('MUNICÍPIO:', posX, yPos);
-    pdf.setFont('helvetica', 'bold');
+    pdf.setFont(versoCabFonte, 'bold');
     posX += pdf.getTextWidth('MUNICÍPIO: ');
     pdf.text(cfg.verso.municipio, posX, yPos);
     
-    pdf.setFont('helvetica', 'normal');
+    pdf.setFont(versoCabFonte, 'normal');
     posX = 250;
     pdf.text('UF:', posX, yPos);
-    pdf.setFont('helvetica', 'bold');
+    pdf.setFont(versoCabFonte, 'bold');
     posX += pdf.getTextWidth('UF: ');
     pdf.text(cfg.verso.uf, posX, yPos);
     
     // Linha 2
     yPos += 5;
     posX = 15;
-    pdf.setFont('helvetica', 'normal');
+    pdf.setFont(versoCabFonte, 'normal');
     pdf.text('ESTUDANTE:', posX, yPos);
-    pdf.setFont('helvetica', 'bold');
+    pdf.setFont(versoCabFonte, 'bold');
     posX += pdf.getTextWidth('ESTUDANTE: ');
     pdf.text(String(aluno.nome || '').toUpperCase(), posX, yPos);
     
-    pdf.setFont('helvetica', 'normal');
+    pdf.setFont(versoCabFonte, 'normal');
     posX = 150;
     pdf.text('RG:', posX, yPos);
-    pdf.setFont('helvetica', 'bold');
+    pdf.setFont(versoCabFonte, 'bold');
     posX += pdf.getTextWidth('RG: ');
     pdf.text(String(aluno.rg || ''), posX, yPos);
     
-    pdf.setFont('helvetica', 'normal');
+    pdf.setFont(versoCabFonte, 'normal');
     posX = 190;
     pdf.text('ÓRGÃO EMISSOR:', posX, yPos);
-    pdf.setFont('helvetica', 'bold');
+    pdf.setFont(versoCabFonte, 'bold');
     posX += pdf.getTextWidth('ÓRGÃO EMISSOR: ');
     pdf.text(String(aluno.orgaoEmissor || ''), posX, yPos);
     
-    pdf.setFont('helvetica', 'normal');
+    pdf.setFont(versoCabFonte, 'normal');
     posX = 240;
     pdf.text('CPF:', posX, yPos);
-    pdf.setFont('helvetica', 'bold');
+    pdf.setFont(versoCabFonte, 'bold');
     posX += pdf.getTextWidth('CPF: ');
     pdf.text(String(aluno.cpf || ''), posX, yPos);
     
     // Linha 3
     yPos += 5;
     posX = 15;
-    pdf.setFont('helvetica', 'normal');
+    pdf.setFont(versoCabFonte, 'normal');
     pdf.text('DATA DE NASCIMENTO:', posX, yPos);
-    pdf.setFont('helvetica', 'bold');
+    pdf.setFont(versoCabFonte, 'bold');
     posX += pdf.getTextWidth('DATA DE NASCIMENTO: ');
     pdf.text(String(aluno.diaNascimento).padStart(2, '0'), posX, yPos);
     
-    pdf.setFont('helvetica', 'normal');
+    pdf.setFont(versoCabFonte, 'normal');
     posX += pdf.getTextWidth(String(aluno.diaNascimento).padStart(2, '0')) + 1;
     pdf.text('DE', posX, yPos);
     
-    pdf.setFont('helvetica', 'bold');
+    pdf.setFont(versoCabFonte, 'bold');
     posX += pdf.getTextWidth('DE ');
     pdf.text(String(aluno.mesNascimento || ''), posX, yPos);
     
-    pdf.setFont('helvetica', 'normal');
+    pdf.setFont(versoCabFonte, 'normal');
     posX += pdf.getTextWidth(aluno.mesNascimento) + 1;
     pdf.text('DE', posX, yPos);
     
-    pdf.setFont('helvetica', 'bold');
+    pdf.setFont(versoCabFonte, 'bold');
     posX += pdf.getTextWidth('DE ');
     pdf.text(String(aluno.anoNascimento || ''), posX, yPos);
     
-    pdf.setFont('helvetica', 'normal');
+    pdf.setFont(versoCabFonte, 'normal');
     posX = 115;
     pdf.text('NATURALIDADE:', posX, yPos);
-    pdf.setFont('helvetica', 'bold');
+    pdf.setFont(versoCabFonte, 'bold');
     posX += pdf.getTextWidth('NATURALIDADE: ');
     pdf.text(String(aluno.cidadeNascimento || ''), posX, yPos);
     
-    pdf.setFont('helvetica', 'normal');
+    pdf.setFont(versoCabFonte, 'normal');
     posX += pdf.getTextWidth(aluno.cidadeNascimento) + 1;
     pdf.text('-', posX, yPos);
     
-    pdf.setFont('helvetica', 'bold');
+    pdf.setFont(versoCabFonte, 'bold');
     posX += pdf.getTextWidth('- ');
     pdf.text(String(aluno.estadoNascimento || ''), posX, yPos);
     
-    pdf.setFont('helvetica', 'normal');
+    pdf.setFont(versoCabFonte, 'normal');
     posX = 210;
     pdf.text('NACIONALIDADE:', posX, yPos);
-    pdf.setFont('helvetica', 'bold');
+    pdf.setFont(versoCabFonte, 'bold');
     posX += pdf.getTextWidth('NACIONALIDADE: ');
     pdf.text(String(aluno.nacionalidade || '').toUpperCase(), posX, yPos);
     
     // Filiação
     yPos += 5;
     posX = 15;
-    pdf.setFont('helvetica', 'normal');
+    pdf.setFont(versoCabFonte, 'normal');
     pdf.text('FILIAÇÃO: MÃE:', posX, yPos);
-    pdf.setFont('helvetica', 'bold');
+    pdf.setFont(versoCabFonte, 'bold');
     posX += pdf.getTextWidth('FILIAÇÃO: MÃE: ');
     pdf.text(String(aluno.nomeMae || ''), posX, yPos);
     
     yPos += 5;
     posX = 15;
-    pdf.setFont('helvetica', 'normal');
+    pdf.setFont(versoCabFonte, 'normal');
     pdf.text('PAI:', posX, yPos);
-    pdf.setFont('helvetica', 'bold');
+    pdf.setFont(versoCabFonte, 'bold');
     posX += pdf.getTextWidth('PAI: ');
     pdf.text(String(aluno.nomePai || ''), posX, yPos);
     
     // Título
     yPos += 10;
-    const fmtV = cfg.formatacao || {};
-    pdf.setFont(fmtV.fonteTitulo || 'times', fmtV.estiloTitulo || 'bolditalic');
-    pdf.setFontSize(13);
-    pdf.text(fmtTransformText(cfg.verso.titulo, fmtV.transformTitulo || 'uppercase'), pageWidth / 2, yPos, { align: 'center' });
+    const versoTituloFonte = cfg.verso.fonteTitulo || 'times';
+    const versoTituloTam = cfg.verso.fonteTituloTam || 13;
+    const versoTituloEstilo = cfg.verso.estiloTitulo || 'bolditalic';
+    const versoTituloAlign = cfg.verso.alinhamentoTitulo || 'center';
+    pdf.setFont(versoTituloFonte, versoTituloEstilo);
+    pdf.setFontSize(versoTituloTam);
+    const tituloX = versoTituloAlign === 'center' ? pageWidth / 2 : (versoTituloAlign === 'right' ? pageWidth - 15 : 15);
+    pdf.text(fmtTransformText(cfg.verso.titulo, 'uppercase'), tituloX, yPos, { align: versoTituloAlign });
     
     // Tabela
     yPos += 8;

@@ -394,6 +394,47 @@
                             <input type="text" id="certVersoTitulo" class="form-control" value="CERTIFICADO DE CONCLUSÃO DO ENSINO MÉDIO" oninput="atualizarPreviewCert()">
                         </div>
                         <div class="editor-field">
+                            <label>Fonte do Cabeçalho do Verso</label>
+                            <select id="certVersoFonteCabecalho" class="form-control" onchange="atualizarPreviewCert()">
+                                <option value="helvetica" selected>Helvetica</option>
+                                <option value="times">Times New Roman</option>
+                                <option value="courier">Courier</option>
+                            </select>
+                        </div>
+                        <div class="editor-field">
+                            <label>Tamanho Fonte do Cabeçalho (pt)</label>
+                            <input type="number" id="certVersoFonteCabecalhoTam" class="form-control" value="7" min="5" max="14" oninput="atualizarPreviewCert()">
+                        </div>
+                        <div class="editor-field">
+                            <label>Fonte do Título do Verso</label>
+                            <select id="certVersoFonteTitulo" class="form-control" onchange="atualizarPreviewCert()">
+                                <option value="times" selected>Times New Roman</option>
+                                <option value="helvetica">Helvetica</option>
+                                <option value="courier">Courier</option>
+                            </select>
+                        </div>
+                        <div class="editor-field">
+                            <label>Tamanho Fonte do Título (pt)</label>
+                            <input type="number" id="certVersoFonteTituloTam" class="form-control" value="13" min="8" max="24" oninput="atualizarPreviewCert()">
+                        </div>
+                        <div class="editor-field">
+                            <label>Estilo do Título do Verso</label>
+                            <select id="certVersoEstiloTitulo" class="form-control" onchange="atualizarPreviewCert()">
+                                <option value="bolditalic" selected>Negrito Itálico</option>
+                                <option value="bold">Negrito</option>
+                                <option value="italic">Itálico</option>
+                                <option value="normal">Normal</option>
+                            </select>
+                        </div>
+                        <div class="editor-field">
+                            <label>Alinhamento do Título</label>
+                            <select id="certVersoAlinhamentoTitulo" class="form-control" onchange="atualizarPreviewCert()">
+                                <option value="center" selected>Centralizado</option>
+                                <option value="left">À Esquerda</option>
+                                <option value="right">À Direita</option>
+                            </select>
+                        </div>
+                        <div class="editor-field">
                             <label>Exibir Tabela de Observações</label>
                             <select id="certVersoObservacoes" class="form-control" onchange="atualizarPreviewCert()">
                                 <option value="sim">Sim</option>
