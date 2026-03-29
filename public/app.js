@@ -1479,6 +1479,26 @@ function carregarImagem(src) {
     });
 }
 
+// Rotaciona imagem 90° CW para gerar borda vertical a partir da horizontal (garante mesma espessura visual)
+function _rotateImageForBorder(dataUrl) {
+    return new Promise((resolve) => {
+        if (!dataUrl) { resolve(null); return; }
+        const img = new Image();
+        img.onload = () => {
+            const c = document.createElement('canvas');
+            c.width = img.height;
+            c.height = img.width;
+            const ctx = c.getContext('2d');
+            ctx.translate(c.width, 0);
+            ctx.rotate(Math.PI / 2);
+            ctx.drawImage(img, 0, 0);
+            resolve(c.toDataURL('image/png'));
+        };
+        img.onerror = () => resolve(null);
+        img.src = dataUrl;
+    });
+}
+
 function detectarFormatoImagem(dataUrl) {
     if (!dataUrl) return 'PNG';
     if (dataUrl.startsWith('data:image/jpeg') || dataUrl.startsWith('data:image/jpg')) return 'JPEG';
@@ -1564,15 +1584,16 @@ function desenharPreviewFrente(ctx, cfg, sx, sy, pw, ph, imgs) {
 
     // Bordas decorativas simuladas
     if (cfg.margens.bordaExibir === 'sim' && bordaEsp > 0) {
+        const sUnif = (sx + sy) / 2; // escala uniforme para espessura igual em todas as direções
         if (imgs && imgs.bordaCompleta) {
             ctx.drawImage(imgs.bordaCompleta, 0, 0, pw, ph);
         } else {
             ctx.fillStyle = cfg.cores.borda || cfg.cores.principal;
             ctx.globalAlpha = 0.3;
-            ctx.fillRect(0, 0, bordaEsp * sx, ph); // esq
-            ctx.fillRect(pw - bordaEsp * sx, 0, bordaEsp * sx, ph); // dir
-            ctx.fillRect(0, 0, pw, bordaEsp * sy); // sup
-            ctx.fillRect(0, ph - bordaEsp * sy, pw, bordaEsp * sy); // inf
+            ctx.fillRect(0, 0, bordaEsp * sUnif, ph); // esq
+            ctx.fillRect(pw - bordaEsp * sUnif, 0, bordaEsp * sUnif, ph); // dir
+            ctx.fillRect(0, 0, pw, bordaEsp * sUnif); // sup
+            ctx.fillRect(0, ph - bordaEsp * sUnif, pw, bordaEsp * sUnif); // inf
             ctx.globalAlpha = 1;
         }
     }
@@ -1736,15 +1757,16 @@ function desenharPreviewVerso(ctx, cfg, sx, sy, pw, ph, imgs) {
 
     // Bordas
     if (cfg.verso.bordas === 'sim' && cfg.margens.bordaExibir === 'sim' && bordaEsp > 0) {
+        const sUnif = (sx + sy) / 2; // escala uniforme para espessura igual
         if (imgs && imgs.bordaCompleta) {
             ctx.drawImage(imgs.bordaCompleta, 0, 0, pw, ph);
         } else {
             ctx.fillStyle = cfg.cores.borda || cfg.cores.principal;
             ctx.globalAlpha = 0.3;
-            ctx.fillRect(0, 0, bordaEsp * sx, ph);
-            ctx.fillRect(pw - bordaEsp * sx, 0, bordaEsp * sx, ph);
-            ctx.fillRect(0, 0, pw, bordaEsp * sy);
-            ctx.fillRect(0, ph - bordaEsp * sy, pw, bordaEsp * sy);
+            ctx.fillRect(0, 0, bordaEsp * sUnif, ph);
+            ctx.fillRect(pw - bordaEsp * sUnif, 0, bordaEsp * sUnif, ph);
+            ctx.fillRect(0, 0, pw, bordaEsp * sUnif);
+            ctx.fillRect(0, ph - bordaEsp * sUnif, pw, bordaEsp * sUnif);
             ctx.globalAlpha = 1;
         }
     }
@@ -2174,6 +2196,14 @@ async function gerarCertificado(aluno, emLote = false) {
             format: 'a4'
         });
 
+        // Pré-gerar borda vertical consistente (rotacionando a horizontal) para espessura uniforme
+        if (!CERT_UPLOADS.bordaVertical && !CERT_UPLOADS._bordaVFromH) {
+            const bordaH = CERT_UPLOADS.bordaHorizontal || (typeof BORDA_HORIZONTAL !== 'undefined' ? BORDA_HORIZONTAL : null);
+            if (bordaH) {
+                CERT_UPLOADS._bordaVFromH = await _rotateImageForBorder(bordaH);
+            }
+        }
+
         // Gerar frente do certificado
         await gerarFrenteCertificado(pdf, aluno, cfg);
         
@@ -2251,7 +2281,7 @@ async function gerarFrenteCertificado(pdf, aluno, cfg) {
                 pdf.addImage(CERT_UPLOADS.bordaCompleta, detectarFormatoImagem(CERT_UPLOADS.bordaCompleta), 0, 0, pageWidth, pageHeight);
             } catch(e) { console.error('Erro borda completa:', e); }
         } else {
-            const bordaV = CERT_UPLOADS.bordaVertical || (typeof BORDA_VERTICAL !== 'undefined' ? BORDA_VERTICAL : null);
+            const bordaV = CERT_UPLOADS.bordaVertical || CERT_UPLOADS._bordaVFromH || (typeof BORDA_VERTICAL !== 'undefined' ? BORDA_VERTICAL : null);
             const bordaH = CERT_UPLOADS.bordaHorizontal || (typeof BORDA_HORIZONTAL !== 'undefined' ? BORDA_HORIZONTAL : null);
         
             if (bordaV) {
@@ -2655,7 +2685,7 @@ function gerarVersoCertificado(pdf, aluno, cfg) {
                 pdf.addImage(CERT_UPLOADS.bordaCompleta, detectarFormatoImagem(CERT_UPLOADS.bordaCompleta), 0, 0, pageWidth, pageHeight);
             } catch(e) { console.error('Erro borda completa verso:', e); }
         } else {
-            const bordaV = CERT_UPLOADS.bordaVertical || (typeof BORDA_VERTICAL !== 'undefined' ? BORDA_VERTICAL : null);
+            const bordaV = CERT_UPLOADS.bordaVertical || CERT_UPLOADS._bordaVFromH || (typeof BORDA_VERTICAL !== 'undefined' ? BORDA_VERTICAL : null);
             const bordaH = CERT_UPLOADS.bordaHorizontal || (typeof BORDA_HORIZONTAL !== 'undefined' ? BORDA_HORIZONTAL : null);
         
             if (bordaV) {
