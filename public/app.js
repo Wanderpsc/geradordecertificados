@@ -8,7 +8,10 @@ const APP_STATE = {
     alunos: JSON.parse(localStorage.getItem('alunos')) || [],
     templateSelecionado: 'estadual-pi',
     templateCustom: localStorage.getItem('templateCustom') || null,
-    alunoEditando: null
+    alunoEditando: null,
+    modeloAtualId: null,
+    modeloAtualNome: null,
+    autoSalvar: localStorage.getItem('autoSalvar') === 'true'
 };
 
 // ==================== TEMPLATES DE CERTIFICADOS ====================
@@ -1052,12 +1055,14 @@ function salvarPersonalizacao() {
     localStorage.setItem('certConfig', JSON.stringify(CERT_CONFIG));
     localStorage.setItem('certUploads', JSON.stringify(CERT_UPLOADS));
     mostrarNotificacao('Modelo personalizado salvo com sucesso!', 'success');
+    dispararAutoSalvar();
 }
 
 function aplicarAlteracoes() {
     CERT_CONFIG = obterConfigCert();
     atualizarPreviewCert();
     mostrarNotificacao('Alterações aplicadas! Veja o preview abaixo.', 'success');
+    dispararAutoSalvar();
 }
 
 function resetarPersonalizacao() {
@@ -1066,9 +1071,274 @@ function resetarPersonalizacao() {
     localStorage.removeItem('certUploads');
     CERT_CONFIG = {};
     CERT_UPLOADS = {};
+    APP_STATE.modeloAtualId = null;
+    APP_STATE.modeloAtualNome = null;
     // Recarregar a página para limpar os campos
     location.hash = 'templates';
     location.reload();
+}
+
+// ==================== MODELOS NA NUVEM ====================
+let _autoSalvarTimer = null;
+
+function toggleAutoSalvar(ativo) {
+    APP_STATE.autoSalvar = ativo;
+    localStorage.setItem('autoSalvar', ativo ? 'true' : 'false');
+    mostrarNotificacao(ativo ? 'Auto-salvar ativado' : 'Auto-salvar desativado', 'info');
+}
+
+function dispararAutoSalvar() {
+    if (!APP_STATE.autoSalvar || !APP_STATE.modeloAtualId) return;
+    clearTimeout(_autoSalvarTimer);
+    _autoSalvarTimer = setTimeout(async () => {
+        const config = obterConfigCert();
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        try {
+            await fetch(`${API_URL}/modelos/${APP_STATE.modeloAtualId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ config, uploads: CERT_UPLOADS })
+            });
+        } catch(e) { /* silencioso */ }
+    }, 3000);
+}
+
+async function salvarModeloNaNuvem() {
+    const token = localStorage.getItem('token');
+    if (!token) { mostrarNotificacao('Faça login para salvar modelos na nuvem.', 'error'); return; }
+
+    const config = obterConfigCert();
+
+    if (APP_STATE.modeloAtualId) {
+        // Atualizar modelo existente
+        try {
+            const resp = await fetch(`${API_URL}/modelos/${APP_STATE.modeloAtualId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ config, uploads: CERT_UPLOADS })
+            });
+            const data = await resp.json();
+            if (data.success) {
+                mostrarNotificacao(`Modelo "${APP_STATE.modeloAtualNome}" atualizado na nuvem!`, 'success');
+                carregarModelosSalvos();
+            } else {
+                mostrarNotificacao(data.message || 'Erro ao atualizar', 'error');
+            }
+        } catch(e) { mostrarNotificacao('Erro de conexão', 'error'); }
+        return;
+    }
+
+    // Novo modelo — pedir nome
+    const nome = prompt('Nome do modelo:');
+    if (!nome || !nome.trim()) return;
+    const descricao = prompt('Descrição (opcional):') || '';
+
+    try {
+        const resp = await fetch(`${API_URL}/modelos`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ nome: nome.trim(), descricao: descricao.trim(), config, uploads: CERT_UPLOADS })
+        });
+        const data = await resp.json();
+        if (data.success) {
+            APP_STATE.modeloAtualId = data.modelo._id;
+            APP_STATE.modeloAtualNome = data.modelo.nome;
+            atualizarInfoModeloAtual();
+            mostrarNotificacao(`Modelo "${nome}" salvo na nuvem!`, 'success');
+            carregarModelosSalvos();
+        } else {
+            mostrarNotificacao(data.message || 'Erro ao salvar', 'error');
+        }
+    } catch(e) { mostrarNotificacao('Erro de conexão', 'error'); }
+}
+
+async function carregarModelosSalvos() {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    const grid = document.getElementById('modelosSalvosGrid');
+    if (!grid) return;
+
+    try {
+        const resp = await fetch(`${API_URL}/modelos`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await resp.json();
+        if (!data.success || !data.modelos.length) {
+            grid.innerHTML = '<div style="text-align: center; color: #9ca3af; padding: 20px; grid-column: 1/-1;">Nenhum modelo salvo. Use "☁️ Salvar na Nuvem" para criar.</div>';
+            return;
+        }
+        grid.innerHTML = data.modelos.map(m => `
+            <div class="card" style="padding: 12px; cursor: pointer; border: 2px solid ${APP_STATE.modeloAtualId === m._id ? '#3b82f6' : '#e5e7eb'}; border-radius: 12px; transition: all 0.2s;">
+                <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px; color: #1e3a8a;">${escapeHtml(m.nome)}</div>
+                ${m.descricao ? `<div style="font-size: 12px; color: #6b7280; margin-bottom: 6px;">${escapeHtml(m.descricao)}</div>` : ''}
+                <div style="font-size: 11px; color: #9ca3af; margin-bottom: 8px;">Atualizado: ${new Date(m.atualizadoEm).toLocaleDateString('pt-BR')}</div>
+                <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                    <button class="btn btn-primary btn-sm" onclick="carregarModeloNuvem('${m._id}')" style="font-size: 11px; padding: 4px 8px;">📂 Carregar</button>
+                    <button class="btn btn-secondary btn-sm" onclick="copiarModeloNuvem('${m._id}')" style="font-size: 11px; padding: 4px 8px;">📋 Copiar</button>
+                    <button class="btn btn-secondary btn-sm" onclick="arquivarModeloNuvem('${m._id}')" style="font-size: 11px; padding: 4px 8px;">📦 Arquivar</button>
+                    <button class="btn btn-danger btn-sm" onclick="excluirModeloNuvem('${m._id}', '${escapeHtml(m.nome)}')" style="font-size: 11px; padding: 4px 8px;">🗑️</button>
+                </div>
+            </div>
+        `).join('');
+    } catch(e) {
+        grid.innerHTML = '<div style="text-align: center; color: #ef4444; padding: 20px; grid-column: 1/-1;">Erro ao carregar modelos.</div>';
+    }
+}
+
+async function carregarModeloNuvem(id) {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    try {
+        const resp = await fetch(`${API_URL}/modelos/${id}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await resp.json();
+        if (!data.success) { mostrarNotificacao(data.message || 'Erro', 'error'); return; }
+        const m = data.modelo;
+        CERT_CONFIG = m.config;
+        CERT_UPLOADS = m.uploads || {};
+        APP_STATE.modeloAtualId = m._id;
+        APP_STATE.modeloAtualNome = m.nome;
+        aplicarConfigNosInputs(CERT_CONFIG);
+        atualizarInfoModeloAtual();
+        atualizarPreviewCert();
+        carregarModelosSalvos();
+        mostrarNotificacao(`Modelo "${m.nome}" carregado!`, 'success');
+    } catch(e) { mostrarNotificacao('Erro de conexão', 'error'); }
+}
+
+async function copiarModeloNuvem(id) {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    try {
+        const resp = await fetch(`${API_URL}/modelos/${id}/copiar`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await resp.json();
+        if (data.success) {
+            mostrarNotificacao(`Cópia criada: "${data.modelo.nome}"`, 'success');
+            carregarModelosSalvos();
+        } else { mostrarNotificacao(data.message || 'Erro', 'error'); }
+    } catch(e) { mostrarNotificacao('Erro de conexão', 'error'); }
+}
+
+function copiarModeloAtual() {
+    if (APP_STATE.modeloAtualId) {
+        copiarModeloNuvem(APP_STATE.modeloAtualId);
+    } else {
+        // Sem modelo carregado — salvar como novo
+        salvarModeloNaNuvem();
+    }
+}
+
+async function arquivarModeloNuvem(id) {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    try {
+        const resp = await fetch(`${API_URL}/modelos/${id}/arquivar`, {
+            method: 'PATCH',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await resp.json();
+        if (data.success) {
+            if (APP_STATE.modeloAtualId === id) {
+                APP_STATE.modeloAtualId = null;
+                APP_STATE.modeloAtualNome = null;
+                atualizarInfoModeloAtual();
+            }
+            mostrarNotificacao(data.arquivado ? 'Modelo arquivado' : 'Modelo desarquivado', 'success');
+            carregarModelosSalvos();
+        } else { mostrarNotificacao(data.message || 'Erro', 'error'); }
+    } catch(e) { mostrarNotificacao('Erro de conexão', 'error'); }
+}
+
+async function excluirModeloNuvem(id, nome) {
+    if (!confirm(`Excluir o modelo "${nome}" permanentemente?`)) return;
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    try {
+        const resp = await fetch(`${API_URL}/modelos/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await resp.json();
+        if (data.success) {
+            if (APP_STATE.modeloAtualId === id) {
+                APP_STATE.modeloAtualId = null;
+                APP_STATE.modeloAtualNome = null;
+                atualizarInfoModeloAtual();
+            }
+            mostrarNotificacao('Modelo excluído', 'success');
+            carregarModelosSalvos();
+        } else { mostrarNotificacao(data.message || 'Erro', 'error'); }
+    } catch(e) { mostrarNotificacao('Erro de conexão', 'error'); }
+}
+
+async function listarModelosArquivados() {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    try {
+        const resp = await fetch(`${API_URL}/modelos?arquivado=true`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await resp.json();
+        if (!data.success || !data.modelos.length) {
+            mostrarNotificacao('Nenhum modelo arquivado.', 'info');
+            return;
+        }
+        const html = data.modelos.map(m => `
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #e5e7eb;">
+                <div>
+                    <strong>${escapeHtml(m.nome)}</strong>
+                    <span style="color:#9ca3af; font-size:12px; margin-left:8px;">${new Date(m.atualizadoEm).toLocaleDateString('pt-BR')}</span>
+                </div>
+                <div style="display:flex; gap:6px;">
+                    <button class="btn btn-primary btn-sm" onclick="arquivarModeloNuvem('${m._id}');this.closest('.overlay-modal')?.remove();" style="font-size:11px; padding:3px 8px;">Restaurar</button>
+                    <button class="btn btn-danger btn-sm" onclick="excluirModeloNuvem('${m._id}','${escapeHtml(m.nome)}');this.closest('.overlay-modal')?.remove();" style="font-size:11px; padding:3px 8px;">Excluir</button>
+                </div>
+            </div>
+        `).join('');
+        const modal = document.createElement('div');
+        modal.className = 'overlay-modal';
+        modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
+        modal.innerHTML = `<div style="background:white;border-radius:16px;padding:24px;max-width:500px;width:90%;max-height:70vh;overflow-y:auto;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                <h3 style="color:#1e3a8a;">📦 Modelos Arquivados</h3>
+                <button onclick="this.closest('.overlay-modal').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;">✕</button>
+            </div>
+            ${html}
+        </div>`;
+        document.body.appendChild(modal);
+        modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+    } catch(e) { mostrarNotificacao('Erro ao carregar arquivados', 'error'); }
+}
+
+function descarregarModelo() {
+    APP_STATE.modeloAtualId = null;
+    APP_STATE.modeloAtualNome = null;
+    atualizarInfoModeloAtual();
+    carregarModelosSalvos();
+    mostrarNotificacao('Modelo desvinculado. Agora editando modelo novo.', 'info');
+}
+
+function atualizarInfoModeloAtual() {
+    const info = document.getElementById('modeloAtualInfo');
+    const nome = document.getElementById('modeloAtualNome');
+    if (!info || !nome) return;
+    if (APP_STATE.modeloAtualId && APP_STATE.modeloAtualNome) {
+        info.style.display = 'block';
+        nome.textContent = APP_STATE.modeloAtualNome;
+    } else {
+        info.style.display = 'none';
+    }
+}
+
+function escapeHtml(text) {
+    const d = document.createElement('div');
+    d.textContent = text;
+    return d.innerHTML;
 }
 
 // Upload handlers
@@ -1691,6 +1961,16 @@ function inicializarTemplates() {
 
     // Gerar preview inicial
     setTimeout(() => atualizarPreviewCert(), 200);
+
+    // Carregar modelos da nuvem
+    const token = localStorage.getItem('token');
+    if (token) {
+        carregarModelosSalvos();
+        atualizarInfoModeloAtual();
+    }
+    // Restaurar estado do auto-salvar
+    const chk = document.getElementById('chkAutoSalvar');
+    if (chk) chk.checked = APP_STATE.autoSalvar;
 }
 
 function selecionarTemplate(key) {

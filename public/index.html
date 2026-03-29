@@ -187,10 +187,27 @@
 
         <!-- Tab: Templates -->
         <div class="tab-content" id="templates">
-            <!-- Modelos Predefinidos -->
+            <!-- Modelos Salvos na Nuvem -->
             <div class="card">
-                <h2>🎨 Personalização de Certificados</h2>
-                <p style="margin-bottom: 15px; color: #6b7280;">Selecione um modelo base ou personalize completamente seu certificado</p>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h2>☁️ Meus Modelos Salvos</h2>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <label style="font-size: 13px; color: #6b7280; display:flex; align-items:center; gap:4px;">
+                            <input type="checkbox" id="chkAutoSalvar" onchange="toggleAutoSalvar(this.checked)"> Auto-salvar
+                        </label>
+                        <button class="btn btn-secondary btn-sm" onclick="listarModelosArquivados()" title="Ver arquivados">📦 Arquivados</button>
+                    </div>
+                </div>
+                <p style="margin-bottom: 15px; color: #6b7280; font-size: 13px;">Modelos salvos ficam seguros na nuvem e acessíveis em qualquer computador com sua conta.</p>
+                <div id="modelosSalvosGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px;">
+                    <div style="text-align: center; color: #9ca3af; padding: 30px;">Carregando modelos...</div>
+                </div>
+            </div>
+
+            <!-- Modelos Predefinidos -->
+            <div class="card" style="margin-top: 20px;">
+                <h2>🎨 Modelos Base</h2>
+                <p style="margin-bottom: 15px; color: #6b7280;">Selecione um modelo base para começar a personalizar</p>
                 
                 <div class="templates-grid" id="templatesGrid">
                     <!-- Templates serão carregados aqui -->
@@ -199,13 +216,19 @@
 
             <!-- Editor de Personalização -->
             <div class="card" id="editorPersonalizacao" style="margin-top: 20px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
                     <h2>✏️ Editor de Modelo</h2>
-                    <div style="display: flex; gap: 10px;">
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                         <button class="btn btn-secondary" onclick="resetarPersonalizacao()">↺ Resetar</button>
-                        <button class="btn btn-success" onclick="aplicarAlteracoes()">✔ Aplicar Alterações</button>
-                        <button class="btn btn-primary" onclick="salvarPersonalizacao()">💾 Salvar Modelo</button>
+                        <button class="btn btn-success" onclick="aplicarAlteracoes()">✔ Aplicar</button>
+                        <button class="btn btn-primary" onclick="salvarPersonalizacao()">💾 Salvar Local</button>
+                        <button class="btn btn-primary" onclick="salvarModeloNaNuvem()" style="background: #059669;">☁️ Salvar na Nuvem</button>
+                        <button class="btn btn-secondary" onclick="copiarModeloAtual()">📋 Copiar Modelo</button>
                     </div>
+                </div>
+                <div id="modeloAtualInfo" style="margin-bottom: 15px; padding: 8px 12px; background: #f0f9ff; border-radius: 8px; font-size: 13px; color: #1e3a8a; display: none;">
+                    <strong>Modelo carregado:</strong> <span id="modeloAtualNome"></span>
+                    <button onclick="descarregarModelo()" style="margin-left: 10px; background: none; border: none; color: #dc2626; cursor: pointer; font-size: 13px;">✕ Novo</button>
                 </div>
 
                 <!-- Sub-abas do editor -->
@@ -557,19 +580,19 @@
                     <div class="editor-grid">
                         <div class="editor-field">
                             <label>Margem Esquerda (mm)</label>
-                            <input type="number" id="certMargemEsq" class="form-control" value="20" min="5" max="50" oninput="atualizarPreviewCert()">
+                            <input type="number" id="certMargemEsq" class="form-control" value="20" min="0" max="80" step="0.5" oninput="atualizarPreviewCert()">
                         </div>
                         <div class="editor-field">
                             <label>Margem Direita (mm)</label>
-                            <input type="number" id="certMargemDir" class="form-control" value="20" min="5" max="50" oninput="atualizarPreviewCert()">
+                            <input type="number" id="certMargemDir" class="form-control" value="20" min="0" max="80" step="0.5" oninput="atualizarPreviewCert()">
                         </div>
                         <div class="editor-field">
                             <label>Margem Superior (mm)</label>
-                            <input type="number" id="certMargemSup" class="form-control" value="15" min="5" max="50" oninput="atualizarPreviewCert()">
+                            <input type="number" id="certMargemSup" class="form-control" value="15" min="0" max="80" step="0.5" oninput="atualizarPreviewCert()">
                         </div>
                         <div class="editor-field">
                             <label>Margem Inferior (mm)</label>
-                            <input type="number" id="certMargemInf" class="form-control" value="15" min="5" max="50" oninput="atualizarPreviewCert()">
+                            <input type="number" id="certMargemInf" class="form-control" value="15" min="0" max="80" step="0.5" oninput="atualizarPreviewCert()">
                         </div>
                         <div class="editor-field">
                             <label>Espessura da Borda (mm)</label>

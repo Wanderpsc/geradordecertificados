@@ -9,6 +9,7 @@ const authRoutes = require('./routes/auth');
 const alunoRoutes = require('./routes/alunos');
 const licenseRoutes = require('./routes/licenses');
 const adminRoutes = require('./routes/admin');
+const modeloRoutes = require('./routes/modelos');
 
 const app = express();
 
@@ -20,8 +21,8 @@ app.use(cors({
     origin: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : '*',
     credentials: true
 }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Servir arquivos estáticos
 app.use(express.static(path.join(__dirname, '../public')));
@@ -31,6 +32,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/alunos', alunoRoutes);
 app.use('/api/licenses', licenseRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/modelos', modeloRoutes);
 
 // Rota raiz - redirecionar para login
 app.get('/', (req, res) => {
