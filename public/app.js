@@ -820,6 +820,11 @@ let CERT_CONFIG = JSON.parse(localStorage.getItem('certConfig')) || {};
 let CERT_UPLOADS = JSON.parse(localStorage.getItem('certUploads')) || {};
 let previewLado = 'frente'; // frente ou verso
 
+function _pf(id, fallback) {
+    const v = parseFloat(document.getElementById(id)?.value);
+    return isNaN(v) ? fallback : v;
+}
+
 function obterConfigCert() {
     return {
         cabecalho: {
@@ -846,6 +851,8 @@ function obterConfigCert() {
             fonteTam: parseInt(document.getElementById('certFonteCorpoTam')?.value) || 14,
             tituloTam: parseInt(document.getElementById('certFonteTituloTam')?.value) || 16,
             alinhamento: document.getElementById('certAlinhamento')?.value || 'justify',
+            corCorpo: document.getElementById('certCorFrenteCorpo')?.value || '#000000',
+            corTitulo: document.getElementById('certCorFrenteTitulo')?.value || '#1e3a8a',
             assinatura1: document.getElementById('certAssinatura1')?.value || 'SECRETÁRIO(A)',
             assinatura2: document.getElementById('certAssinatura2')?.value || 'DIRETOR(A)',
             assinatura3: document.getElementById('certAssinatura3')?.value || 'CONCLUDENTE'
@@ -861,7 +868,9 @@ function obterConfigCert() {
             fonteTitulo: document.getElementById('certVersoFonteTitulo')?.value || 'times',
             fonteTituloTam: parseInt(document.getElementById('certVersoFonteTituloTam')?.value) || 13,
             estiloTitulo: document.getElementById('certVersoEstiloTitulo')?.value || 'bolditalic',
-            alinhamentoTitulo: document.getElementById('certVersoAlinhamentoTitulo')?.value || 'center'
+            alinhamentoTitulo: document.getElementById('certVersoAlinhamentoTitulo')?.value || 'center',
+            corTexto: document.getElementById('certCorVersoTexto')?.value || '#000000',
+            corTitulo: document.getElementById('certCorVersoTitulo')?.value || '#1e3a8a'
         },
         rodape: {
             exibir: document.getElementById('certRodapeExibir')?.value || 'sim',
@@ -871,11 +880,11 @@ function obterConfigCert() {
             fonte: document.getElementById('certRodapeFonteFamily')?.value || 'helvetica'
         },
         margens: {
-            esq: parseInt(document.getElementById('certMargemEsq')?.value) || 20,
-            dir: parseInt(document.getElementById('certMargemDir')?.value) || 20,
-            sup: parseInt(document.getElementById('certMargemSup')?.value) || 15,
-            inf: parseInt(document.getElementById('certMargemInf')?.value) || 15,
-            bordaEspessura: parseFloat(document.getElementById('certBordaEspessura')?.value) || 7,
+            esq: _pf('certMargemEsq', 20),
+            dir: _pf('certMargemDir', 20),
+            sup: _pf('certMargemSup', 15),
+            inf: _pf('certMargemInf', 15),
+            bordaEspessura: _pf('certBordaEspessura', 7),
             bordaExibir: document.getElementById('certBordaExibir')?.value || 'sim',
             orientacao: document.getElementById('certOrientacao')?.value || 'landscape'
         },
@@ -937,6 +946,10 @@ function aplicarConfigNosInputs(cfg) {
         ['certFonteCorpoTam', cfg.frente.fonteTam],
         ['certFonteTituloTam', cfg.frente.tituloTam],
         ['certAlinhamento', cfg.frente.alinhamento || 'justify'],
+        ['certCorFrenteCorpo', cfg.frente.corCorpo || '#000000'],
+        ['certCorFrenteCorpoHex', cfg.frente.corCorpo || '#000000'],
+        ['certCorFrenteTitulo', cfg.frente.corTitulo || '#1e3a8a'],
+        ['certCorFrenteTituloHex', cfg.frente.corTitulo || '#1e3a8a'],
         ['certAssinatura1', cfg.frente.assinatura1],
         ['certAssinatura2', cfg.frente.assinatura2],
         ['certAssinatura3', cfg.frente.assinatura3],
@@ -951,6 +964,10 @@ function aplicarConfigNosInputs(cfg) {
         ['certVersoFonteTituloTam', cfg.verso.fonteTituloTam],
         ['certVersoEstiloTitulo', cfg.verso.estiloTitulo],
         ['certVersoAlinhamentoTitulo', cfg.verso.alinhamentoTitulo],
+        ['certCorVersoTexto', cfg.verso.corTexto || '#000000'],
+        ['certCorVersoTextoHex', cfg.verso.corTexto || '#000000'],
+        ['certCorVersoTitulo', cfg.verso.corTitulo || '#1e3a8a'],
+        ['certCorVersoTituloHex', cfg.verso.corTitulo || '#1e3a8a'],
         ['certRodapeExibir', cfg.rodape.exibir],
         ['certRodapeLinha1', cfg.rodape.linha1],
         ['certRodapeLinha2', cfg.rodape.linha2],
@@ -1034,7 +1051,7 @@ function trocarEditorTab(btn) {
     if (tabContent) tabContent.classList.add('active');
 
     // Sincronizar o preview com a sub-aba selecionada
-    if (tabId === 'tab-frente' || tabId === 'tab-cabecalho' || tabId === 'tab-emblema') {
+    if (tabId === 'tab-frente' || tabId === 'tab-cabecalho' || tabId === 'tab-emblema' || tabId === 'tab-formatacao') {
         previewLado = 'frente';
         atualizarPreviewCert();
     } else if (tabId === 'tab-verso') {
@@ -1628,13 +1645,13 @@ function desenharPreviewFrente(ctx, cfg, sx, sy, pw, ph, imgs) {
 
     // Título
     yBase += 16 * sy / 2;
-    ctx.fillStyle = cfg.cores.titulo || cfg.cores.principal;
+    ctx.fillStyle = cfg.frente.corTitulo || cfg.cores.titulo || cfg.cores.principal;
     ctx.font = `${fmtCanvasStyle(fmt.estiloTitulo || 'bolditalic')} ${cfg.frente.tituloTam * sx / 2.1}px ${fmtCanvasFamily(fmt.fonteTitulo || 'times')}`;
     ctx.fillText(fmtTransformText(cfg.frente.titulo, fmt.transformTitulo || 'uppercase'), pw / 2, yBase);
 
     // Corpo resumido
     yBase += 26 * sy / 2;
-    ctx.fillStyle = cfg.cores.texto;
+    ctx.fillStyle = cfg.frente.corCorpo || cfg.cores.texto;
     ctx.font = `${fmtCanvasStyle(fmt.estiloCorpo || 'italic')} ${cfg.frente.fonteTam * sx / 2.3}px ${fmtCanvasFamily(cfg.frente.fonte || 'times')}`;
     ctx.textAlign = 'left';
     const margemEsq = cfg.margens.esq * sx;
@@ -1722,7 +1739,7 @@ function desenharPreviewVerso(ctx, cfg, sx, sy, pw, ph, imgs) {
 
     // Cabeçalho do verso
     let yPos = 30 * sy;
-    ctx.fillStyle = cfg.cores.texto;
+    ctx.fillStyle = cfg.verso.corTexto || cfg.cores.texto;
     const versoCabFonte = cfg.verso.fonteCabecalho || 'helvetica';
     const versoCabTam = cfg.verso.fonteCabecalhoTam || 7;
     ctx.font = `bold ${versoCabTam * sx / 2}px ${fmtCanvasFamily(versoCabFonte)}`;
@@ -1747,7 +1764,7 @@ function desenharPreviewVerso(ctx, cfg, sx, sy, pw, ph, imgs) {
     const versoTituloTam = cfg.verso.fonteTituloTam || 13;
     const versoTituloEstilo = cfg.verso.estiloTitulo || 'bolditalic';
     const versoTituloAlign = cfg.verso.alinhamentoTitulo || 'center';
-    ctx.fillStyle = cfg.cores.titulo || cfg.cores.principal;
+    ctx.fillStyle = cfg.verso.corTitulo || cfg.cores.titulo || cfg.cores.principal;
     ctx.font = `${fmtCanvasStyle(versoTituloEstilo)} ${versoTituloTam * sx / 2.1}px ${fmtCanvasFamily(versoTituloFonte)}`;
     ctx.textAlign = versoTituloAlign;
     const tituloX = versoTituloAlign === 'center' ? pw / 2 : (versoTituloAlign === 'right' ? pw - 15 * sx : 15 * sx);
@@ -1785,7 +1802,7 @@ function desenharPreviewVerso(ctx, cfg, sx, sy, pw, ph, imgs) {
             ctx.stroke();
         }
         
-        ctx.fillStyle = cfg.cores.texto;
+        ctx.fillStyle = cfg.verso.corTexto || cfg.cores.texto;
         ctx.font = `bold ${9 * sx / 2.2}px sans-serif`;
         ctx.textAlign = 'center';
         ctx.fillText('OBSERVAÇÕES', obsX + obsW / 2, yPos + 14);
@@ -1919,10 +1936,61 @@ function gerarModeloPreview() {
 }
 
 // ==================== TEMPLATES ====================
-function inicializarTemplates() {
+function obterModelosLocais() {
+    try { return JSON.parse(localStorage.getItem('modelosLocais')) || {}; } catch(e) { return {}; }
+}
+
+function salvarModelosLocais(modelos) {
+    localStorage.setItem('modelosLocais', JSON.stringify(modelos));
+}
+
+function salvarModeloLocal() {
+    const nome = prompt('Nome do modelo local:');
+    if (!nome || !nome.trim()) return;
+    const chave = 'local_' + Date.now();
+    const config = obterConfigCert();
+    const modelos = obterModelosLocais();
+    modelos[chave] = {
+        nome: nome.trim(),
+        config: config,
+        uploads: JSON.parse(JSON.stringify(CERT_UPLOADS)),
+        cor1: config.cores.principal || '#1e3a8a',
+        cor2: config.cores.secundaria || '#3b82f6',
+        criadoEm: new Date().toISOString()
+    };
+    salvarModelosLocais(modelos);
+    renderizarTemplatesGrid();
+    mostrarNotificacao(`Modelo local "${nome.trim()}" salvo!`, 'success');
+}
+
+function carregarModeloLocal(chave) {
+    const modelos = obterModelosLocais();
+    const m = modelos[chave];
+    if (!m) return;
+    CERT_CONFIG = m.config;
+    CERT_UPLOADS = m.uploads || {};
+    localStorage.setItem('certConfig', JSON.stringify(CERT_CONFIG));
+    localStorage.setItem('certUploads', JSON.stringify(CERT_UPLOADS));
+    aplicarConfigNosInputs(CERT_CONFIG);
+    atualizarPreviewCert();
+    mostrarNotificacao(`Modelo "${m.nome}" carregado!`, 'success');
+}
+
+function excluirModeloLocal(chave) {
+    const modelos = obterModelosLocais();
+    const nome = modelos[chave]?.nome || chave;
+    if (!confirm(`Excluir o modelo local "${nome}"?`)) return;
+    delete modelos[chave];
+    salvarModelosLocais(modelos);
+    renderizarTemplatesGrid();
+    mostrarNotificacao('Modelo local excluído.', 'success');
+}
+
+function renderizarTemplatesGrid() {
     const grid = document.getElementById('templatesGrid');
-    
-    grid.innerHTML = Object.keys(TEMPLATES).map(key => `
+    if (!grid) return;
+    // Templates predefinidos
+    let html = Object.keys(TEMPLATES).map(key => `
         <div class="template-card ${key === APP_STATE.templateSelecionado ? 'selected' : ''}" 
              onclick="selecionarTemplate('${key}')">
             <div class="template-preview" style="background: linear-gradient(135deg, ${TEMPLATES[key].cor1}, ${TEMPLATES[key].cor2})">
@@ -1931,6 +1999,30 @@ function inicializarTemplates() {
             <div class="template-name">${TEMPLATES[key].nome}</div>
         </div>
     `).join('');
+    // Templates locais salvos
+    const locais = obterModelosLocais();
+    const chaves = Object.keys(locais);
+    if (chaves.length) {
+        html += chaves.map(k => {
+            const m = locais[k];
+            return `
+            <div class="template-card" style="border: 2px solid #059669; position: relative;">
+                <div class="template-preview" style="background: linear-gradient(135deg, ${m.cor1 || '#1e3a8a'}, ${m.cor2 || '#3b82f6'}); cursor: pointer;" onclick="carregarModeloLocal('${k}')">
+                    💾
+                </div>
+                <div class="template-name" style="color: #059669; font-weight: 600;">${escapeHtml(m.nome)}</div>
+                <div style="display: flex; gap: 4px; justify-content: center; margin-top: 4px;">
+                    <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); carregarModeloLocal('${k}')" style="font-size: 10px; padding: 2px 6px;">Carregar</button>
+                    <button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); excluirModeloLocal('${k}')" style="font-size: 10px; padding: 2px 6px;">Excluir</button>
+                </div>
+            </div>`;
+        }).join('');
+    }
+    grid.innerHTML = html;
+}
+
+function inicializarTemplates() {
+    renderizarTemplatesGrid();
 
     // Botões de geração
     document.getElementById('btnGerarIndividual').addEventListener('click', gerarCertificadoIndividual);
@@ -2101,8 +2193,8 @@ async function gerarFrenteCertificado(pdf, aluno, cfg) {
     const bordaEspessura = cfg.margens.bordaEspessura;
     const corP = hexParaRgb(cfg.cores.principal);
     const corCab = hexParaRgb(cfg.cores.cabecalho || cfg.cores.principal);
-    const corTit = hexParaRgb(cfg.cores.titulo || cfg.cores.principal);
-    const corT = hexParaRgb(cfg.cores.texto);
+    const corTit = hexParaRgb(cfg.frente.corTitulo || cfg.cores.titulo || cfg.cores.principal);
+    const corT = hexParaRgb(cfg.frente.corCorpo || cfg.cores.texto);
     const corA = hexParaRgb(cfg.cores.assinatura);
     const corB = hexParaRgb(cfg.cores.borda || cfg.cores.principal);
     const corRod = hexParaRgb(cfg.cores.rodape || '#646464');
@@ -2508,8 +2600,8 @@ function gerarVersoCertificado(pdf, aluno, cfg) {
     const bordaEspessura = cfg.margens.bordaEspessura;
     const corP = hexParaRgb(cfg.cores.principal);
     const corCab = hexParaRgb(cfg.cores.cabecalho || cfg.cores.principal);
-    const corTit = hexParaRgb(cfg.cores.titulo || cfg.cores.principal);
-    const corT = hexParaRgb(cfg.cores.texto);
+    const corTit = hexParaRgb(cfg.verso.corTitulo || cfg.cores.titulo || cfg.cores.principal);
+    const corT = hexParaRgb(cfg.verso.corTexto || cfg.cores.texto);
     const corB = hexParaRgb(cfg.cores.borda || cfg.cores.principal);
     const corF = hexParaRgb(cfg.cores.fundo);
     

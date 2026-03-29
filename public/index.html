@@ -221,7 +221,7 @@
                     <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                         <button class="btn btn-secondary" onclick="resetarPersonalizacao()">↺ Resetar</button>
                         <button class="btn btn-success" onclick="aplicarAlteracoes()">✔ Aplicar</button>
-                        <button class="btn btn-primary" onclick="salvarPersonalizacao()">💾 Salvar Local</button>
+                        <button class="btn btn-primary" onclick="salvarModeloLocal()">💾 Salvar Local</button>
                         <button class="btn btn-primary" onclick="salvarModeloNaNuvem()" style="background: #059669;">☁️ Salvar na Nuvem</button>
                         <button class="btn btn-secondary" onclick="copiarModeloAtual()">📋 Copiar Modelo</button>
                     </div>
@@ -239,7 +239,7 @@
                     <button class="editor-tab-btn" data-editor-tab="tab-verso" onclick="trocarEditorTab(this)">📃 Verso</button>
                     <button class="editor-tab-btn" data-editor-tab="tab-rodape" onclick="trocarEditorTab(this)">📎 Rodapé</button>
                     <button class="editor-tab-btn" data-editor-tab="tab-margens" onclick="trocarEditorTab(this)">📐 Margens</button>
-                    <button class="editor-tab-btn" data-editor-tab="tab-formatacao" onclick="trocarEditorTab(this)">🔤 Formatação</button>
+                    <button class="editor-tab-btn" data-editor-tab="tab-formatacao" onclick="trocarEditorTab(this)">🔤 Cabeçalho e Título</button>
                     <button class="editor-tab-btn" data-editor-tab="tab-cores" onclick="trocarEditorTab(this)">🎨 Cores</button>
                 </div>
 
@@ -365,6 +365,20 @@
                             <input type="number" id="certFonteTituloTam" class="form-control" value="16" min="10" max="28" oninput="atualizarPreviewCert()">
                         </div>
                         <div class="editor-field">
+                            <label>Cor do Texto do Corpo (Frente)</label>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <input type="color" id="certCorFrenteCorpo" value="#000000" onchange="atualizarPreviewCert()" style="width: 50px; height: 40px; border: none; cursor: pointer;">
+                                <input type="text" id="certCorFrenteCorpoHex" class="form-control" value="#000000" style="flex: 1;" oninput="sincronizarCor('certCorFrenteCorpo', this.value)">
+                            </div>
+                        </div>
+                        <div class="editor-field">
+                            <label>Cor do Título (Frente)</label>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <input type="color" id="certCorFrenteTitulo" value="#1e3a8a" onchange="atualizarPreviewCert()" style="width: 50px; height: 40px; border: none; cursor: pointer;">
+                                <input type="text" id="certCorFrenteTituloHex" class="form-control" value="#1e3a8a" style="flex: 1;" oninput="sincronizarCor('certCorFrenteTitulo', this.value)">
+                            </div>
+                        </div>
+                        <div class="editor-field">
                             <label>Assinatura 1 (Cargo)</label>
                             <input type="text" id="certAssinatura1" class="form-control" value="SECRETÁRIO(A)" oninput="atualizarPreviewCert()">
                         </div>
@@ -483,6 +497,20 @@
                                 <option value="left">À Esquerda</option>
                                 <option value="right">À Direita</option>
                             </select>
+                        </div>
+                        <div class="editor-field">
+                            <label>Cor do Texto (Verso)</label>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <input type="color" id="certCorVersoTexto" value="#000000" onchange="atualizarPreviewCert()" style="width: 50px; height: 40px; border: none; cursor: pointer;">
+                                <input type="text" id="certCorVersoTextoHex" class="form-control" value="#000000" style="flex: 1;" oninput="sincronizarCor('certCorVersoTexto', this.value)">
+                            </div>
+                        </div>
+                        <div class="editor-field">
+                            <label>Cor do Título (Verso)</label>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <input type="color" id="certCorVersoTitulo" value="#1e3a8a" onchange="atualizarPreviewCert()" style="width: 50px; height: 40px; border: none; cursor: pointer;">
+                                <input type="text" id="certCorVersoTituloHex" class="form-control" value="#1e3a8a" style="flex: 1;" oninput="sincronizarCor('certCorVersoTitulo', this.value)">
+                            </div>
                         </div>
                         <div class="editor-field">
                             <label>Exibir Tabela de Observações</label>
@@ -637,7 +665,7 @@
                     </div>
                 </div>
                 <div class="editor-tab-content" id="tab-formatacao">
-                    <h3 style="margin-bottom: 15px; color: #1e3a8a;">Formatação de Texto</h3>
+                    <h3 style="margin-bottom: 15px; color: #1e3a8a;">Formatação de Cabeçalho e Título</h3>
                     <div class="editor-grid">
                         <div class="editor-field">
                             <label>Fonte do Cabeçalho</label>
