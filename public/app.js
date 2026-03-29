@@ -1264,19 +1264,14 @@ function desenharPreviewFrente(ctx, cfg, sx, sy, pw, ph, imgs) {
         }
     }
 
-    // Emblema (preservando proporção)
+    // Emblema (largura e altura configuráveis)
     if (cfg.emblema.tipo !== 'nenhum') {
         const emX = pw / 2;
         const emY = cfg.emblema.posY * sy;
         const emW = cfg.emblema.largura * sx;
         const emH = cfg.emblema.altura * sy;
         if (imgs && imgs.emblema) {
-            const natW = imgs.emblema.naturalWidth;
-            const natH = imgs.emblema.naturalHeight;
-            const ratio = emW / natW;
-            const drawW = emW;
-            const drawH = natH * ratio;
-            ctx.drawImage(imgs.emblema, emX - drawW / 2, emY - drawH / 2, drawW, drawH);
+            ctx.drawImage(imgs.emblema, emX - emW / 2, emY - emH / 2, emW, emH);
         } else {
             ctx.fillStyle = '#d4a843';
             ctx.globalAlpha = 0.4;
@@ -1872,13 +1867,8 @@ async function gerarFrenteCertificado(pdf, aluno, cfg) {
             try {
                 const tmpImg = new Image();
                 tmpImg.src = imgEmblema;
-                const natW = tmpImg.naturalWidth || brasaoLargura;
-                const natH = tmpImg.naturalHeight || brasaoAltura;
-                const ratio = brasaoLargura / natW;
-                const drawW = brasaoLargura;
-                const drawH = natH * ratio;
                 const fmt = detectarFormatoImagem(imgEmblema);
-                pdf.addImage(imgEmblema, fmt, brasaoX - drawW / 2, brasaoY - drawH / 2, drawW, drawH);
+                pdf.addImage(imgEmblema, fmt, brasaoX - brasaoLargura / 2, brasaoY - brasaoAltura / 2, brasaoLargura, brasaoAltura);
             } catch(e) { console.error('Erro ao adicionar emblema:', e); }
         }
     }
