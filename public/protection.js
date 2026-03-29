@@ -289,11 +289,6 @@ if (document.readyState === 'loading') {
     verificarLicenca();
 }
 
-// Proteção contra modificação do código
-Object.freeze(Object.prototype);
-Object.freeze(Array.prototype);
-Object.freeze(Function.prototype);
-
 // Export para uso em outros módulos
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
