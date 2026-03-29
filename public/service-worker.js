@@ -1,5 +1,5 @@
 // Service Worker para PWA
-const CACHE_NAME = 'certificados-v6';
+const CACHE_NAME = 'certificados-v7';
 const urlsToCache = [
   '/login.html',
   '/index.html',
