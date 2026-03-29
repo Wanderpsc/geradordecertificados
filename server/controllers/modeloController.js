@@ -61,8 +61,14 @@ exports.atualizarModelo = async (req, res) => {
         const { nome, descricao, config, uploads } = req.body;
         if (nome) modelo.nome = nome;
         if (descricao !== undefined) modelo.descricao = descricao;
-        if (config) modelo.config = config;
-        if (uploads !== undefined) modelo.uploads = uploads;
+        if (config) {
+            modelo.config = config;
+            modelo.markModified('config');
+        }
+        if (uploads !== undefined) {
+            modelo.uploads = uploads;
+            modelo.markModified('uploads');
+        }
         await modelo.save();
         res.json({ success: true, modelo: { _id: modelo._id, nome: modelo.nome, descricao: modelo.descricao, atualizadoEm: modelo.atualizadoEm } });
     } catch (error) {

@@ -1052,6 +1052,8 @@ function aplicarConfigNosInputs(cfg) {
             if (btn) btn.style.display = 'inline-block';
         }
     });
+    // Sincronizar campos do editor rápido de preview
+    if (typeof _syncEditorPreviewFields === 'function') _syncEditorPreviewFields();
 }
 
 function trocarEditorTab(btn) {
@@ -1094,6 +1096,64 @@ function aplicarAlteracoes() {
     dispararAutoSalvar();
 }
 
+// ==================== EDITOR DE PRÉ-VISUALIZAÇÃO ====================
+function toggleEditorPreview() {
+    const panel = document.getElementById('editorPreviewPanel');
+    if (!panel) return;
+    const isVisible = panel.style.display !== 'none';
+    if (isVisible) {
+        panel.style.display = 'none';
+        return;
+    }
+    panel.style.display = 'block';
+    _syncEditorPreviewFields();
+    _updateEditorPreviewSide();
+    // Cadastrar listeners nos campos do editor rápido
+    panel.querySelectorAll('.ep-field').forEach(field => {
+        field.removeEventListener('input', _onEditorPreviewInput);
+        field.addEventListener('input', _onEditorPreviewInput);
+    });
+}
+
+function _syncEditorPreviewFields() {
+    document.querySelectorAll('.ep-field').forEach(field => {
+        const targetId = field.dataset.target;
+        const src = document.getElementById(targetId);
+        if (src) field.value = src.value;
+    });
+}
+
+function _onEditorPreviewInput(e) {
+    const targetId = e.target.dataset.target;
+    const src = document.getElementById(targetId);
+    if (src) {
+        src.value = e.target.value;
+        atualizarPreviewCert();
+    }
+}
+
+function _updateEditorPreviewSide() {
+    const frentePanel = document.getElementById('editorPreviewFrente');
+    const versoPanel = document.getElementById('editorPreviewVerso');
+    if (frentePanel) frentePanel.style.display = previewLado === 'frente' ? 'block' : 'none';
+    if (versoPanel) versoPanel.style.display = previewLado === 'verso' ? 'block' : 'none';
+}
+
+function salvarEdicaoPreview() {
+    // Sincronizar campos do editor rápido → campos principais
+    document.querySelectorAll('.ep-field').forEach(field => {
+        const targetId = field.dataset.target;
+        const src = document.getElementById(targetId);
+        if (src) src.value = field.value;
+    });
+    CERT_CONFIG = obterConfigCert();
+    localStorage.setItem('certConfig', JSON.stringify(CERT_CONFIG));
+    localStorage.setItem('certUploads', JSON.stringify(CERT_UPLOADS));
+    atualizarPreviewCert();
+    dispararAutoSalvar();
+    mostrarNotificacao('Alterações salvas!', 'success');
+}
+
 function resetarPersonalizacao() {
     if (!confirm('Resetar todas as personalizações para os valores padrão?')) return;
     localStorage.removeItem('certConfig');
@@ -1121,6 +1181,7 @@ function dispararAutoSalvar() {
     clearTimeout(_autoSalvarTimer);
     _autoSalvarTimer = setTimeout(async () => {
         const config = obterConfigCert();
+        CERT_CONFIG = config; // Manter sincronizado
         const token = localStorage.getItem('token');
         if (!token) return;
         try {
@@ -1138,6 +1199,7 @@ async function salvarModeloNaNuvem() {
     if (!token) { mostrarNotificacao('Faça login para salvar modelos na nuvem.', 'error'); return; }
 
     const config = obterConfigCert();
+    CERT_CONFIG = config; // Sincronizar CERT_CONFIG com os inputs atuais
 
     if (APP_STATE.modeloAtualId) {
         // Atualizar modelo existente
@@ -1933,6 +1995,8 @@ function wrapText(ctx, text, x, y, maxWidth, lineHeight, alinhamento) {
 
 function alternarPreviewLado() {
     previewLado = previewLado === 'frente' ? 'verso' : 'frente';
+    _updateEditorPreviewSide();
+    _syncEditorPreviewFields();
     atualizarPreviewCert();
 }
 
@@ -2186,7 +2250,9 @@ async function gerarCertificado(aluno, emLote = false) {
         }
         
         const { jsPDF } = window.jspdf;
-        const cfg = (CERT_CONFIG && CERT_CONFIG.cabecalho) ? CERT_CONFIG : obterConfigCert();
+        // Sempre ler config fresca dos inputs para capturar alterações
+        CERT_CONFIG = obterConfigCert();
+        const cfg = CERT_CONFIG;
         const orientacao = cfg.margens.orientacao || 'landscape';
         
         // Criar PDF em formato A4
