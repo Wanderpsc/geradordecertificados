@@ -1052,8 +1052,6 @@ function aplicarConfigNosInputs(cfg) {
             if (btn) btn.style.display = 'inline-block';
         }
     });
-    // Sincronizar campos do editor rápido de preview
-    if (typeof _syncEditorPreviewFields === 'function') _syncEditorPreviewFields();
 }
 
 function trocarEditorTab(btn) {
@@ -1096,56 +1094,240 @@ function aplicarAlteracoes() {
     dispararAutoSalvar();
 }
 
-// ==================== EDITOR DE PRÉ-VISUALIZAÇÃO ====================
-function toggleEditorPreview() {
-    const panel = document.getElementById('editorPreviewPanel');
-    if (!panel) return;
-    const isVisible = panel.style.display !== 'none';
-    if (isVisible) {
-        panel.style.display = 'none';
-        return;
-    }
-    panel.style.display = 'block';
-    _syncEditorPreviewFields();
-    _updateEditorPreviewSide();
-    // Cadastrar listeners nos campos do editor rápido
-    panel.querySelectorAll('.ep-field').forEach(field => {
-        field.removeEventListener('input', _onEditorPreviewInput);
-        field.addEventListener('input', _onEditorPreviewInput);
-    });
-}
+// ==================== EDITOR VISUAL NA PRÉ-VISUALIZAÇÃO ====================
+let _editMode = false;
 
-function _syncEditorPreviewFields() {
-    document.querySelectorAll('.ep-field').forEach(field => {
-        const targetId = field.dataset.target;
-        const src = document.getElementById(targetId);
-        if (src) field.value = src.value;
-    });
-}
-
-function _onEditorPreviewInput(e) {
-    const targetId = e.target.dataset.target;
-    const src = document.getElementById(targetId);
-    if (src) {
-        src.value = e.target.value;
-        atualizarPreviewCert();
+function toggleEditarPreview() {
+    _editMode = !_editMode;
+    const btn = document.getElementById('btnEditarPreview');
+    if (_editMode) {
+        btn.textContent = '💾 Salvar';
+        btn.classList.remove('btn-secondary');
+        btn.classList.add('btn-success');
+        _criarOverlaysEditaveis();
+    } else {
+        _salvarERemoverOverlays();
+        btn.textContent = '✏️ Editar';
+        btn.classList.remove('btn-success');
+        btn.classList.add('btn-secondary');
     }
 }
 
-function _updateEditorPreviewSide() {
-    const frentePanel = document.getElementById('editorPreviewFrente');
-    const versoPanel = document.getElementById('editorPreviewVerso');
-    if (frentePanel) frentePanel.style.display = previewLado === 'frente' ? 'block' : 'none';
-    if (versoPanel) versoPanel.style.display = previewLado === 'verso' ? 'block' : 'none';
+function _getCanvasWrapper() {
+    const canvas = document.getElementById('previewCanvas');
+    if (!canvas) return null;
+    let wrapper = document.getElementById('previewCanvasWrapper');
+    if (!wrapper) {
+        wrapper = document.createElement('div');
+        wrapper.id = 'previewCanvasWrapper';
+        wrapper.style.position = 'relative';
+        wrapper.style.display = 'inline-block';
+        canvas.parentNode.insertBefore(wrapper, canvas);
+        wrapper.appendChild(canvas);
+    }
+    return wrapper;
 }
 
-function salvarEdicaoPreview() {
-    // Sincronizar campos do editor rápido → campos principais
-    document.querySelectorAll('.ep-field').forEach(field => {
-        const targetId = field.dataset.target;
-        const src = document.getElementById(targetId);
-        if (src) src.value = field.value;
+function _criarOverlaysEditaveis() {
+    const wrapper = _getCanvasWrapper();
+    const canvas = document.getElementById('previewCanvas');
+    if (!wrapper || !canvas) return;
+    wrapper.querySelectorAll('.edit-overlay').forEach(el => el.remove());
+
+    const cfg = obterConfigCert();
+    const isLandscape = cfg.margens.orientacao === 'landscape';
+    const basePw = isLandscape ? 842 : 595;
+    const basePh = isLandscape ? 595 : 842;
+    const sx = basePw / (isLandscape ? 297 : 210);
+    const sy = basePh / (isLandscape ? 210 : 297);
+    const ds = canvas.clientWidth / basePw;
+
+    if (previewLado === 'frente') {
+        _criarOverlaysFrente(wrapper, cfg, sx, sy, basePw, basePh, ds);
+    } else {
+        _criarOverlaysVerso(wrapper, cfg, sx, sy, basePw, basePh, ds);
+    }
+}
+
+function _criarOverlaysFrente(wrapper, cfg, sx, sy, pw, ph, ds) {
+    const fmt = cfg.formatacao || {};
+    const fontTam = cfg.cabecalho.fonteTam;
+    const hFontPx = fontTam * sx / 2.1;
+    const hSpacing = fontTam * sy / 2.5;
+    let y = (cfg.emblema.posY + cfg.emblema.altura / 2 + 10) * sy;
+
+    // Cabeçalho Linhas 1-3
+    ['certCabecalhoLinha1', 'certCabecalhoLinha2', 'certCabecalhoLinha3'].forEach(id => {
+        _addEditOverlay(wrapper, id, {
+            x: pw * 0.05, y: y - hFontPx * 0.85,
+            w: pw * 0.9, h: hFontPx * 1.3,
+            fontSize: hFontPx,
+            fontFamily: fmtCanvasFamily(fmt.fonteCabecalho || 'helvetica'),
+            fontWeight: 'bold',
+            color: cfg.cores.cabecalho || cfg.cores.principal,
+            textAlign: 'center',
+            textTransform: fmt.transformCabecalho || 'uppercase',
+            ds: ds
+        });
+        y += hSpacing;
     });
+
+    // Pular CNPJ/INEP + nome + labels + endereço
+    y += fontTam * sy / 2;
+    y += 14 * sy / 2;
+    y += 6 * sy / 2;
+    y += 12 * sy / 2;
+    y += 6 * sy / 2;
+    y += 16 * sy / 2;
+
+    // Título
+    y += 16 * sy / 2;
+    const tFontPx = cfg.frente.tituloTam * sx / 2.1;
+    _addEditOverlay(wrapper, 'certTitulo', {
+        x: pw * 0.1, y: y - tFontPx * 0.85,
+        w: pw * 0.8, h: tFontPx * 1.5,
+        fontSize: tFontPx,
+        fontFamily: fmtCanvasFamily(fmt.fonteTitulo || 'times'),
+        fontWeight: (fmt.estiloTitulo || 'bolditalic').includes('bold') ? 'bold' : 'normal',
+        fontStyle: (fmt.estiloTitulo || 'bolditalic').includes('italic') ? 'italic' : 'normal',
+        color: cfg.frente.corTitulo || cfg.cores.titulo || cfg.cores.principal,
+        textAlign: 'center',
+        textTransform: fmt.transformTitulo || 'uppercase',
+        ds: ds
+    });
+
+    // Corpo texto
+    y += 26 * sy / 2;
+    const cFontPx = cfg.frente.fonteTam * sx / 2.3;
+    const mEsq = cfg.margens.esq * sx;
+    const maxW = pw - cfg.margens.dir * sx - mEsq;
+    const assY = ph - 60 * sy / 2;
+
+    _addEditOverlay(wrapper, 'certCorpoTexto', {
+        x: mEsq, y: y - cFontPx,
+        w: maxW, h: assY - y - 30,
+        fontSize: cFontPx * 0.85,
+        fontFamily: fmtCanvasFamily(cfg.frente.fonte || 'times'),
+        fontStyle: (fmt.estiloCorpo || 'italic').includes('italic') ? 'italic' : 'normal',
+        fontWeight: (fmt.estiloCorpo || 'italic').includes('bold') ? 'bold' : 'normal',
+        color: cfg.frente.corCorpo || cfg.cores.texto,
+        textAlign: cfg.frente.alinhamento === 'justify' ? 'justify' : (cfg.frente.alinhamento || 'left'),
+        isTextarea: true,
+        ds: ds
+    });
+
+    // Assinaturas
+    const aFontPx = 9 * sx / 2.2;
+    _addEditOverlay(wrapper, 'certAssinatura1', {
+        x: pw * 0.08, y: assY + 2,
+        w: pw * 0.34, h: aFontPx * 2.5,
+        fontSize: aFontPx,
+        fontFamily: fmtCanvasFamily(fmt.fonteAssinatura || 'helvetica'),
+        color: cfg.cores.assinatura,
+        textAlign: 'center',
+        ds: ds
+    });
+    _addEditOverlay(wrapper, 'certAssinatura2', {
+        x: pw * 0.58, y: assY + 2,
+        w: pw * 0.34, h: aFontPx * 2.5,
+        fontSize: aFontPx,
+        fontFamily: fmtCanvasFamily(fmt.fonteAssinatura || 'helvetica'),
+        color: cfg.cores.assinatura,
+        textAlign: 'center',
+        ds: ds
+    });
+    _addEditOverlay(wrapper, 'certAssinatura3', {
+        x: pw * 0.33, y: assY + 38,
+        w: pw * 0.34, h: aFontPx * 2.5,
+        fontSize: aFontPx,
+        fontFamily: fmtCanvasFamily(fmt.fonteAssinatura || 'helvetica'),
+        color: cfg.cores.assinatura,
+        textAlign: 'center',
+        ds: ds
+    });
+}
+
+function _criarOverlaysVerso(wrapper, cfg, sx, sy, pw, ph, ds) {
+    let yPos = 30 * sy + 12 * 5 + 20;
+    const vTituloTam = cfg.verso.fonteTituloTam || 13;
+    const vFontPx = vTituloTam * sx / 2.1;
+
+    _addEditOverlay(wrapper, 'certVersoTitulo', {
+        x: pw * 0.1, y: yPos - vFontPx * 0.85,
+        w: pw * 0.8, h: vFontPx * 1.5,
+        fontSize: vFontPx,
+        fontFamily: fmtCanvasFamily(cfg.verso.fonteTitulo || 'times'),
+        fontWeight: 'bold',
+        fontStyle: 'italic',
+        color: cfg.verso.corTitulo || cfg.cores.titulo || cfg.cores.principal,
+        textAlign: cfg.verso.alinhamentoTitulo || 'center',
+        textTransform: 'uppercase',
+        ds: ds
+    });
+}
+
+function _addEditOverlay(wrapper, inputId, o) {
+    const src = document.getElementById(inputId);
+    if (!src) return;
+    const ds = o.ds;
+    const el = document.createElement(o.isTextarea ? 'textarea' : 'input');
+    if (!o.isTextarea) el.type = 'text';
+    el.className = 'edit-overlay';
+    el.dataset.inputId = inputId;
+    el.value = src.value;
+
+    el.style.cssText = [
+        'position:absolute',
+        'left:' + (o.x * ds) + 'px',
+        'top:' + (o.y * ds) + 'px',
+        'width:' + (o.w * ds) + 'px',
+        'height:' + (o.h * ds) + 'px',
+        'font-size:' + Math.max(o.fontSize * ds, 10) + 'px',
+        'font-family:' + (o.fontFamily || 'serif'),
+        'font-weight:' + (o.fontWeight || 'normal'),
+        'font-style:' + (o.fontStyle || 'normal'),
+        'color:' + (o.color || '#000'),
+        'text-align:' + (o.textAlign || 'left'),
+        'text-transform:' + (o.textTransform || 'none'),
+        'background:rgba(255,255,255,0.75)',
+        'border:1px dashed rgba(59,130,246,0.6)',
+        'border-radius:3px',
+        'padding:2px 4px',
+        'outline:none',
+        'box-sizing:border-box',
+        'z-index:10',
+        'resize:none',
+        'overflow:hidden',
+        'line-height:1.3',
+        'cursor:text'
+    ].join(';');
+
+    el.addEventListener('input', () => { src.value = el.value; });
+    el.addEventListener('focus', () => {
+        el.style.background = 'rgba(255,255,255,0.95)';
+        el.style.borderColor = '#3b82f6';
+        el.style.borderStyle = 'solid';
+        el.style.boxShadow = '0 0 0 2px rgba(59,130,246,0.25)';
+    });
+    el.addEventListener('blur', () => {
+        el.style.background = 'rgba(255,255,255,0.75)';
+        el.style.borderColor = 'rgba(59,130,246,0.6)';
+        el.style.borderStyle = 'dashed';
+        el.style.boxShadow = 'none';
+    });
+
+    wrapper.appendChild(el);
+}
+
+function _salvarERemoverOverlays() {
+    const wrapper = document.getElementById('previewCanvasWrapper');
+    if (wrapper) {
+        wrapper.querySelectorAll('.edit-overlay').forEach(el => {
+            const src = document.getElementById(el.dataset.inputId);
+            if (src) src.value = el.value;
+            el.remove();
+        });
+    }
     CERT_CONFIG = obterConfigCert();
     localStorage.setItem('certConfig', JSON.stringify(CERT_CONFIG));
     localStorage.setItem('certUploads', JSON.stringify(CERT_UPLOADS));
@@ -1993,11 +2175,18 @@ function wrapText(ctx, text, x, y, maxWidth, lineHeight, alinhamento) {
     }
 }
 
-function alternarPreviewLado() {
+async function alternarPreviewLado() {
+    if (_editMode) {
+        const wrapper = document.getElementById('previewCanvasWrapper');
+        if (wrapper) wrapper.querySelectorAll('.edit-overlay').forEach(el => {
+            const src = document.getElementById(el.dataset.inputId);
+            if (src) src.value = el.value;
+            el.remove();
+        });
+    }
     previewLado = previewLado === 'frente' ? 'verso' : 'frente';
-    _updateEditorPreviewSide();
-    _syncEditorPreviewFields();
-    atualizarPreviewCert();
+    await atualizarPreviewCert();
+    if (_editMode) _criarOverlaysEditaveis();
 }
 
 // ==================== GERAR PDF DO MODELO COM DADOS FICTÍCIOS ====================
