@@ -309,8 +309,8 @@ async function carregarLicencas() {
                 <td>${cliente.nome}</td>
                 <td>${cliente.email}</td>
                 <td><span class="badge ${getBadgeLicenca(licenca.tipo)}">${licenca.tipo}</span></td>
-                <td><span class="badge ${expirada ? 'badge-danger' : licenca.ativa ? 'badge-success' : 'badge-warning'}">
-                    ${expirada ? 'Expirada' : licenca.ativa ? 'Ativa' : 'Inativa'}
+                <td><span class="badge ${expirada ? 'badge-danger' : licenca.status === 'ativa' ? 'badge-success' : 'badge-warning'}">
+                    ${expirada ? 'Expirada' : licenca.status === 'ativa' ? 'Ativa' : 'Inativa'}
                 </span></td>
                 <td>
                     ${formatarData(licenca.dataExpiracao)}
@@ -468,7 +468,7 @@ Telefone: ${cliente.telefone || '-'}
 
 LICENÇA ATUAL:
 Tipo: ${cliente.licenca?.tipo || 'Nenhuma'}
-Status: ${cliente.licenca?.ativa ? 'Ativa' : 'Inativa'}
+Status: ${cliente.licenca?.status === 'ativa' ? 'Ativa' : 'Inativa'}
 Validade: ${cliente.licenca?.dataExpiracao ? formatarData(cliente.licenca.dataExpiracao) : '-'}
 
 ESTATÍSTICAS:

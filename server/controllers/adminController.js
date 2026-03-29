@@ -13,18 +13,22 @@ exports.getDashboard = async (req, res) => {
         const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
         const inicioAno = new Date(hoje.getFullYear(), 0, 1);
 
-        // Estatísticas de usuários
-        const totalUsuarios = await Usuario.countDocuments();
-        const usuariosAtivos = await Usuario.countDocuments({ ativo: true });
+        // Estatísticas de usuários (apenas clientes, não admins)
+        const totalUsuarios = await Usuario.countDocuments({ role: 'user' });
+        const usuariosAtivos = await Usuario.countDocuments({ role: 'user', ativo: true });
         const usuariosNovos = await Usuario.countDocuments({ 
+            role: 'user',
             criadoEm: { $gte: inicioMes } 
         });
 
-        // Estatísticas de licenças
-        const licencasAtivas = await Licenca.countDocuments({ status: 'ativa' });
-        const licencasExpiradas = await Licenca.countDocuments({ status: 'expirada' });
-        const licencasTrial = await Licenca.countDocuments({ tipo: 'trial', status: 'ativa' });
+        // Estatísticas de licenças (apenas vinculadas a usuários clientes)
+        const idsClientes = await Usuario.find({ role: 'user' }).distinct('licenca');
+        const filtroLicClientes = { _id: { $in: idsClientes } };
+        const licencasAtivas = await Licenca.countDocuments({ ...filtroLicClientes, status: 'ativa' });
+        const licencasExpiradas = await Licenca.countDocuments({ ...filtroLicClientes, status: 'expirada' });
+        const licencasTrial = await Licenca.countDocuments({ ...filtroLicClientes, tipo: 'trial', status: 'ativa' });
         const licencasPagas = await Licenca.countDocuments({ 
+            ...filtroLicClientes,
             tipo: { $in: ['mensal', 'anual', 'vitalicia'] },
             status: 'ativa'
         });
