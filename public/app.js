@@ -1443,10 +1443,26 @@ function desenharPreviewVerso(ctx, cfg, sx, sy, pw, ph, imgs) {
     if (cfg.verso.observacoes === 'sim') {
         const obsX = mx + tabelaW * 0.65;
         const obsW = tabelaW * 0.35;
+        
+        // Retângulo externo completo (mesma altura da tabela principal)
+        ctx.strokeRect(obsX, yPos, obsW, tabelaH);
+        
+        // Cabeçalho com fundo amarelo
         ctx.fillStyle = '#ffffc8';
         ctx.fillRect(obsX, yPos, obsW, 20);
         ctx.strokeRect(obsX, yPos, obsW, 20);
-        ctx.strokeRect(obsX, yPos + 20, obsW, tabelaH - 20);
+        
+        // Linhas horizontais internas
+        const linhaAlt = 20;
+        const numLinhas = Math.floor((tabelaH - 20) / linhaAlt);
+        for (let i = 1; i < numLinhas; i++) {
+            const ly = yPos + 20 + (i * linhaAlt);
+            ctx.beginPath();
+            ctx.moveTo(obsX, ly);
+            ctx.lineTo(obsX + obsW, ly);
+            ctx.stroke();
+        }
+        
         ctx.fillStyle = cfg.cores.texto;
         ctx.font = `bold ${9 * sx / 2.2}px sans-serif`;
         ctx.textAlign = 'center';
@@ -2331,25 +2347,34 @@ function gerarVersoCertificado(pdf, aluno, cfg) {
     
     if (cfg.verso.observacoes === 'sim') {
         const obsY = yPos;
+        const obsX = 15 + colunaEsqLargura;
+        
+        // Retângulo externo completo (mesma altura da tabela principal)
+        pdf.rect(obsX, obsY, colunaDirLargura, tabelaAltura);
+        
+        // Cabeçalho com fundo amarelo
         pdf.setFillColor(255, 255, 200);
-        pdf.rect(15 + colunaEsqLargura, obsY, colunaDirLargura, 10, 'FD');
+        pdf.rect(obsX, obsY, colunaDirLargura, 10, 'FD');
         
         pdf.setFont('helvetica', 'bold');
         pdf.setFontSize(9);
         pdf.setTextColor(corT.r, corT.g, corT.b);
-        pdf.text('OBSERVAÇÕES', 15 + colunaEsqLargura + (colunaDirLargura / 2), obsY + 7, { align: 'center' });
+        pdf.text('OBSERVAÇÕES', obsX + (colunaDirLargura / 2), obsY + 7, { align: 'center' });
         
+        // Linhas horizontais internas
         const linhaAltura = 13;
         const numLinhas = Math.floor((tabelaAltura - 10) / linhaAltura);
         
-        for(let i = 0; i < numLinhas; i++) {
-            pdf.rect(15 + colunaEsqLargura, obsY + 10 + (i * linhaAltura), colunaDirLargura, linhaAltura);
-            
-            if(i === 0 && aluno.observacoes) {
-                pdf.setFont('helvetica', 'normal');
-                pdf.setFontSize(8);
-                pdf.text(aluno.observacoes, 15 + colunaEsqLargura + 3, obsY + 10 + (i * linhaAltura) + 8, { maxWidth: colunaDirLargura - 6 });
-            }
+        for(let i = 1; i < numLinhas; i++) {
+            const ly = obsY + 10 + (i * linhaAltura);
+            pdf.line(obsX, ly, obsX + colunaDirLargura, ly);
+        }
+        
+        // Texto de observações na primeira linha
+        if (aluno.observacoes) {
+            pdf.setFont('helvetica', 'normal');
+            pdf.setFontSize(8);
+            pdf.text(aluno.observacoes, obsX + 3, obsY + 18, { maxWidth: colunaDirLargura - 6 });
         }
     }
 }
