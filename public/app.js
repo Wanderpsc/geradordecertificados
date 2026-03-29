@@ -864,7 +864,8 @@ function obterConfigCert() {
             exibir: document.getElementById('certRodapeExibir')?.value || 'sim',
             linha1: document.getElementById('certRodapeLinha1')?.value || '',
             linha2: document.getElementById('certRodapeLinha2')?.value || '',
-            fonteTam: parseInt(document.getElementById('certRodapeFonte')?.value) || 8
+            fonteTam: parseInt(document.getElementById('certRodapeFonte')?.value) || 8,
+            fonte: document.getElementById('certRodapeFonteFamily')?.value || 'helvetica'
         },
         margens: {
             esq: parseInt(document.getElementById('certMargemEsq')?.value) || 20,
@@ -877,9 +878,13 @@ function obterConfigCert() {
         },
         cores: {
             principal: document.getElementById('certCorPrincipal')?.value || '#1e3a8a',
+            cabecalho: document.getElementById('certCorCabecalho')?.value || '#1e3a8a',
+            titulo: document.getElementById('certCorTitulo')?.value || '#1e3a8a',
             secundaria: document.getElementById('certCorSecundaria')?.value || '#3b82f6',
             texto: document.getElementById('certCorTexto')?.value || '#000000',
             assinatura: document.getElementById('certCorAssinatura')?.value || '#1e3a8a',
+            borda: document.getElementById('certCorBorda')?.value || '#1e3a8a',
+            rodape: document.getElementById('certCorRodape')?.value || '#646464',
             fundo: document.getElementById('certCorFundo')?.value || '#ffffff'
         },
         fundoImg: {
@@ -947,6 +952,7 @@ function aplicarConfigNosInputs(cfg) {
         ['certRodapeLinha1', cfg.rodape.linha1],
         ['certRodapeLinha2', cfg.rodape.linha2],
         ['certRodapeFonte', cfg.rodape.fonteTam],
+        ['certRodapeFonteFamily', cfg.rodape.fonte || 'helvetica'],
         ['certMargemEsq', cfg.margens.esq],
         ['certMargemDir', cfg.margens.dir],
         ['certMargemSup', cfg.margens.sup],
@@ -955,14 +961,22 @@ function aplicarConfigNosInputs(cfg) {
         ['certBordaExibir', cfg.margens.bordaExibir],
         ['certOrientacao', cfg.margens.orientacao],
         ['certCorPrincipal', cfg.cores.principal],
+        ['certCorCabecalho', cfg.cores.cabecalho || cfg.cores.principal],
+        ['certCorTitulo', cfg.cores.titulo || cfg.cores.principal],
         ['certCorSecundaria', cfg.cores.secundaria],
         ['certCorTexto', cfg.cores.texto],
         ['certCorAssinatura', cfg.cores.assinatura],
+        ['certCorBorda', cfg.cores.borda || cfg.cores.principal],
+        ['certCorRodape', cfg.cores.rodape || '#646464'],
         ['certCorFundo', cfg.cores.fundo],
         ['certCorPrincipalHex', cfg.cores.principal],
+        ['certCorCabecalhoHex', cfg.cores.cabecalho || cfg.cores.principal],
+        ['certCorTituloHex', cfg.cores.titulo || cfg.cores.principal],
         ['certCorSecundariaHex', cfg.cores.secundaria],
         ['certCorTextoHex', cfg.cores.texto],
         ['certCorAssinaturaHex', cfg.cores.assinatura],
+        ['certCorBordaHex', cfg.cores.borda || cfg.cores.principal],
+        ['certCorRodapeHex', cfg.cores.rodape || '#646464'],
         ['certCorFundoHex', cfg.cores.fundo],
         ['certFundoFrenteMode', cfg.fundoImg ? cfg.fundoImg.frenteMode : 'clarear'],
         ['certFundoFrenteOpacidade', cfg.fundoImg ? cfg.fundoImg.frenteOpacidade : 50],
@@ -1254,7 +1268,7 @@ function desenharPreviewFrente(ctx, cfg, sx, sy, pw, ph, imgs) {
         if (imgs && imgs.bordaCompleta) {
             ctx.drawImage(imgs.bordaCompleta, 0, 0, pw, ph);
         } else {
-            ctx.fillStyle = cfg.cores.principal;
+            ctx.fillStyle = cfg.cores.borda || cfg.cores.principal;
             ctx.globalAlpha = 0.3;
             ctx.fillRect(0, 0, bordaEsp * sx, ph); // esq
             ctx.fillRect(pw - bordaEsp * sx, 0, bordaEsp * sx, ph); // dir
@@ -1285,10 +1299,10 @@ function desenharPreviewFrente(ctx, cfg, sx, sy, pw, ph, imgs) {
     }
 
     // Cabeçalho
-    const corPrincipal = cfg.cores.principal;
+    const corCabecalho = cfg.cores.cabecalho || cfg.cores.principal;
     const fontTam = cfg.cabecalho.fonteTam;
     const fmt = cfg.formatacao || {};
-    ctx.fillStyle = corPrincipal;
+    ctx.fillStyle = corCabecalho;
     ctx.font = `${fmtCanvasStyle(fmt.estiloCabecalho || 'bold')} ${fontTam * sx / 2.1}px ${fmtCanvasFamily(fmt.fonteCabecalho || 'helvetica')}`;
     ctx.textAlign = 'center';
 
@@ -1344,7 +1358,7 @@ function desenharPreviewFrente(ctx, cfg, sx, sy, pw, ph, imgs) {
 
     // Título
     yBase += 16 * sy / 2;
-    ctx.fillStyle = corPrincipal;
+    ctx.fillStyle = cfg.cores.titulo || cfg.cores.principal;
     ctx.font = `${fmtCanvasStyle(fmt.estiloTitulo || 'bolditalic')} ${cfg.frente.tituloTam * sx / 2.1}px ${fmtCanvasFamily(fmt.fonteTitulo || 'times')}`;
     ctx.fillText(fmtTransformText(cfg.frente.titulo, fmt.transformTitulo || 'uppercase'), pw / 2, yBase);
 
@@ -1392,8 +1406,8 @@ function desenharPreviewFrente(ctx, cfg, sx, sy, pw, ph, imgs) {
     // Rodapé
     if (cfg.rodape.exibir === 'sim' && (cfg.rodape.linha1 || cfg.rodape.linha2)) {
         const rodY = ph - 12;
-        ctx.fillStyle = '#6b7280';
-        ctx.font = `${cfg.rodape.fonteTam * sx / 2.5}px sans-serif`;
+        ctx.fillStyle = cfg.cores.rodape || '#646464';
+        ctx.font = `${cfg.rodape.fonteTam * sx / 2.5}px ${fmtCanvasFamily(cfg.rodape.fonte || 'helvetica')}`;
         ctx.textAlign = 'center';
         if (cfg.rodape.linha1) ctx.fillText(cfg.rodape.linha1, pw / 2, rodY - 10);
         if (cfg.rodape.linha2) ctx.fillText(cfg.rodape.linha2, pw / 2, rodY);
@@ -1426,7 +1440,7 @@ function desenharPreviewVerso(ctx, cfg, sx, sy, pw, ph, imgs) {
         if (imgs && imgs.bordaCompleta) {
             ctx.drawImage(imgs.bordaCompleta, 0, 0, pw, ph);
         } else {
-            ctx.fillStyle = cfg.cores.principal;
+            ctx.fillStyle = cfg.cores.borda || cfg.cores.principal;
             ctx.globalAlpha = 0.3;
             ctx.fillRect(0, 0, bordaEsp * sx, ph);
             ctx.fillRect(pw - bordaEsp * sx, 0, bordaEsp * sx, ph);
@@ -1463,7 +1477,7 @@ function desenharPreviewVerso(ctx, cfg, sx, sy, pw, ph, imgs) {
     const versoTituloTam = cfg.verso.fonteTituloTam || 13;
     const versoTituloEstilo = cfg.verso.estiloTitulo || 'bolditalic';
     const versoTituloAlign = cfg.verso.alinhamentoTitulo || 'center';
-    ctx.fillStyle = cfg.cores.principal;
+    ctx.fillStyle = cfg.cores.titulo || cfg.cores.principal;
     ctx.font = `${fmtCanvasStyle(versoTituloEstilo)} ${versoTituloTam * sx / 2.1}px ${fmtCanvasFamily(versoTituloFonte)}`;
     ctx.textAlign = versoTituloAlign;
     const tituloX = versoTituloAlign === 'center' ? pw / 2 : (versoTituloAlign === 'right' ? pw - 15 * sx : 15 * sx);
@@ -1471,7 +1485,7 @@ function desenharPreviewVerso(ctx, cfg, sx, sy, pw, ph, imgs) {
 
     // Tabela placeholder
     yPos += 15;
-    ctx.strokeStyle = cfg.cores.principal;
+    ctx.strokeStyle = cfg.cores.borda || cfg.cores.principal;
     ctx.lineWidth = 1;
     const tabelaW = pw - 30 * sx;
     const tabelaH = ph - yPos - 20 * sy;
@@ -1514,9 +1528,29 @@ function desenharPreviewVerso(ctx, cfg, sx, sy, pw, ph, imgs) {
 }
 
 function fmtCanvasFamily(fonte) {
-    if (fonte === 'courier') return 'monospace';
-    if (fonte === 'helvetica') return 'sans-serif';
-    return 'serif';
+    const map = {
+        'courier': 'Courier New, monospace',
+        'helvetica': 'Helvetica, sans-serif',
+        'times': 'Times New Roman, serif',
+        'arial': 'Arial, sans-serif',
+        'georgia': 'Georgia, serif',
+        'verdana': 'Verdana, sans-serif',
+        'tahoma': 'Tahoma, sans-serif',
+        'trebuchet': 'Trebuchet MS, sans-serif',
+        'palatino': 'Palatino Linotype, Palatino, serif',
+        'garamond': 'Garamond, serif',
+        'cambria': 'Cambria, serif',
+        'calibri': 'Calibri, sans-serif'
+    };
+    return map[fonte] || 'serif';
+}
+
+function fmtPdfFamily(fonte) {
+    const serif = ['times', 'georgia', 'palatino', 'garamond', 'cambria'];
+    const mono = ['courier'];
+    if (serif.includes(fonte)) return 'times';
+    if (mono.includes(fonte)) return 'courier';
+    return 'helvetica';
 }
 
 function fmtCanvasStyle(estilo) {
@@ -1786,8 +1820,12 @@ async function gerarFrenteCertificado(pdf, aluno, cfg) {
     const pageHeight = isLandscape ? 210 : 297;
     const bordaEspessura = cfg.margens.bordaEspessura;
     const corP = hexParaRgb(cfg.cores.principal);
+    const corCab = hexParaRgb(cfg.cores.cabecalho || cfg.cores.principal);
+    const corTit = hexParaRgb(cfg.cores.titulo || cfg.cores.principal);
     const corT = hexParaRgb(cfg.cores.texto);
     const corA = hexParaRgb(cfg.cores.assinatura);
+    const corB = hexParaRgb(cfg.cores.borda || cfg.cores.principal);
+    const corRod = hexParaRgb(cfg.cores.rodape || '#646464');
     const corF = hexParaRgb(cfg.cores.fundo);
     
     // Fundo
@@ -1876,8 +1914,8 @@ async function gerarFrenteCertificado(pdf, aluno, cfg) {
     // Cabeçalho
     const fontTamCab = cfg.cabecalho.fonteTam;
     const fmt = cfg.formatacao || {};
-    pdf.setTextColor(corP.r, corP.g, corP.b);
-    pdf.setFont(fmt.fonteCabecalho || 'helvetica', fmt.estiloCabecalho || 'bold');
+    pdf.setTextColor(corCab.r, corCab.g, corCab.b);
+    pdf.setFont(fmtPdfFamily(fmt.fonteCabecalho || 'helvetica'), fmt.estiloCabecalho || 'bold');
     pdf.setFontSize(fontTamCab);
     
     let yBase = cfg.emblema.posY + cfg.emblema.altura / 2 + 6;
@@ -1949,14 +1987,14 @@ async function gerarFrenteCertificado(pdf, aluno, cfg) {
     
     // Título
     yBase += 8;
-    pdf.setFont(fmt.fonteTitulo || 'times', fmt.estiloTitulo || 'bolditalic');
+    pdf.setFont(fmtPdfFamily(fmt.fonteTitulo || 'times'), fmt.estiloTitulo || 'bolditalic');
     pdf.setFontSize(cfg.frente.tituloTam);
-    pdf.setTextColor(corP.r, corP.g, corP.b);
+    pdf.setTextColor(corTit.r, corTit.g, corTit.b);
     pdf.text(fmtTransformText(cfg.frente.titulo, fmt.transformTitulo || 'uppercase'), pageWidth / 2, yBase, { align: 'center' });
     
     // Corpo do texto
     yBase += 17;
-    const fonteCorpo = cfg.frente.fonte || 'times';
+    const fonteCorpo = fmtPdfFamily(cfg.frente.fonte || 'times');
     pdf.setFont(fonteCorpo, fmt.estiloCorpo || 'italic');
     pdf.setFontSize(cfg.frente.fonteTam);
     pdf.setTextColor(corT.r, corT.g, corT.b);
@@ -2150,7 +2188,7 @@ async function gerarFrenteCertificado(pdf, aluno, cfg) {
         dataFormatada = `${hoje.getDate()} de ${obterNomeMes(hoje.getMonth())} de ${hoje.getFullYear()}.`;
     }
     pdf.setFont('times', 'bold');
-    pdf.setTextColor(corP.r, corP.g, corP.b);
+    pdf.setTextColor(corTit.r, corTit.g, corTit.b);
     pdf.text(dataFormatada, pageWidth / 2, yPos, { align: 'center' });
     
     // Linhas de assinatura
@@ -2160,7 +2198,7 @@ async function gerarFrenteCertificado(pdf, aluno, cfg) {
     pdf.line(25, yPos, 130, yPos);
     pdf.line(167, yPos, 272, yPos);
     
-    pdf.setFont(fmt.fonteAssinatura || 'helvetica', 'normal');
+    pdf.setFont(fmtPdfFamily(fmt.fonteAssinatura || 'helvetica'), 'normal');
     pdf.setFontSize(9);
     pdf.setTextColor(corA.r, corA.g, corA.b);
     pdf.text(cfg.frente.assinatura1, 77.5, yPos + 5, { align: 'center' });
@@ -2173,9 +2211,9 @@ async function gerarFrenteCertificado(pdf, aluno, cfg) {
 
     // Rodapé
     if (cfg.rodape.exibir === 'sim' && (cfg.rodape.linha1 || cfg.rodape.linha2)) {
-        pdf.setFont('helvetica', 'normal');
+        pdf.setFont(fmtPdfFamily(cfg.rodape.fonte || 'helvetica'), 'normal');
         pdf.setFontSize(cfg.rodape.fonteTam);
-        pdf.setTextColor(100, 100, 100);
+        pdf.setTextColor(corRod.r, corRod.g, corRod.b);
         const rodY = pageHeight - cfg.margens.inf;
         if (cfg.rodape.linha1) pdf.text(cfg.rodape.linha1, pageWidth / 2, rodY - 4, { align: 'center' });
         if (cfg.rodape.linha2) pdf.text(cfg.rodape.linha2, pageWidth / 2, rodY, { align: 'center' });
@@ -2189,7 +2227,10 @@ function gerarVersoCertificado(pdf, aluno, cfg) {
     const pageHeight = isLandscape ? 210 : 297;
     const bordaEspessura = cfg.margens.bordaEspessura;
     const corP = hexParaRgb(cfg.cores.principal);
+    const corCab = hexParaRgb(cfg.cores.cabecalho || cfg.cores.principal);
+    const corTit = hexParaRgb(cfg.cores.titulo || cfg.cores.principal);
     const corT = hexParaRgb(cfg.cores.texto);
+    const corB = hexParaRgb(cfg.cores.borda || cfg.cores.principal);
     const corF = hexParaRgb(cfg.cores.fundo);
     
     // Fundo
@@ -2251,8 +2292,8 @@ function gerarVersoCertificado(pdf, aluno, cfg) {
     }
     
     // Cabeçalho do verso
-    pdf.setTextColor(corP.r, corP.g, corP.b);
-    const versoCabFonte = cfg.verso.fonteCabecalho || 'helvetica';
+    pdf.setTextColor(corCab.r, corCab.g, corCab.b);
+    const versoCabFonte = fmtPdfFamily(cfg.verso.fonteCabecalho || 'helvetica');
     const versoCabTam = cfg.verso.fonteCabecalhoTam || 7;
     pdf.setFont(versoCabFonte, 'normal');
     pdf.setFontSize(versoCabTam);
@@ -2379,14 +2420,15 @@ function gerarVersoCertificado(pdf, aluno, cfg) {
     const versoTituloTam = cfg.verso.fonteTituloTam || 13;
     const versoTituloEstilo = cfg.verso.estiloTitulo || 'bolditalic';
     const versoTituloAlign = cfg.verso.alinhamentoTitulo || 'center';
-    pdf.setFont(versoTituloFonte, versoTituloEstilo);
+    pdf.setFont(fmtPdfFamily(versoTituloFonte), versoTituloEstilo);
     pdf.setFontSize(versoTituloTam);
+    pdf.setTextColor(corTit.r, corTit.g, corTit.b);
     const tituloX = versoTituloAlign === 'center' ? pageWidth / 2 : (versoTituloAlign === 'right' ? pageWidth - 15 : 15);
     pdf.text(fmtTransformText(cfg.verso.titulo, 'uppercase'), tituloX, yPos, { align: versoTituloAlign });
     
     // Tabela
     yPos += 8;
-    pdf.setDrawColor(corP.r, corP.g, corP.b);
+    pdf.setDrawColor(corB.r, corB.g, corB.b);
     pdf.setLineWidth(0.5);
     pdf.setTextColor(corT.r, corT.g, corT.b);
     
