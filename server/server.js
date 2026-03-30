@@ -45,8 +45,37 @@ app.use((req, res, next) => {
     next();
 });
 
-// Servir arquivos estáticos
-app.use(express.static(path.join(__dirname, '../public')));
+// Servir arquivos estáticos com headers anti-cache para HTML e JS
+app.use(express.static(path.join(__dirname, '../public'), {
+    setHeaders: (res, filePath) => {
+        if (filePath.endsWith('.html') || filePath.endsWith('.js') || filePath.endsWith('.css')) {
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+            res.setHeader('Pragma', 'no-cache');
+            res.setHeader('Expires', '0');
+        }
+    }
+}));
+
+// Endpoint para forçar limpeza do service worker (acessível direto pelo navegador)
+app.get('/limpar-cache', (req, res) => {
+    res.send(`<!DOCTYPE html><html><head><title>Limpando cache...</title></head><body>
+<h2>Limpando cache e service worker...</h2><p id="status">Aguarde...</p>
+<script>
+(async()=>{
+  const s=document.getElementById('status');
+  try{
+    const regs=await navigator.serviceWorker.getRegistrations();
+    for(const r of regs){await r.unregister();}
+    s.textContent='Service workers removidos: '+regs.length;
+    const keys=await caches.keys();
+    for(const k of keys){await caches.delete(k);}
+    s.textContent+=' | Caches removidos: '+keys.length;
+    s.textContent+=' | Redirecionando...';
+    setTimeout(()=>window.location.replace('/login.html'),1500);
+  }catch(e){s.textContent='Erro: '+e.message;}
+})();
+</script></body></html>`);
+});
 
 // Rotas da API
 app.use('/api/auth', authRoutes);
