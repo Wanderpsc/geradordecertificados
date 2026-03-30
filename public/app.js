@@ -1092,9 +1092,14 @@ function salvarPersonalizacao() {
 
 function aplicarAlteracoes() {
     CERT_CONFIG = obterConfigCert();
+    localStorage.setItem('certConfig', JSON.stringify(CERT_CONFIG));
+    localStorage.setItem('certUploads', JSON.stringify(CERT_UPLOADS));
     atualizarPreviewCert();
-    mostrarNotificacao('Alterações aplicadas! Veja o preview abaixo.', 'success');
-    dispararAutoSalvar();
+    if (APP_STATE.modeloAtualId) {
+        salvarModeloNaNuvem();
+    } else {
+        mostrarNotificacao('Alterações aplicadas!', 'success');
+    }
 }
 
 // ==================== EDITOR VISUAL NA PRÉ-VISUALIZAÇÃO ====================
