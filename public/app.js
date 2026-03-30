@@ -1095,7 +1095,8 @@ function obterConfigCert() {
             alinhamentoTitulo: document.getElementById('certVersoAlinhamentoTitulo')?.value || 'center',
             corTexto: document.getElementById('certCorVersoTexto')?.value || '#000000',
             corTitulo: document.getElementById('certCorVersoTitulo')?.value || '#1e3a8a',
-            localData: document.getElementById('certVersoLocalData')?.value || ''
+            localData: document.getElementById('certVersoLocalData')?.value || '',
+            inverter: document.getElementById('certVersoInverter')?.value || 'nao'
         },
         rodape: {
             exibir: document.getElementById('certRodapeExibir')?.value || 'sim',
@@ -1197,6 +1198,7 @@ function aplicarConfigNosInputs(cfg) {
         ['certCorVersoTitulo', cfg.verso.corTitulo || '#1e3a8a'],
         ['certCorVersoTituloHex', cfg.verso.corTitulo || '#1e3a8a'],
         ['certVersoLocalData', cfg.verso.localData || ''],
+        ['certVersoInverter', cfg.verso.inverter || 'nao'],
         ['certRodapeExibir', cfg.rodape.exibir],
         ['certRodapeLinha1', cfg.rodape.linha1],
         ['certRodapeLinha2', cfg.rodape.linha2],
@@ -3347,6 +3349,17 @@ function gerarVersoCertificado(pdf, aluno, cfg) {
     const isLandscape = cfg.margens.orientacao === 'landscape';
     const pageWidth = isLandscape ? 297 : 210;
     const pageHeight = isLandscape ? 210 : 297;
+
+    // Inverter verso para impressão duplex (rotacionar 180°)
+    if (cfg.verso.inverter === 'sim') {
+        const cx = pageWidth / 2;
+        const cy = pageHeight / 2;
+        pdf.internal.write('q');
+        pdf.internal.write(`1 0 0 1 ${(cx * 72/25.4).toFixed(2)} ${(cy * 72/25.4).toFixed(2)} cm`);
+        pdf.internal.write('-1 0 0 -1 0 0 cm');
+        pdf.internal.write(`1 0 0 1 ${(-cx * 72/25.4).toFixed(2)} ${(-cy * 72/25.4).toFixed(2)} cm`);
+    }
+
     const bordaEspessura = cfg.margens.bordaEspessura;
     const corP = hexParaRgb(cfg.cores.principal);
     const corCab = hexParaRgb(cfg.cores.cabecalho || cfg.cores.principal);
@@ -3601,6 +3614,11 @@ function gerarVersoCertificado(pdf, aluno, cfg) {
         pdf.setFontSize(9);
         pdf.setTextColor(corT.r, corT.g, corT.b);
         pdf.text(cfg.verso.localData, pageWidth / 2, ldVY, { align: 'center' });
+    }
+
+    // Fechar rotação do verso se ativa
+    if (cfg.verso.inverter === 'sim') {
+        pdf.internal.write('Q');
     }
 }
 

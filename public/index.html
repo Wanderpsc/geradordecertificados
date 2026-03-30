@@ -600,6 +600,14 @@
                                 <option value="nao">Não</option>
                             </select>
                         </div>
+                        <div class="editor-field">
+                            <label>🔄 Inverter Verso (Impressão Duplex)</label>
+                            <select id="certVersoInverter" class="form-control" onchange="atualizarPreviewCert()">
+                                <option value="nao">Não</option>
+                                <option value="sim">Sim - Rotacionar 180°</option>
+                            </select>
+                            <small style="color: #6b7280; font-size: 11px;">Ative se o verso sai de cabeça para baixo na impressão frente e verso.</small>
+                        </div>
                         <div class="editor-field" style="grid-column: 1 / -1;">
                             <label>📍 Local e Data (Verso)</label>
                             <input type="text" id="certVersoLocalData" class="form-control" placeholder="Ex: Curimatá - PI, 20 de janeiro de 2025" oninput="atualizarPreviewCert()">
