@@ -2791,14 +2791,66 @@ async function gerarCertificadosLote() {
         return;
     }
 
-    mostrarNotificacao(`Gerando ${alunosParaGerar.length} certificado(s)...`, 'info');
-
-    for (let i = 0; i < alunosParaGerar.length; i++) {
-        await gerarCertificado(alunosParaGerar[i], true);
-        await new Promise(resolve => setTimeout(resolve, 500)); // Pausa entre gerações
+    // Se for apenas 1 aluno, gerar individual
+    if (alunosParaGerar.length === 1) {
+        await gerarCertificado(alunosParaGerar[0], false);
+        return;
     }
 
-    mostrarNotificacao(`${alunosParaGerar.length} certificado(s) gerado(s) com sucesso!`, 'success');
+    // Gerar PDF único com todos os certificados
+    try {
+        if (!window.jspdf || !window.jspdf.jsPDF) {
+            mostrarNotificacao('Biblioteca jsPDF não carregada. Recarregue a página.', 'error');
+            return;
+        }
+
+        const { jsPDF } = window.jspdf;
+        CERT_CONFIG = obterConfigCert();
+        const cfg = CERT_CONFIG;
+        const orientacao = cfg.margens.orientacao || 'landscape';
+
+        const pdf = new jsPDF({
+            orientation: orientacao,
+            unit: 'mm',
+            format: 'a4'
+        });
+
+        // Pré-gerar borda vertical se necessário
+        if (!CERT_UPLOADS.bordaVertical && !CERT_UPLOADS._bordaVFromH) {
+            const bordaH = CERT_UPLOADS.bordaHorizontal || (typeof BORDA_HORIZONTAL !== 'undefined' ? BORDA_HORIZONTAL : null);
+            if (bordaH) {
+                CERT_UPLOADS._bordaVFromH = await _rotateImageForBorder(bordaH);
+            }
+        }
+
+        mostrarNotificacao(`Gerando ${alunosParaGerar.length} certificado(s) em PDF único...`, 'info');
+
+        for (let i = 0; i < alunosParaGerar.length; i++) {
+            if (i > 0) {
+                pdf.addPage();
+            }
+            // Frente
+            await gerarFrenteCertificado(pdf, alunosParaGerar[i], cfg);
+            // Verso
+            pdf.addPage();
+            gerarVersoCertificado(pdf, alunosParaGerar[i], cfg);
+        }
+
+        // Abrir PDF único em nova aba
+        const pdfBlob = pdf.output('blob');
+        const pdfUrl = URL.createObjectURL(pdfBlob);
+        window.open(pdfUrl, '_blank');
+
+        // Download do PDF único
+        setTimeout(() => {
+            pdf.save(`Certificados_Lote_${alunosParaGerar.length}_alunos.pdf`);
+        }, 500);
+
+        mostrarNotificacao(`${alunosParaGerar.length} certificado(s) gerado(s) em PDF único!`, 'success');
+    } catch (error) {
+        console.error('Erro ao gerar certificados em lote:', error);
+        mostrarNotificacao('Erro ao gerar certificados: ' + error.message, 'error');
+    }
 }
 
 async function gerarCertificado(aluno, emLote = false) {
