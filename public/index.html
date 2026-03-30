@@ -59,6 +59,49 @@
 
         <!-- Tab: Cadastro de Alunos -->
         <div class="tab-content active" id="cadastro">
+            <!-- Barra Turma Padrão -->
+            <div id="barraTurmaPadrao" style="background: linear-gradient(135deg, #eff6ff, #dbeafe); border: 2px solid #93c5fd; border-radius: 12px; padding: 16px 20px; margin-bottom: 16px; display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 22px;">🏫</span>
+                    <strong style="color: #1e3a8a; font-size: 14px;">Turma Padrão:</strong>
+                </div>
+                <div style="display: flex; gap: 10px; flex: 1; flex-wrap: wrap; align-items: center;">
+                    <select id="turmaPadraoSerie" onchange="salvarTurmaPadrao()" style="padding: 8px 12px; border: 2px solid #93c5fd; border-radius: 8px; font-size: 13px; min-width: 220px; background: white;">
+                        <option value="">Selecione a Série...</option>
+                        <optgroup label="Ensino Fundamental">
+                            <option value="1º Ano Ensino Fundamental">1º Ano Ensino Fundamental</option>
+                            <option value="2º Ano Ensino Fundamental">2º Ano Ensino Fundamental</option>
+                            <option value="3º Ano Ensino Fundamental">3º Ano Ensino Fundamental</option>
+                            <option value="4º Ano Ensino Fundamental">4º Ano Ensino Fundamental</option>
+                            <option value="5º Ano Ensino Fundamental">5º Ano Ensino Fundamental</option>
+                            <option value="6º Ano Ensino Fundamental">6º Ano Ensino Fundamental</option>
+                            <option value="7º Ano Ensino Fundamental">7º Ano Ensino Fundamental</option>
+                            <option value="8º Ano Ensino Fundamental">8º Ano Ensino Fundamental</option>
+                            <option value="9º Ano Ensino Fundamental">9º Ano Ensino Fundamental</option>
+                        </optgroup>
+                        <optgroup label="Ensino Médio">
+                            <option value="1ª Série Ensino Médio">1ª Série Ensino Médio</option>
+                            <option value="2ª Série Ensino Médio">2ª Série Ensino Médio</option>
+                            <option value="3ª Série Ensino Médio">3ª Série Ensino Médio</option>
+                        </optgroup>
+                        <optgroup label="EJA">
+                            <option value="EJA - Fundamental">EJA - Fundamental</option>
+                            <option value="EJA - Médio">EJA - Médio</option>
+                        </optgroup>
+                    </select>
+                    <input type="text" id="turmaPadraoTurma" onchange="salvarTurmaPadrao()" placeholder="Turma (Ex: A, B, Única)" style="padding: 8px 12px; border: 2px solid #93c5fd; border-radius: 8px; font-size: 13px; width: 160px; background: white;">
+                    <div id="turmaPadraoStatus" style="font-size: 13px; color: #16a34a; font-weight: 600; display: none;">
+                        ✅ Ativa
+                    </div>
+                    <button type="button" onclick="limparTurmaPadrao()" style="background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; padding: 7px 14px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 600;">
+                        ✕ Limpar
+                    </button>
+                </div>
+                <div style="width: 100%; font-size: 12px; color: #6b7280; margin-top: 2px;">
+                    💡 Defina a turma padrão para preencher automaticamente Série e Turma em todos os cadastros (individual e lote).
+                </div>
+            </div>
+
             <div class="card">
                 <h2>Cadastrar Novo Aluno</h2>
                 <form id="formAluno">

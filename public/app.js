@@ -81,7 +81,70 @@ document.addEventListener('DOMContentLoaded', () => {
     inicializarFormulario();
     inicializarTemplates();
     carregarAlunos(); // Carregar alunos do servidor
+    carregarTurmaPadrao();
 });
+
+// ==================== TURMA PADRÃO ====================
+function carregarTurmaPadrao() {
+    const serie = localStorage.getItem('turmaPadraoSerie') || '';
+    const turma = localStorage.getItem('turmaPadraoTurma') || '';
+    const selSerie = document.getElementById('turmaPadraoSerie');
+    const inpTurma = document.getElementById('turmaPadraoTurma');
+    if (selSerie) selSerie.value = serie;
+    if (inpTurma) inpTurma.value = turma;
+    atualizarStatusTurmaPadrao();
+    aplicarTurmaPadraoNoCadastro();
+}
+
+function salvarTurmaPadrao() {
+    const serie = document.getElementById('turmaPadraoSerie').value;
+    const turma = document.getElementById('turmaPadraoTurma').value.trim();
+    localStorage.setItem('turmaPadraoSerie', serie);
+    localStorage.setItem('turmaPadraoTurma', turma);
+    atualizarStatusTurmaPadrao();
+    aplicarTurmaPadraoNoCadastro();
+}
+
+function limparTurmaPadrao() {
+    localStorage.removeItem('turmaPadraoSerie');
+    localStorage.removeItem('turmaPadraoTurma');
+    document.getElementById('turmaPadraoSerie').value = '';
+    document.getElementById('turmaPadraoTurma').value = '';
+    document.getElementById('serieAluno').value = '';
+    document.getElementById('turmaAluno').value = '';
+    atualizarStatusTurmaPadrao();
+}
+
+function atualizarStatusTurmaPadrao() {
+    const serie = document.getElementById('turmaPadraoSerie').value;
+    const turma = document.getElementById('turmaPadraoTurma').value.trim();
+    const statusEl = document.getElementById('turmaPadraoStatus');
+    const barra = document.getElementById('barraTurmaPadrao');
+    if (serie || turma) {
+        statusEl.style.display = 'inline';
+        barra.style.borderColor = '#16a34a';
+        barra.style.background = 'linear-gradient(135deg, #f0fdf4, #dcfce7)';
+    } else {
+        statusEl.style.display = 'none';
+        barra.style.borderColor = '#93c5fd';
+        barra.style.background = 'linear-gradient(135deg, #eff6ff, #dbeafe)';
+    }
+}
+
+function aplicarTurmaPadraoNoCadastro() {
+    const serie = localStorage.getItem('turmaPadraoSerie') || '';
+    const turma = localStorage.getItem('turmaPadraoTurma') || '';
+    const serieEl = document.getElementById('serieAluno');
+    const turmaEl = document.getElementById('turmaAluno');
+    if (serieEl && serie) serieEl.value = serie;
+    if (turmaEl && turma) turmaEl.value = turma;
+}
+
+function getTurmaPadrao() {
+    const serie = localStorage.getItem('turmaPadraoSerie') || '';
+    const turma = localStorage.getItem('turmaPadraoTurma') || '';
+    return { serie, turma };
+}
 
 // ==================== PERMISSÕES DE SUB-USUÁRIO ====================
 function aplicarPermissoesSubUsuario() {
@@ -263,6 +326,7 @@ async function cadastrarAluno() {
         if (data.success) {
             document.getElementById('formAluno').reset();
             APP_STATE.alunoEditando = null;
+            aplicarTurmaPadraoNoCadastro();
             await carregarAlunos(); // Recarrega a lista do servidor
             const acao = isEdicao ? 'atualizado' : 'cadastrado';
             mostrarNotificacao(`Aluno ${aluno.nome} ${acao} com sucesso!`, 'success');
@@ -575,6 +639,10 @@ async function enviarCadastroLote() {
     linhas.forEach((linha, i) => {
         const aluno = parsearLinhaAluno(linha);
         if (aluno) {
+            // Aplicar turma padrão se o aluno não tiver série/turma
+            const tp = getTurmaPadrao();
+            if (!aluno.serie && tp.serie) aluno.serie = tp.serie;
+            if (!aluno.turma && tp.turma) aluno.turma = tp.turma;
             alunos.push(aluno);
         } else {
             erros.push(i + 1);
