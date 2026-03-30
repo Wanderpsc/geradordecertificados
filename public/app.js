@@ -649,7 +649,7 @@ function atualizarListaAlunos(filtro = '') {
             <div class="aluno-info">
                 <div class="aluno-info-item">
                     <div class="aluno-info-label">RG</div>
-                    <div>${aluno.rg}</div>
+                    <div>${aluno.rg}${aluno.orgaoEmissor ? ' - ' + aluno.orgaoEmissor : ''}</div>
                 </div>
                 <div class="aluno-info-item">
                     <div class="aluno-info-label">CPF</div>
@@ -664,8 +664,24 @@ function atualizarListaAlunos(filtro = '') {
                     <div>${aluno.cidadeNascimento} - ${aluno.estadoNascimento}</div>
                 </div>
                 <div class="aluno-info-item">
+                    <div class="aluno-info-label">Nacionalidade</div>
+                    <div>${aluno.nacionalidade || 'Brasileira'}</div>
+                </div>
+                <div class="aluno-info-item">
+                    <div class="aluno-info-label">Mãe</div>
+                    <div>${aluno.nomeMae || ''}</div>
+                </div>
+                <div class="aluno-info-item">
+                    <div class="aluno-info-label">Pai</div>
+                    <div>${aluno.nomePai || ''}</div>
+                </div>
+                <div class="aluno-info-item">
                     <div class="aluno-info-label">Ano de Conclusão</div>
                     <div>${aluno.anoConclusao}</div>
+                </div>
+                <div class="aluno-info-item">
+                    <div class="aluno-info-label">Data de Confecção</div>
+                    <div>${aluno.dataConfeccao ? new Date(aluno.dataConfeccao + 'T00:00:00').toLocaleDateString('pt-BR') : ''}</div>
                 </div>
                 <div class="aluno-info-item">
                     <div class="aluno-info-label">Resolução</div>
@@ -692,10 +708,16 @@ function imprimirListaAlunos() {
             <td>${idx + 1}</td>
             <td>${aluno.nome || ''}</td>
             <td>${aluno.cpf || ''}</td>
-            <td>${aluno.rg || ''}</td>
+            <td>${aluno.rg || ''}${aluno.orgaoEmissor ? ' - ' + aluno.orgaoEmissor : ''}</td>
             <td>${aluno.diaNascimento || ''}/${aluno.mesNascimento || ''}/${aluno.anoNascimento || ''}</td>
             <td>${aluno.cidadeNascimento || ''} - ${aluno.estadoNascimento || ''}</td>
+            <td>${aluno.nacionalidade || 'Brasileira'}</td>
+            <td>${aluno.nomeMae || ''}</td>
+            <td>${aluno.nomePai || ''}</td>
             <td>${aluno.anoConclusao || ''}</td>
+            <td>${aluno.dataConfeccao ? new Date(aluno.dataConfeccao + 'T00:00:00').toLocaleDateString('pt-BR') : ''}</td>
+            <td>${aluno.resolucao || ''}</td>
+            <td>${aluno.observacoes || ''}</td>
         </tr>
     `).join('');
 
@@ -706,19 +728,19 @@ function imprimirListaAlunos() {
             body { font-family: Arial, sans-serif; padding: 20px; }
             h1 { text-align: center; color: #1e3a8a; margin-bottom: 5px; }
             .info { text-align: center; color: #666; margin-bottom: 20px; font-size: 14px; }
-            table { width: 100%; border-collapse: collapse; font-size: 12px; }
-            th { background: #1e3a8a; color: white; padding: 8px 6px; text-align: left; }
-            td { padding: 6px; border-bottom: 1px solid #ddd; }
+            table { width: 100%; border-collapse: collapse; font-size: 10px; }
+            th { background: #1e3a8a; color: white; padding: 6px 4px; text-align: left; white-space: nowrap; }
+            td { padding: 5px 4px; border-bottom: 1px solid #ddd; }
             tr:nth-child(even) { background: #f8f9fa; }
             .total { margin-top: 15px; font-weight: bold; font-size: 14px; }
-            @media print { body { padding: 0; } }
+            @media print { body { padding: 0; } @page { size: landscape; } }
         </style>
         </head><body>
         <h1>Lista de Alunos Cadastrados</h1>
         <p class="info">Data: ${dataAtual} | Total: ${APP_STATE.alunos.length} aluno(s)</p>
         <table>
             <thead><tr>
-                <th>#</th><th>Nome</th><th>CPF</th><th>RG</th><th>Nascimento</th><th>Naturalidade</th><th>Conclusão</th>
+                <th>#</th><th>Nome</th><th>CPF</th><th>RG</th><th>Nascimento</th><th>Naturalidade</th><th>Nacional.</th><th>Mãe</th><th>Pai</th><th>Conclusão</th><th>Confecção</th><th>Resolução</th><th>Obs</th>
             </tr></thead>
             <tbody>${linhas}</tbody>
         </table>
