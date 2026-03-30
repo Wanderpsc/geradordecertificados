@@ -830,6 +830,7 @@ function atualizarContadorLote() {
 // ==================== PERSONALIZAÇÃO DE TEMPLATES ====================
 let CERT_CONFIG = JSON.parse(localStorage.getItem('certConfig')) || {};
 let CERT_UPLOADS = JSON.parse(localStorage.getItem('certUploads')) || {};
+let _posOffsets = (CERT_CONFIG && CERT_CONFIG.ajustesPosicao) ? Object.assign({}, CERT_CONFIG.ajustesPosicao) : {};
 let previewLado = 'frente'; // frente ou verso
 
 function _pf(id, fallback) {
@@ -932,12 +933,14 @@ function obterConfigCert() {
             transformTitulo: document.getElementById('certFmtTransformTitulo')?.value || 'uppercase',
             espacoLinha: parseFloat(document.getElementById('certFmtEspacoLinha')?.value) || 8,
             espacoLetras: parseFloat(document.getElementById('certFmtEspacoLetras')?.value) || 0
-        }
+        },
+        ajustesPosicao: Object.assign({}, _posOffsets)
     };
 }
 
 function aplicarConfigNosInputs(cfg) {
     if (!cfg || !cfg.cabecalho) return;
+    if (cfg.ajustesPosicao) _posOffsets = Object.assign({}, cfg.ajustesPosicao);
     const sets = [
         ['certCabecalhoLinha1', cfg.cabecalho.linha1],
         ['certCabecalhoLinha2', cfg.cabecalho.linha2],
@@ -1141,15 +1144,16 @@ function _criarOverlaysEditaveis() {
     const sx = basePw / (isLandscape ? 297 : 210);
     const sy = basePh / (isLandscape ? 210 : 297);
     const ds = canvas.clientWidth / basePw;
+    const aj = cfg.ajustesPosicao || {};
 
     if (previewLado === 'frente') {
-        _criarOverlaysFrente(wrapper, cfg, sx, sy, basePw, basePh, ds);
+        _criarOverlaysFrente(wrapper, cfg, sx, sy, basePw, basePh, ds, aj);
     } else {
-        _criarOverlaysVerso(wrapper, cfg, sx, sy, basePw, basePh, ds);
+        _criarOverlaysVerso(wrapper, cfg, sx, sy, basePw, basePh, ds, aj);
     }
 }
 
-function _criarOverlaysFrente(wrapper, cfg, sx, sy, pw, ph, ds) {
+function _criarOverlaysFrente(wrapper, cfg, sx, sy, pw, ph, ds, aj) {
     const fmt = cfg.formatacao || {};
     const fontTam = cfg.cabecalho.fonteTam;
     const hFontPx = fontTam * sx / 2.1;
@@ -1159,7 +1163,7 @@ function _criarOverlaysFrente(wrapper, cfg, sx, sy, pw, ph, ds) {
     // Cabeçalho Linhas 1-3
     ['certCabecalhoLinha1', 'certCabecalhoLinha2', 'certCabecalhoLinha3'].forEach(id => {
         _addEditOverlay(wrapper, id, {
-            x: pw * 0.05, y: y - hFontPx * 0.85,
+            x: pw * 0.05, y: y - hFontPx * 0.85 + (aj[id] || 0) * sy,
             w: pw * 0.9, h: hFontPx * 1.3,
             fontSize: hFontPx,
             fontFamily: fmtCanvasFamily(fmt.fonteCabecalho || 'helvetica'),
@@ -1167,7 +1171,7 @@ function _criarOverlaysFrente(wrapper, cfg, sx, sy, pw, ph, ds) {
             color: cfg.cores.cabecalho || cfg.cores.principal,
             textAlign: 'center',
             textTransform: fmt.transformCabecalho || 'uppercase',
-            ds: ds
+            ds: ds, sy: sy
         });
         y += hSpacing;
     });
@@ -1184,7 +1188,7 @@ function _criarOverlaysFrente(wrapper, cfg, sx, sy, pw, ph, ds) {
     y += 16 * sy / 2;
     const tFontPx = cfg.frente.tituloTam * sx / 2.1;
     _addEditOverlay(wrapper, 'certTitulo', {
-        x: pw * 0.1, y: y - tFontPx * 0.85,
+        x: pw * 0.1, y: y - tFontPx * 0.85 + (aj.certTitulo || 0) * sy,
         w: pw * 0.8, h: tFontPx * 1.5,
         fontSize: tFontPx,
         fontFamily: fmtCanvasFamily(fmt.fonteTitulo || 'times'),
@@ -1193,7 +1197,7 @@ function _criarOverlaysFrente(wrapper, cfg, sx, sy, pw, ph, ds) {
         color: cfg.frente.corTitulo || cfg.cores.titulo || cfg.cores.principal,
         textAlign: 'center',
         textTransform: fmt.transformTitulo || 'uppercase',
-        ds: ds
+        ds: ds, sy: sy
     });
 
     // Corpo texto
@@ -1204,7 +1208,7 @@ function _criarOverlaysFrente(wrapper, cfg, sx, sy, pw, ph, ds) {
     const assY = ph - 60 * sy / 2;
 
     _addEditOverlay(wrapper, 'certCorpoTexto', {
-        x: mEsq, y: y - cFontPx,
+        x: mEsq, y: y - cFontPx + (aj.certCorpoTexto || 0) * sy,
         w: maxW, h: assY - y - 30,
         fontSize: cFontPx * 0.85,
         fontFamily: fmtCanvasFamily(cfg.frente.fonte || 'times'),
@@ -1213,47 +1217,47 @@ function _criarOverlaysFrente(wrapper, cfg, sx, sy, pw, ph, ds) {
         color: cfg.frente.corCorpo || cfg.cores.texto,
         textAlign: cfg.frente.alinhamento === 'justify' ? 'justify' : (cfg.frente.alinhamento || 'left'),
         isTextarea: true,
-        ds: ds
+        ds: ds, sy: sy
     });
 
     // Assinaturas
     const aFontPx = 9 * sx / 2.2;
     _addEditOverlay(wrapper, 'certAssinatura1', {
-        x: pw * 0.08, y: assY + 2,
+        x: pw * 0.08, y: assY + 2 + (aj.certAssinatura1 || 0) * sy,
         w: pw * 0.34, h: aFontPx * 2.5,
         fontSize: aFontPx,
         fontFamily: fmtCanvasFamily(fmt.fonteAssinatura || 'helvetica'),
         color: cfg.cores.assinatura,
         textAlign: 'center',
-        ds: ds
+        ds: ds, sy: sy
     });
     _addEditOverlay(wrapper, 'certAssinatura2', {
-        x: pw * 0.58, y: assY + 2,
+        x: pw * 0.58, y: assY + 2 + (aj.certAssinatura2 || 0) * sy,
         w: pw * 0.34, h: aFontPx * 2.5,
         fontSize: aFontPx,
         fontFamily: fmtCanvasFamily(fmt.fonteAssinatura || 'helvetica'),
         color: cfg.cores.assinatura,
         textAlign: 'center',
-        ds: ds
+        ds: ds, sy: sy
     });
     _addEditOverlay(wrapper, 'certAssinatura3', {
-        x: pw * 0.33, y: assY + 38,
+        x: pw * 0.33, y: assY + 38 + (aj.certAssinatura3 || 0) * sy,
         w: pw * 0.34, h: aFontPx * 2.5,
         fontSize: aFontPx,
         fontFamily: fmtCanvasFamily(fmt.fonteAssinatura || 'helvetica'),
         color: cfg.cores.assinatura,
         textAlign: 'center',
-        ds: ds
+        ds: ds, sy: sy
     });
 }
 
-function _criarOverlaysVerso(wrapper, cfg, sx, sy, pw, ph, ds) {
+function _criarOverlaysVerso(wrapper, cfg, sx, sy, pw, ph, ds, aj) {
     let yPos = 30 * sy + 12 * 5 + 20;
     const vTituloTam = cfg.verso.fonteTituloTam || 13;
     const vFontPx = vTituloTam * sx / 2.1;
 
     _addEditOverlay(wrapper, 'certVersoTitulo', {
-        x: pw * 0.1, y: yPos - vFontPx * 0.85,
+        x: pw * 0.1, y: yPos - vFontPx * 0.85 + (aj.certVersoTitulo || 0) * sy,
         w: pw * 0.8, h: vFontPx * 1.5,
         fontSize: vFontPx,
         fontFamily: fmtCanvasFamily(cfg.verso.fonteTitulo || 'times'),
@@ -1262,7 +1266,7 @@ function _criarOverlaysVerso(wrapper, cfg, sx, sy, pw, ph, ds) {
         color: cfg.verso.corTitulo || cfg.cores.titulo || cfg.cores.principal,
         textAlign: cfg.verso.alinhamentoTitulo || 'center',
         textTransform: 'uppercase',
-        ds: ds
+        ds: ds, sy: sy
     });
 }
 
@@ -1270,16 +1274,33 @@ function _addEditOverlay(wrapper, inputId, o) {
     const src = document.getElementById(inputId);
     if (!src) return;
     const ds = o.ds;
+    const syVal = o.sy;
+
+    // Container com grip + input
+    const container = document.createElement('div');
+    container.className = 'edit-overlay';
+    container.dataset.inputId = inputId;
+    container.dataset.origY = o.y;
+    container.style.cssText = [
+        'position:absolute',
+        'left:' + (o.x * ds - 18) + 'px',
+        'top:' + (o.y * ds) + 'px',
+        'display:flex',
+        'align-items:stretch',
+        'z-index:10'
+    ].join(';');
+
+    // Grip handle
+    const grip = document.createElement('div');
+    grip.style.cssText = 'width:16px;min-height:100%;cursor:ns-resize;display:flex;align-items:center;justify-content:center;background:rgba(59,130,246,0.2);border-radius:3px 0 0 3px;color:#3b82f6;font-size:14px;user-select:none;flex-shrink:0;';
+    grip.textContent = '↕';
+    grip.title = 'Arrastar para mover';
+
+    // Input element
     const el = document.createElement(o.isTextarea ? 'textarea' : 'input');
     if (!o.isTextarea) el.type = 'text';
-    el.className = 'edit-overlay';
-    el.dataset.inputId = inputId;
     el.value = src.value;
-
     el.style.cssText = [
-        'position:absolute',
-        'left:' + (o.x * ds) + 'px',
-        'top:' + (o.y * ds) + 'px',
         'width:' + (o.w * ds) + 'px',
         'height:' + (o.h * ds) + 'px',
         'font-size:' + Math.max(o.fontSize * ds, 10) + 'px',
@@ -1291,15 +1312,15 @@ function _addEditOverlay(wrapper, inputId, o) {
         'text-transform:' + (o.textTransform || 'none'),
         'background:rgba(255,255,255,0.75)',
         'border:1px dashed rgba(59,130,246,0.6)',
-        'border-radius:3px',
+        'border-radius:0 3px 3px 0',
         'padding:2px 4px',
         'outline:none',
         'box-sizing:border-box',
-        'z-index:10',
         'resize:none',
         'overflow:hidden',
         'line-height:1.3',
-        'cursor:text'
+        'cursor:text',
+        'flex-shrink:0'
     ].join(';');
 
     el.addEventListener('input', () => { src.value = el.value; });
@@ -1316,15 +1337,71 @@ function _addEditOverlay(wrapper, inputId, o) {
         el.style.boxShadow = 'none';
     });
 
-    wrapper.appendChild(el);
+    container.appendChild(grip);
+    container.appendChild(el);
+
+    // Drag logic
+    let dragging = false, startMouseY = 0, startTop = 0;
+    grip.addEventListener('mousedown', e => {
+        dragging = true;
+        startMouseY = e.clientY;
+        startTop = parseFloat(container.style.top);
+        e.preventDefault();
+    });
+    const onMove = e => {
+        if (!dragging) return;
+        const dy = e.clientY - startMouseY;
+        container.style.top = (startTop + dy) + 'px';
+    };
+    const onUp = () => {
+        if (!dragging) return;
+        dragging = false;
+        const currentTop = parseFloat(container.style.top);
+        const origTop = parseFloat(container.dataset.origY) * ds;
+        const deltaCSS = currentTop - origTop;
+        const deltaMM = deltaCSS / (ds * syVal);
+        _posOffsets[inputId] = (_posOffsets[inputId] || 0) + deltaMM;
+        // Update origY so subsequent drags don't re-add the same delta
+        container.dataset.origY = currentTop / ds;
+    };
+    // Touch support
+    grip.addEventListener('touchstart', e => {
+        dragging = true;
+        startMouseY = e.touches[0].clientY;
+        startTop = parseFloat(container.style.top);
+        e.preventDefault();
+    }, { passive: false });
+    const onTouchMove = e => {
+        if (!dragging) return;
+        const dy = e.touches[0].clientY - startMouseY;
+        container.style.top = (startTop + dy) + 'px';
+    };
+    const onTouchEnd = () => { onUp(); };
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    document.addEventListener('touchmove', onTouchMove, { passive: false });
+    document.addEventListener('touchend', onTouchEnd);
+
+    // Cleanup listeners when overlay removed
+    container._cleanup = () => {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        document.removeEventListener('touchmove', onTouchMove);
+        document.removeEventListener('touchend', onTouchEnd);
+    };
+
+    wrapper.appendChild(container);
 }
 
 function _salvarERemoverOverlays() {
     const wrapper = document.getElementById('previewCanvasWrapper');
     if (wrapper) {
         wrapper.querySelectorAll('.edit-overlay').forEach(el => {
+            const inputEl = el.querySelector('input, textarea');
             const src = document.getElementById(el.dataset.inputId);
-            if (src) src.value = el.value;
+            if (src && inputEl) src.value = inputEl.value;
+            if (el._cleanup) el._cleanup();
             el.remove();
         });
     }
@@ -1342,6 +1419,7 @@ function resetarPersonalizacao() {
     localStorage.removeItem('certUploads');
     CERT_CONFIG = {};
     CERT_UPLOADS = {};
+    _posOffsets = {};
     APP_STATE.modeloAtualId = null;
     APP_STATE.modeloAtualNome = null;
     // Recarregar a página para limpar os campos
@@ -1866,16 +1944,17 @@ function desenharPreviewFrente(ctx, cfg, sx, sy, pw, ph, imgs) {
     const corCabecalho = cfg.cores.cabecalho || cfg.cores.principal;
     const fontTam = cfg.cabecalho.fonteTam;
     const fmt = cfg.formatacao || {};
+    const aj = cfg.ajustesPosicao || {};
     ctx.fillStyle = corCabecalho;
     ctx.font = `${fmtCanvasStyle(fmt.estiloCabecalho || 'bold')} ${fontTam * sx / 2.1}px ${fmtCanvasFamily(fmt.fonteCabecalho || 'helvetica')}`;
     ctx.textAlign = 'center';
 
     let yBase = (cfg.emblema.posY + cfg.emblema.altura / 2 + 10) * sy;
-    ctx.fillText(fmtTransformText(cfg.cabecalho.linha1, fmt.transformCabecalho || 'uppercase'), pw / 2, yBase);
+    ctx.fillText(fmtTransformText(cfg.cabecalho.linha1, fmt.transformCabecalho || 'uppercase'), pw / 2, yBase + (aj.certCabecalhoLinha1 || 0) * sy);
     yBase += fontTam * sy / 2.5;
-    ctx.fillText(fmtTransformText(cfg.cabecalho.linha2, fmt.transformCabecalho || 'uppercase'), pw / 2, yBase);
+    ctx.fillText(fmtTransformText(cfg.cabecalho.linha2, fmt.transformCabecalho || 'uppercase'), pw / 2, yBase + (aj.certCabecalhoLinha2 || 0) * sy);
     yBase += fontTam * sy / 2.5;
-    ctx.fillText(fmtTransformText(cfg.cabecalho.linha3, fmt.transformCabecalho || 'uppercase'), pw / 2, yBase);
+    ctx.fillText(fmtTransformText(cfg.cabecalho.linha3, fmt.transformCabecalho || 'uppercase'), pw / 2, yBase + (aj.certCabecalhoLinha3 || 0) * sy);
 
     // CNPJ / INEP
     yBase += fontTam * sy / 2;
@@ -1924,7 +2003,7 @@ function desenharPreviewFrente(ctx, cfg, sx, sy, pw, ph, imgs) {
     yBase += 16 * sy / 2;
     ctx.fillStyle = cfg.frente.corTitulo || cfg.cores.titulo || cfg.cores.principal;
     ctx.font = `${fmtCanvasStyle(fmt.estiloTitulo || 'bolditalic')} ${cfg.frente.tituloTam * sx / 2.1}px ${fmtCanvasFamily(fmt.fonteTitulo || 'times')}`;
-    ctx.fillText(fmtTransformText(cfg.frente.titulo, fmt.transformTitulo || 'uppercase'), pw / 2, yBase);
+    ctx.fillText(fmtTransformText(cfg.frente.titulo, fmt.transformTitulo || 'uppercase'), pw / 2, yBase + (aj.certTitulo || 0) * sy);
 
     // Corpo resumido
     yBase += 26 * sy / 2;
@@ -1947,7 +2026,7 @@ function desenharPreviewFrente(ctx, cfg, sx, sy, pw, ph, imgs) {
         .replace('{MAE}', 'Ana da Silva').replace('{PAI}', 'José da Silva')
         .replace('{ANO_CONCLUSAO}', '2025');
 
-    wrapText(ctx, textoPreview, margemEsq, yBase, maxW, (fmt.espacoLinha || 8) * sy / 2.5, cfg.frente.alinhamento || 'justify');
+    wrapText(ctx, textoPreview, margemEsq, yBase + (aj.certCorpoTexto || 0) * sy, maxW, (fmt.espacoLinha || 8) * sy / 2.5, cfg.frente.alinhamento || 'justify');
 
     // Linhas de assinatura
     const assY = ph - 60 * sy / 2;
@@ -1957,13 +2036,16 @@ function desenharPreviewFrente(ctx, cfg, sx, sy, pw, ph, imgs) {
     ctx.fillStyle = cfg.cores.assinatura;
     ctx.font = `${9 * sx / 2.2}px ${fmtCanvasFamily(fmt.fonteAssinatura || 'helvetica')}`;
 
-    ctx.beginPath(); ctx.moveTo(pw * 0.08, assY); ctx.lineTo(pw * 0.42, assY); ctx.stroke();
-    ctx.fillText(cfg.frente.assinatura1, pw * 0.25, assY + 14);
+    const a1dy = (aj.certAssinatura1 || 0) * sy;
+    ctx.beginPath(); ctx.moveTo(pw * 0.08, assY + a1dy); ctx.lineTo(pw * 0.42, assY + a1dy); ctx.stroke();
+    ctx.fillText(cfg.frente.assinatura1, pw * 0.25, assY + 14 + a1dy);
 
-    ctx.beginPath(); ctx.moveTo(pw * 0.58, assY); ctx.lineTo(pw * 0.92, assY); ctx.stroke();
-    ctx.fillText(cfg.frente.assinatura2, pw * 0.75, assY + 14);
+    const a2dy = (aj.certAssinatura2 || 0) * sy;
+    ctx.beginPath(); ctx.moveTo(pw * 0.58, assY + a2dy); ctx.lineTo(pw * 0.92, assY + a2dy); ctx.stroke();
+    ctx.fillText(cfg.frente.assinatura2, pw * 0.75, assY + 14 + a2dy);
 
-    const ass3Y = assY + 36;
+    const a3dy = (aj.certAssinatura3 || 0) * sy;
+    const ass3Y = assY + 36 + a3dy;
     ctx.beginPath(); ctx.moveTo(pw * 0.33, ass3Y); ctx.lineTo(pw * 0.67, ass3Y); ctx.stroke();
     ctx.fillText(cfg.frente.assinatura3, pw * 0.5, ass3Y + 14);
 
@@ -2038,6 +2120,7 @@ function desenharPreviewVerso(ctx, cfg, sx, sy, pw, ph, imgs) {
 
     // Título
     yPos += 20;
+    const aj = cfg.ajustesPosicao || {};
     const versoTituloFonte = cfg.verso.fonteTitulo || 'times';
     const versoTituloTam = cfg.verso.fonteTituloTam || 13;
     const versoTituloEstilo = cfg.verso.estiloTitulo || 'bolditalic';
@@ -2046,7 +2129,7 @@ function desenharPreviewVerso(ctx, cfg, sx, sy, pw, ph, imgs) {
     ctx.font = `${fmtCanvasStyle(versoTituloEstilo)} ${versoTituloTam * sx / 2.1}px ${fmtCanvasFamily(versoTituloFonte)}`;
     ctx.textAlign = versoTituloAlign;
     const tituloX = versoTituloAlign === 'center' ? pw / 2 : (versoTituloAlign === 'right' ? pw - 15 * sx : 15 * sx);
-    ctx.fillText(fmtTransformText(cfg.verso.titulo, 'uppercase'), tituloX, yPos);
+    ctx.fillText(fmtTransformText(cfg.verso.titulo, 'uppercase'), tituloX, yPos + (aj.certVersoTitulo || 0) * sy);
 
     // Tabela placeholder
     yPos += 15;
@@ -2179,8 +2262,10 @@ async function alternarPreviewLado() {
     if (_editMode) {
         const wrapper = document.getElementById('previewCanvasWrapper');
         if (wrapper) wrapper.querySelectorAll('.edit-overlay').forEach(el => {
+            const inputEl = el.querySelector('input, textarea');
             const src = document.getElementById(el.dataset.inputId);
-            if (src) src.value = el.value;
+            if (src && inputEl) src.value = inputEl.value;
+            if (el._cleanup) el._cleanup();
             el.remove();
         });
     }
@@ -2583,16 +2668,17 @@ async function gerarFrenteCertificado(pdf, aluno, cfg) {
     // Cabeçalho
     const fontTamCab = cfg.cabecalho.fonteTam;
     const fmt = cfg.formatacao || {};
+    const aj = cfg.ajustesPosicao || {};
     pdf.setTextColor(corCab.r, corCab.g, corCab.b);
     pdf.setFont(fmtPdfFamily(fmt.fonteCabecalho || 'helvetica'), fmt.estiloCabecalho || 'bold');
     pdf.setFontSize(fontTamCab);
     
     let yBase = cfg.emblema.posY + cfg.emblema.altura / 2 + 6;
-    pdf.text(fmtTransformText(cfg.cabecalho.linha1, fmt.transformCabecalho || 'uppercase'), pageWidth / 2, yBase, { align: 'center' });
+    pdf.text(fmtTransformText(cfg.cabecalho.linha1, fmt.transformCabecalho || 'uppercase'), pageWidth / 2, yBase + (aj.certCabecalhoLinha1 || 0), { align: 'center' });
     yBase += fontTamCab * 0.45;
-    pdf.text(fmtTransformText(cfg.cabecalho.linha2, fmt.transformCabecalho || 'uppercase'), pageWidth / 2, yBase, { align: 'center' });
+    pdf.text(fmtTransformText(cfg.cabecalho.linha2, fmt.transformCabecalho || 'uppercase'), pageWidth / 2, yBase + (aj.certCabecalhoLinha2 || 0), { align: 'center' });
     yBase += fontTamCab * 0.45;
-    pdf.text(fmtTransformText(cfg.cabecalho.linha3, fmt.transformCabecalho || 'uppercase'), pageWidth / 2, yBase, { align: 'center' });
+    pdf.text(fmtTransformText(cfg.cabecalho.linha3, fmt.transformCabecalho || 'uppercase'), pageWidth / 2, yBase + (aj.certCabecalhoLinha3 || 0), { align: 'center' });
     
     // CNPJ e INEP
     yBase += fontTamCab * 0.4;
@@ -2659,10 +2745,10 @@ async function gerarFrenteCertificado(pdf, aluno, cfg) {
     pdf.setFont(fmtPdfFamily(fmt.fonteTitulo || 'times'), fmt.estiloTitulo || 'bolditalic');
     pdf.setFontSize(cfg.frente.tituloTam);
     pdf.setTextColor(corTit.r, corTit.g, corTit.b);
-    pdf.text(fmtTransformText(cfg.frente.titulo, fmt.transformTitulo || 'uppercase'), pageWidth / 2, yBase, { align: 'center' });
+    pdf.text(fmtTransformText(cfg.frente.titulo, fmt.transformTitulo || 'uppercase'), pageWidth / 2, yBase + (aj.certTitulo || 0), { align: 'center' });
     
     // Corpo do texto
-    yBase += 17;
+    yBase += 17 + (aj.certCorpoTexto || 0);
     const fonteCorpo = fmtPdfFamily(cfg.frente.fonte || 'times');
     pdf.setFont(fonteCorpo, fmt.estiloCorpo || 'italic');
     pdf.setFontSize(cfg.frente.fonteTam);
@@ -2864,19 +2950,22 @@ async function gerarFrenteCertificado(pdf, aluno, cfg) {
     yPos += 15;
     pdf.setLineWidth(0.5);
     pdf.setDrawColor(corA.r, corA.g, corA.b);
-    pdf.line(25, yPos, 130, yPos);
-    pdf.line(167, yPos, 272, yPos);
+    const a1dyP = aj.certAssinatura1 || 0;
+    pdf.line(25, yPos + a1dyP, 130, yPos + a1dyP);
+    const a2dyP = aj.certAssinatura2 || 0;
+    pdf.line(167, yPos + a2dyP, 272, yPos + a2dyP);
     
     pdf.setFont(fmtPdfFamily(fmt.fonteAssinatura || 'helvetica'), 'normal');
     pdf.setFontSize(9);
     pdf.setTextColor(corA.r, corA.g, corA.b);
-    pdf.text(cfg.frente.assinatura1, 77.5, yPos + 5, { align: 'center' });
-    pdf.text(cfg.frente.assinatura2, 219.5, yPos + 5, { align: 'center' });
+    pdf.text(cfg.frente.assinatura1, 77.5, yPos + 5 + a1dyP, { align: 'center' });
+    pdf.text(cfg.frente.assinatura2, 219.5, yPos + 5 + a2dyP, { align: 'center' });
     
     // Linha para terceira assinatura
+    const a3dyP = aj.certAssinatura3 || 0;
     yPos += 15;
-    pdf.line(100, yPos, 197, yPos);
-    pdf.text(cfg.frente.assinatura3, 148.5, yPos + 5, { align: 'center' });
+    pdf.line(100, yPos + a3dyP, 197, yPos + a3dyP);
+    pdf.text(cfg.frente.assinatura3, 148.5, yPos + 5 + a3dyP, { align: 'center' });
 
     // Rodapé
     if (cfg.rodape.exibir === 'sim' && (cfg.rodape.linha1 || cfg.rodape.linha2)) {
@@ -3085,6 +3174,7 @@ function gerarVersoCertificado(pdf, aluno, cfg) {
     
     // Título
     yPos += 10;
+    const aj = cfg.ajustesPosicao || {};
     const versoTituloFonte = cfg.verso.fonteTitulo || 'times';
     const versoTituloTam = cfg.verso.fonteTituloTam || 13;
     const versoTituloEstilo = cfg.verso.estiloTitulo || 'bolditalic';
@@ -3093,7 +3183,7 @@ function gerarVersoCertificado(pdf, aluno, cfg) {
     pdf.setFontSize(versoTituloTam);
     pdf.setTextColor(corTit.r, corTit.g, corTit.b);
     const tituloX = versoTituloAlign === 'center' ? pageWidth / 2 : (versoTituloAlign === 'right' ? pageWidth - 15 : 15);
-    pdf.text(fmtTransformText(cfg.verso.titulo, 'uppercase'), tituloX, yPos, { align: versoTituloAlign });
+    pdf.text(fmtTransformText(cfg.verso.titulo, 'uppercase'), tituloX, yPos + (aj.certVersoTitulo || 0), { align: versoTituloAlign });
     
     // Tabela
     yPos += 8;
