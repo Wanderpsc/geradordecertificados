@@ -71,6 +71,31 @@ const alunoSchema = new mongoose.Schema({
             trim: true
         }
     },
+    dataConfeccao: {
+        type: String,
+        trim: true
+    },
+    cidadeConfeccao: {
+        type: String,
+        trim: true
+    },
+    resolucao: {
+        type: String,
+        trim: true
+    },
+    anoConclusao: {
+        type: String,
+        trim: true
+    },
+    nacionalidade: {
+        type: String,
+        trim: true,
+        default: 'Brasileira'
+    },
+    observacoes: {
+        type: String,
+        trim: true
+    },
     criadoEm: {
         type: Date,
         default: Date.now

@@ -214,6 +214,7 @@ async function cadastrarAluno() {
             pai: document.getElementById('nomePai').value.trim()
         },
         dataConfeccao: document.getElementById('dataConfeccao').value,
+        cidadeConfeccao: document.getElementById('cidadeConfeccao').value.trim(),
         resolucao: document.getElementById('resolucao').value.trim(),
         anoConclusao: document.getElementById('anoConclusao').value,
         nacionalidade: document.getElementById('nacionalidade').value.trim(),
@@ -282,6 +283,7 @@ async function carregarAlunos() {
                 nomeMae: aluno.filiacao?.mae || '',
                 nomePai: aluno.filiacao?.pai || '',
                 dataConfeccao: aluno.dataConfeccao,
+                cidadeConfeccao: aluno.cidadeConfeccao || '',
                 resolucao: aluno.resolucao,
                 anoConclusao: aluno.anoConclusao,
                 nacionalidade: aluno.nacionalidade,
@@ -312,6 +314,7 @@ function editarAluno(id) {
     document.getElementById('nomeMae').value = aluno.nomeMae || '';
     document.getElementById('nomePai').value = aluno.nomePai || '';
     document.getElementById('dataConfeccao').value = aluno.dataConfeccao || '';
+    document.getElementById('cidadeConfeccao').value = aluno.cidadeConfeccao || '';
     document.getElementById('resolucao').value = aluno.resolucao || '';
     document.getElementById('anoConclusao').value = aluno.anoConclusao || '';
     document.getElementById('nacionalidade').value = aluno.nacionalidade || 'Brasileira';
@@ -478,6 +481,7 @@ function parsearLinhaAluno(linha) {
     if (campos[12]) aluno.resolucao = campos[12];
     if (campos[13]) aluno.anoConclusao = campos[13];
     if (campos[14]) aluno.nacionalidade = campos[14];
+    if (campos[15]) aluno.cidadeConfeccao = campos[15];
 
     return aluno;
 }
@@ -681,7 +685,7 @@ function atualizarListaAlunos(filtro = '') {
                 </div>
                 <div class="aluno-info-item">
                     <div class="aluno-info-label">Data de Confecção</div>
-                    <div>${aluno.dataConfeccao ? new Date(aluno.dataConfeccao + 'T00:00:00').toLocaleDateString('pt-BR') : ''}</div>
+                    <div>${aluno.cidadeConfeccao ? aluno.cidadeConfeccao + ', ' : ''}${aluno.dataConfeccao ? new Date(aluno.dataConfeccao + 'T00:00:00').toLocaleDateString('pt-BR') : ''}</div>
                 </div>
                 <div class="aluno-info-item">
                     <div class="aluno-info-label">Resolução</div>
@@ -715,7 +719,7 @@ function imprimirListaAlunos() {
             <td>${aluno.nomeMae || ''}</td>
             <td>${aluno.nomePai || ''}</td>
             <td>${aluno.anoConclusao || ''}</td>
-            <td>${aluno.dataConfeccao ? new Date(aluno.dataConfeccao + 'T00:00:00').toLocaleDateString('pt-BR') : ''}</td>
+            <td>${aluno.cidadeConfeccao ? aluno.cidadeConfeccao + ', ' : ''}${aluno.dataConfeccao ? new Date(aluno.dataConfeccao + 'T00:00:00').toLocaleDateString('pt-BR') : ''}</td>
             <td>${aluno.resolucao || ''}</td>
             <td>${aluno.observacoes || ''}</td>
         </tr>
@@ -3030,6 +3034,9 @@ async function gerarFrenteCertificado(pdf, aluno, cfg) {
     } else {
         const hoje = new Date();
         dataFormatada = `${hoje.getDate()} de ${obterNomeMes(hoje.getMonth())} de ${hoje.getFullYear()}.`;
+    }
+    if (aluno.cidadeConfeccao) {
+        dataFormatada = `${aluno.cidadeConfeccao}, ${dataFormatada}`;
     }
     pdf.setFont('times', 'bold');
     pdf.setTextColor(corTit.r, corTit.g, corTit.b);
