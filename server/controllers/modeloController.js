@@ -1,5 +1,19 @@
 const Modelo = require('../models/Modelo');
 
+// Diagnóstico - contar modelos do usuário
+exports.diagnostico = async (req, res) => {
+    try {
+        const userId = req.usuario._id;
+        const total = await Modelo.countDocuments({ usuario: userId });
+        const ativos = await Modelo.countDocuments({ usuario: userId, arquivado: false });
+        const arquivados = await Modelo.countDocuments({ usuario: userId, arquivado: true });
+        const nomes = await Modelo.find({ usuario: userId }).select('nome arquivado criadoEm').sort('-criadoEm').lean();
+        res.json({ success: true, userId: userId.toString(), total, ativos, arquivados, modelos: nomes });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Erro no diagnóstico.' });
+    }
+};
+
 // Listar modelos do usuário
 exports.listarModelos = async (req, res) => {
     try {

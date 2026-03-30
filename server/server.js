@@ -64,14 +64,16 @@ app.get('/limpar-cache', (req, res) => {
 (async()=>{
   const s=document.getElementById('status');
   try{
-    const regs=await navigator.serviceWorker.getRegistrations();
-    for(const r of regs){await r.unregister();}
-    s.textContent='Service workers removidos: '+regs.length;
-    const keys=await caches.keys();
-    for(const k of keys){await caches.delete(k);}
-    s.textContent+=' | Caches removidos: '+keys.length;
-    s.textContent+=' | Redirecionando...';
-    setTimeout(()=>window.location.replace('/login.html'),1500);
+    if('serviceWorker' in navigator){
+      const regs=await navigator.serviceWorker.getRegistrations();
+      for(const r of regs){await r.unregister();}
+      s.textContent='Service workers removidos: '+regs.length;
+      const keys=await caches.keys();
+      for(const k of keys){await caches.delete(k);}
+      s.textContent+=' | Caches removidos: '+keys.length;
+    }
+    s.textContent+=' | Limpeza concluída! Redirecionando...';
+    setTimeout(()=>window.location.replace('/index.html?v='+Date.now()),1500);
   }catch(e){s.textContent='Erro: '+e.message;}
 })();
 </script></body></html>`);

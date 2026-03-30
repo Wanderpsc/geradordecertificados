@@ -1774,6 +1774,20 @@ async function carregarModelosSalvos() {
         });
         const data = await resp.json();
         if (!data.success || !data.modelos.length) {
+            // Verificar se existem modelos arquivados
+            try {
+                const respArq = await fetch(`${API_URL}/modelos/diagnostico`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const diag = await respArq.json();
+                if (diag.success && diag.arquivados > 0) {
+                    grid.innerHTML = `<div style="text-align: center; padding: 20px; grid-column: 1/-1;">
+                        <p style="color: #f59e0b; font-weight: 600;">⚠️ Você tem ${diag.arquivados} modelo(s) arquivado(s).</p>
+                        <p style="color: #6b7280; font-size: 13px; margin-top: 4px;">Clique em "📦 Arquivados" acima para restaurá-los.</p>
+                    </div>`;
+                    return;
+                }
+            } catch(e) {}
             grid.innerHTML = '<div style="text-align: center; color: #9ca3af; padding: 20px; grid-column: 1/-1;">Nenhum modelo salvo. Use "☁️ Salvar na Nuvem" para criar.</div>';
             return;
         }

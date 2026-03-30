@@ -6,6 +6,7 @@ const modeloController = require('../controllers/modeloController');
 // Todas as rotas requerem autenticação + cliente + licença válida
 router.use(proteger, apenasCliente, verificarLicenca);
 
+router.get('/diagnostico', modeloController.diagnostico);
 router.get('/', modeloController.listarModelos);
 router.post('/', modeloController.salvarModelo);
 router.get('/:id', modeloController.obterModelo);
