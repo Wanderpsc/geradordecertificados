@@ -87,6 +87,14 @@ const alunoSchema = new mongoose.Schema({
         type: String,
         trim: true
     },
+    serie: {
+        type: String,
+        trim: true
+    },
+    turma: {
+        type: String,
+        trim: true
+    },
     nacionalidade: {
         type: String,
         trim: true,

@@ -160,6 +160,17 @@
                             <input type="number" id="anoConclusao" min="2000" max="2030" placeholder="2025" required>
                         </div>
                         <div class="form-group">
+                            <label for="serieAluno">Ano/Série</label>
+                            <input type="text" id="serieAluno" placeholder="Ex: 9º Ano, 3ª Série">
+                        </div>
+                        <div class="form-group">
+                            <label for="turmaAluno">Turma</label>
+                            <input type="text" id="turmaAluno" placeholder="Ex: A, B, Única">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
                             <label for="nacionalidade">Nacionalidade*</label>
                             <input type="text" id="nacionalidade" value="Brasileira" required>
                         </div>
@@ -908,6 +919,22 @@
                         <div style="margin-bottom: 10px;">
                             <input type="text" id="buscarAlunoLote" placeholder="🔍 Buscar aluno por nome ou CPF..." 
                                 style="width: 100%; padding: 10px; border: 2px solid #d1d5db; border-radius: 8px; font-size: 14px; margin-bottom: 8px;">
+                        </div>
+                        <div style="display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap;">
+                            <div style="flex: 1; min-width: 140px;">
+                                <label style="font-size: 12px; font-weight: 600; color: #374151; display: block; margin-bottom: 4px;">Filtrar por Turma:</label>
+                                <select id="filtroTurmaLote" onchange="filtrarPorTurmaLote()" 
+                                    style="width: 100%; padding: 8px; border: 2px solid #d1d5db; border-radius: 8px; font-size: 13px;">
+                                    <option value="">Todas as turmas</option>
+                                </select>
+                            </div>
+                            <div style="flex: 1; min-width: 140px;">
+                                <label style="font-size: 12px; font-weight: 600; color: #374151; display: block; margin-bottom: 4px;">Filtrar por Série:</label>
+                                <select id="filtroSerieLote" onchange="filtrarPorTurmaLote()"
+                                    style="width: 100%; padding: 8px; border: 2px solid #d1d5db; border-radius: 8px; font-size: 13px;">
+                                    <option value="">Todas as séries</option>
+                                </select>
+                            </div>
                         </div>
                         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
                             <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 14px; font-weight: 600; color: #1e3a8a;">

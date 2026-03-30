@@ -149,6 +149,7 @@ function navegarParaTab(targetTab, atualizarHash = true) {
 
         // Ao entrar na aba gerar, atualizar a lista de alunos com checkbox
         if (targetTab === 'gerar' && typeof atualizarListaAlunosLote === 'function') {
+            if (typeof atualizarFiltrosTurmaLote === 'function') atualizarFiltrosTurmaLote();
             atualizarListaAlunosLote();
         }
 
@@ -235,6 +236,8 @@ async function cadastrarAluno() {
         cidadeConfeccao: document.getElementById('cidadeConfeccao').value.trim(),
         resolucao: document.getElementById('resolucao').value.trim(),
         anoConclusao: document.getElementById('anoConclusao').value,
+        serie: document.getElementById('serieAluno').value.trim(),
+        turma: document.getElementById('turmaAluno').value.trim(),
         nacionalidade: document.getElementById('nacionalidade').value.trim(),
         observacoes: document.getElementById('observacoes').value.trim()
     };
@@ -304,6 +307,8 @@ async function carregarAlunos() {
                 cidadeConfeccao: aluno.cidadeConfeccao || '',
                 resolucao: aluno.resolucao,
                 anoConclusao: aluno.anoConclusao,
+                serie: aluno.serie || '',
+                turma: aluno.turma || '',
                 nacionalidade: aluno.nacionalidade,
                 observacoes: aluno.observacoes
             }));
@@ -336,6 +341,8 @@ function editarAluno(id) {
     document.getElementById('cidadeConfeccao').value = aluno.cidadeConfeccao || '';
     document.getElementById('resolucao').value = aluno.resolucao || '';
     document.getElementById('anoConclusao').value = aluno.anoConclusao || '';
+    document.getElementById('serieAluno').value = aluno.serie || '';
+    document.getElementById('turmaAluno').value = aluno.turma || '';
     document.getElementById('nacionalidade').value = aluno.nacionalidade || 'Brasileira';
     document.getElementById('observacoes').value = aluno.observacoes || '';
 
@@ -419,7 +426,7 @@ function abrirModalCadastroLote() {
                     <span style="font-family: monospace; font-size: 11px;">Maria Silva; 1.234.567; SSP/PI; 123.456.789-00; 15; março; 2006; Curimatá; Piauí; Ana Silva; José Silva</span>
                 </p>
                 <p style="font-size: 12px; color: #64748b; margin-top: 6px;">
-                    📌 Campos opcionais ao final: <em>Data Confecção (AAAA-MM-DD); Resolução; Ano Conclusão; Nacionalidade</em>
+                    📌 Campos opcionais ao final: <em>Data Confecção (AAAA-MM-DD); Resolução; Ano Conclusão; Nacionalidade; Cidade Confecção; Ano/Série; Turma</em>
                 </p>
             </div>
 
@@ -501,6 +508,8 @@ function parsearLinhaAluno(linha) {
     if (campos[13]) aluno.anoConclusao = campos[13];
     if (campos[14]) aluno.nacionalidade = campos[14];
     if (campos[15]) aluno.cidadeConfeccao = campos[15];
+    if (campos[16]) aluno.serie = campos[16];
+    if (campos[17]) aluno.turma = campos[17];
 
     return aluno;
 }
@@ -644,7 +653,9 @@ function atualizarListaAlunos(filtro = '') {
         const termo = filtro.toLowerCase();
         alunosFiltrados = APP_STATE.alunos.filter(aluno => 
             aluno.nome.toLowerCase().includes(termo) ||
-            (aluno.cpf && aluno.cpf.includes(termo))
+            (aluno.cpf && aluno.cpf.includes(termo)) ||
+            (aluno.serie && aluno.serie.toLowerCase().includes(termo)) ||
+            (aluno.turma && aluno.turma.toLowerCase().includes(termo))
         );
     }
 
@@ -702,6 +713,14 @@ function atualizarListaAlunos(filtro = '') {
                     <div class="aluno-info-label">Ano de Conclusão</div>
                     <div>${aluno.anoConclusao}</div>
                 </div>
+                ${aluno.serie ? `<div class="aluno-info-item">
+                    <div class="aluno-info-label">Ano/Série</div>
+                    <div>${aluno.serie}</div>
+                </div>` : ''}
+                ${aluno.turma ? `<div class="aluno-info-item">
+                    <div class="aluno-info-label">Turma</div>
+                    <div>${aluno.turma}</div>
+                </div>` : ''}
                 <div class="aluno-info-item">
                     <div class="aluno-info-label">Data de Confecção</div>
                     <div>${aluno.cidadeConfeccao ? aluno.cidadeConfeccao + ', ' : ''}${aluno.dataConfeccao ? new Date(aluno.dataConfeccao + 'T00:00:00').toLocaleDateString('pt-BR') : ''}</div>
@@ -781,9 +800,10 @@ function atualizarSelectAlunos() {
         select.innerHTML = '<option value="">-- Nenhum aluno cadastrado --</option>';
     } else {
         select.innerHTML = '<option value="">-- Selecione um aluno --</option>' +
-            APP_STATE.alunos.map(aluno => 
-                `<option value="${aluno.id}">${aluno.nome}${aluno.anoConclusao ? ' (' + aluno.anoConclusao + ')' : ''}</option>`
-            ).join('');
+            APP_STATE.alunos.map(aluno => {
+                const info = [aluno.anoConclusao, aluno.serie, aluno.turma ? 'Turma ' + aluno.turma : ''].filter(Boolean).join(' | ');
+                return `<option value="${aluno.id}">${aluno.nome}${info ? ' (' + info + ')' : ''}</option>`;
+            }).join('');
     }
 
     // Atualizar lista de alunos para geração em lote
@@ -795,36 +815,98 @@ function atualizarListaAlunosLote(filtro = '') {
     if (!container) return;
 
     let alunosFiltrados = APP_STATE.alunos;
+    
+    // Filtro por texto (nome/CPF)
     if (filtro) {
         const termo = filtro.toLowerCase();
-        alunosFiltrados = APP_STATE.alunos.filter(a =>
+        alunosFiltrados = alunosFiltrados.filter(a =>
             a.nome.toLowerCase().includes(termo) || (a.cpf && a.cpf.includes(termo))
         );
     }
 
+    // Filtro por turma
+    const filtroTurma = document.getElementById('filtroTurmaLote')?.value || '';
+    if (filtroTurma) {
+        alunosFiltrados = alunosFiltrados.filter(a => (a.turma || '') === filtroTurma);
+    }
+
+    // Filtro por série
+    const filtroSerie = document.getElementById('filtroSerieLote')?.value || '';
+    if (filtroSerie) {
+        alunosFiltrados = alunosFiltrados.filter(a => (a.serie || '') === filtroSerie);
+    }
+
     if (alunosFiltrados.length === 0) {
-        container.innerHTML = `<p style="text-align: center; padding: 20px; color: #9ca3af;">${filtro ? 'Nenhum aluno encontrado' : 'Nenhum aluno cadastrado'}</p>`;
+        container.innerHTML = `<p style="text-align: center; padding: 20px; color: #9ca3af;">${filtro || filtroTurma || filtroSerie ? 'Nenhum aluno encontrado' : 'Nenhum aluno cadastrado'}</p>`;
         atualizarContadorLote();
         return;
     }
 
-    container.innerHTML = alunosFiltrados.map((aluno, idx) => {
-        const checked = APP_STATE.alunosSelecionadosLote && APP_STATE.alunosSelecionadosLote.has(aluno.id) ? 'checked' : '';
-        const bg = idx % 2 === 0 ? '#ffffff' : '#f8fafc';
-        return `
-        <div style="display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-bottom: 1px solid #e5e7eb; cursor: pointer; background: ${bg}; transition: background 0.15s;"
-             onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background='${bg}'"
-             onclick="toggleCheckLote(this, '${aluno.id}')">
-            <input type="checkbox" class="check-aluno-lote" data-id="${aluno.id}" ${checked}
-                style="width: 20px; height: 20px; cursor: pointer; flex-shrink: 0; accent-color: #1e3a8a;" onclick="event.stopPropagation(); toggleAlunolote('${aluno.id}', this.checked)">
-            <div style="flex: 1; min-width: 0;">
-                <div style="font-weight: 600; font-size: 14px; color: #1e293b;">${aluno.nome}</div>
-                <div style="font-size: 12px; color: #6b7280;">CPF: ${aluno.cpf || '-'} | Conclusão: ${aluno.anoConclusao || '-'}</div>
-            </div>
-        </div>`;
-    }).join('');
+    // Agrupar por turma se houver turmas definidas e nenhum filtro específico de turma
+    const temTurmas = alunosFiltrados.some(a => a.turma);
+    
+    if (temTurmas && !filtroTurma) {
+        // Agrupar por série+turma
+        const grupos = {};
+        alunosFiltrados.forEach(a => {
+            const chave = (a.serie || '') + (a.turma ? ' - Turma ' + a.turma : '') || 'Sem turma';
+            if (!grupos[chave]) grupos[chave] = [];
+            grupos[chave].push(a);
+        });
+
+        let html = '';
+        const chavesOrdenadas = Object.keys(grupos).sort();
+        chavesOrdenadas.forEach(chave => {
+            html += `<div style="background: #eff6ff; padding: 8px 14px; font-weight: 700; font-size: 13px; color: #1e3a8a; border-bottom: 2px solid #bfdbfe; display: flex; justify-content: space-between; align-items: center;">
+                <span>📚 ${chave}</span>
+                <span style="font-weight: 400; font-size: 12px; color: #6b7280;">${grupos[chave].length} aluno(s)</span>
+            </div>`;
+            grupos[chave].forEach((aluno, idx) => {
+                html += renderItemAlunoLote(aluno, idx);
+            });
+        });
+        container.innerHTML = html;
+    } else {
+        container.innerHTML = alunosFiltrados.map((aluno, idx) => renderItemAlunoLote(aluno, idx)).join('');
+    }
 
     atualizarContadorLote();
+}
+
+function renderItemAlunoLote(aluno, idx) {
+    const checked = APP_STATE.alunosSelecionadosLote && APP_STATE.alunosSelecionadosLote.has(aluno.id) ? 'checked' : '';
+    const bg = idx % 2 === 0 ? '#ffffff' : '#f8fafc';
+    return `
+    <div style="display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-bottom: 1px solid #e5e7eb; cursor: pointer; background: ${bg}; transition: background 0.15s;"
+         onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background='${bg}'"
+         onclick="toggleCheckLote(this, '${aluno.id}')">
+        <input type="checkbox" class="check-aluno-lote" data-id="${aluno.id}" ${checked}
+            style="width: 20px; height: 20px; cursor: pointer; flex-shrink: 0; accent-color: #1e3a8a;" onclick="event.stopPropagation(); toggleAlunolote('${aluno.id}', this.checked)">
+        <div style="flex: 1; min-width: 0;">
+            <div style="font-weight: 600; font-size: 14px; color: #1e293b;">${aluno.nome}</div>
+            <div style="font-size: 12px; color: #6b7280;">CPF: ${aluno.cpf || '-'} | Conclusão: ${aluno.anoConclusao || '-'}${aluno.serie ? ' | ' + aluno.serie : ''}${aluno.turma ? ' | Turma ' + aluno.turma : ''}</div>
+        </div>
+    </div>`;
+}
+
+function atualizarFiltrosTurmaLote() {
+    const selectTurma = document.getElementById('filtroTurmaLote');
+    const selectSerie = document.getElementById('filtroSerieLote');
+    if (!selectTurma || !selectSerie) return;
+
+    const turmas = [...new Set(APP_STATE.alunos.map(a => a.turma).filter(Boolean))].sort();
+    const series = [...new Set(APP_STATE.alunos.map(a => a.serie).filter(Boolean))].sort();
+
+    const turmaAtual = selectTurma.value;
+    const serieAtual = selectSerie.value;
+
+    selectTurma.innerHTML = '<option value="">Todas as turmas</option>' + turmas.map(t => `<option value="${t}" ${t === turmaAtual ? 'selected' : ''}>${t}</option>`).join('');
+    selectSerie.innerHTML = '<option value="">Todas as séries</option>' + series.map(s => `<option value="${s}" ${s === serieAtual ? 'selected' : ''}>${s}</option>`).join('');
+}
+
+function filtrarPorTurmaLote() {
+    const filtro = document.getElementById('buscarAlunoLote')?.value || '';
+    atualizarListaAlunosLote(filtro);
 }
 
 // Inicializar set de seleção
@@ -854,10 +936,25 @@ function toggleAlunolote(id, checked) {
 
 function toggleSelecionarTodosLote() {
     const checkAll = document.getElementById('checkTodosLote');
+    const filtroTurma = document.getElementById('filtroTurmaLote')?.value || '';
+    const filtroSerie = document.getElementById('filtroSerieLote')?.value || '';
+    const filtroTexto = document.getElementById('buscarAlunoLote')?.value?.toLowerCase() || '';
+
+    let alunosFiltrados = APP_STATE.alunos;
+    if (filtroTexto) {
+        alunosFiltrados = alunosFiltrados.filter(a => a.nome.toLowerCase().includes(filtroTexto) || (a.cpf && a.cpf.includes(filtroTexto)));
+    }
+    if (filtroTurma) {
+        alunosFiltrados = alunosFiltrados.filter(a => (a.turma || '') === filtroTurma);
+    }
+    if (filtroSerie) {
+        alunosFiltrados = alunosFiltrados.filter(a => (a.serie || '') === filtroSerie);
+    }
+
     if (checkAll.checked) {
-        APP_STATE.alunos.forEach(a => APP_STATE.alunosSelecionadosLote.add(a.id));
+        alunosFiltrados.forEach(a => APP_STATE.alunosSelecionadosLote.add(a.id));
     } else {
-        APP_STATE.alunosSelecionadosLote.clear();
+        alunosFiltrados.forEach(a => APP_STATE.alunosSelecionadosLote.delete(a.id));
     }
     // Recarregar com filtro atual
     const filtro = document.getElementById('buscarAlunoLote')?.value || '';
