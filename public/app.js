@@ -16,8 +16,8 @@ const APP_STATE = {
     templateSelecionado: 'estadual-pi',
     templateCustom: localStorage.getItem('templateCustom') || null,
     alunoEditando: null,
-    modeloAtualId: null,
-    modeloAtualNome: null,
+    modeloAtualId: localStorage.getItem('modeloAtualId') || null,
+    modeloAtualNome: localStorage.getItem('modeloAtualNome') || null,
     autoSalvar: localStorage.getItem('autoSalvar') === 'true'
 };
 
@@ -289,6 +289,7 @@ async function carregarAlunos() {
                 nacionalidade: aluno.nacionalidade,
                 observacoes: aluno.observacoes
             }));
+            localStorage.setItem('alunos', JSON.stringify(APP_STATE.alunos));
             
             atualizarListaAlunos();
             atualizarSelectAlunos();
@@ -1488,6 +1489,8 @@ function resetarPersonalizacao() {
     _posOffsets = {};
     APP_STATE.modeloAtualId = null;
     APP_STATE.modeloAtualNome = null;
+    localStorage.removeItem('modeloAtualId');
+    localStorage.removeItem('modeloAtualNome');
     // Recarregar a página para limpar os campos
     location.hash = 'templates';
     location.reload();
@@ -1537,6 +1540,8 @@ async function salvarModeloNaNuvem() {
             });
             const data = await resp.json();
             if (data.success) {
+                localStorage.setItem('certConfig', JSON.stringify(config));
+                localStorage.setItem('certUploads', JSON.stringify(CERT_UPLOADS));
                 mostrarNotificacao(`Modelo "${APP_STATE.modeloAtualNome}" atualizado na nuvem!`, 'success');
                 carregarModelosSalvos();
             } else {
@@ -1561,6 +1566,10 @@ async function salvarModeloNaNuvem() {
         if (data.success) {
             APP_STATE.modeloAtualId = data.modelo._id;
             APP_STATE.modeloAtualNome = data.modelo.nome;
+            localStorage.setItem('modeloAtualId', data.modelo._id);
+            localStorage.setItem('modeloAtualNome', data.modelo.nome);
+            localStorage.setItem('certConfig', JSON.stringify(config));
+            localStorage.setItem('certUploads', JSON.stringify(CERT_UPLOADS));
             atualizarInfoModeloAtual();
             mostrarNotificacao(`Modelo "${nome}" salvo na nuvem!`, 'success');
             carregarModelosSalvos();
@@ -1617,6 +1626,10 @@ async function carregarModeloNuvem(id) {
         CERT_UPLOADS = m.uploads || {};
         APP_STATE.modeloAtualId = m._id;
         APP_STATE.modeloAtualNome = m.nome;
+        localStorage.setItem('certConfig', JSON.stringify(CERT_CONFIG));
+        localStorage.setItem('certUploads', JSON.stringify(CERT_UPLOADS));
+        localStorage.setItem('modeloAtualId', m._id);
+        localStorage.setItem('modeloAtualNome', m.nome);
         aplicarConfigNosInputs(CERT_CONFIG);
         atualizarInfoModeloAtual();
         atualizarPreviewCert();
@@ -1663,6 +1676,8 @@ async function arquivarModeloNuvem(id) {
             if (APP_STATE.modeloAtualId === id) {
                 APP_STATE.modeloAtualId = null;
                 APP_STATE.modeloAtualNome = null;
+                localStorage.removeItem('modeloAtualId');
+                localStorage.removeItem('modeloAtualNome');
                 atualizarInfoModeloAtual();
             }
             mostrarNotificacao(data.arquivado ? 'Modelo arquivado' : 'Modelo desarquivado', 'success');
@@ -1685,6 +1700,8 @@ async function excluirModeloNuvem(id, nome) {
             if (APP_STATE.modeloAtualId === id) {
                 APP_STATE.modeloAtualId = null;
                 APP_STATE.modeloAtualNome = null;
+                localStorage.removeItem('modeloAtualId');
+                localStorage.removeItem('modeloAtualNome');
                 atualizarInfoModeloAtual();
             }
             mostrarNotificacao('Modelo excluído', 'success');
@@ -1735,6 +1752,8 @@ async function listarModelosArquivados() {
 function descarregarModelo() {
     APP_STATE.modeloAtualId = null;
     APP_STATE.modeloAtualNome = null;
+    localStorage.removeItem('modeloAtualId');
+    localStorage.removeItem('modeloAtualNome');
     atualizarInfoModeloAtual();
     carregarModelosSalvos();
     mostrarNotificacao('Modelo desvinculado. Agora editando modelo novo.', 'info');
