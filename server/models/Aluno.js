@@ -67,7 +67,6 @@ const alunoSchema = new mongoose.Schema({
         },
         pai: {
             type: String,
-            required: true,
             trim: true
         }
     },
