@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const Usuario = require('../models/Usuario');
+const SubUsuario = require('../models/SubUsuario');
 
 exports.proteger = async (req, res, next) => {
     try {
@@ -20,7 +21,37 @@ exports.proteger = async (req, res, next) => {
         // Verificar token
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-        // Buscar usuário
+        // Se for sub-usuário, buscar na coleção SubUsuario
+        if (decoded.tipo === 'subUsuario') {
+            const subUsuario = await SubUsuario.findById(decoded.id);
+            if (!subUsuario) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'Usuário não encontrado.'
+                });
+            }
+            if (!subUsuario.ativo) {
+                return res.status(403).json({
+                    success: false,
+                    message: 'Conta desativada. Entre em contato com o administrador da sua escola.'
+                });
+            }
+            // Buscar o dono para obter a licença
+            const dono = await Usuario.findById(subUsuario.escola).populate('licenca');
+            if (!dono || !dono.ativo) {
+                return res.status(403).json({
+                    success: false,
+                    message: 'A conta da escola está desativada.'
+                });
+            }
+            // Montar req.usuario com dados do dono + info do sub
+            req.usuario = dono;
+            req.subUsuario = subUsuario;
+            req.isSubUsuario = true;
+            return next();
+        }
+
+        // Buscar usuário principal
         req.usuario = await Usuario.findById(decoded.id).populate('licenca');
 
         if (!req.usuario) {
@@ -38,6 +69,7 @@ exports.proteger = async (req, res, next) => {
             });
         }
 
+        req.isSubUsuario = false;
         next();
     } catch (error) {
         return res.status(401).json({

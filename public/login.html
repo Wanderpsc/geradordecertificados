@@ -423,28 +423,24 @@
             }
         }
 
-        // PWA - Registrar Service Worker e limpar cache antigo
+        // PWA - Desregistrar Service Worker antigo e limpar todos os caches
         if ('serviceWorker' in navigator) {
-            // Limpar caches antigos
-            caches.keys().then(cacheNames => {
-                return Promise.all(
-                    cacheNames.filter(cacheName => cacheName !== 'certificados-v2')
-                        .map(cacheName => caches.delete(cacheName))
-                );
-            }).then(() => {
-                console.log('✅ Caches antigos limpos');
+            // Desregistrar todos os service workers antigos para evitar cache obsoleto
+            navigator.serviceWorker.getRegistrations().then(registrations => {
+                registrations.forEach(reg => {
+                    reg.unregister();
+                    console.log('✅ Service Worker desregistrado:', reg.scope);
+                });
             });
 
-            // Registrar service worker - TEMPORARIAMENTE DESABILITADO
-            /* 
-            navigator.serviceWorker.register('/service-worker.js')
-                .then(reg => {
-                    console.log('✅ Service Worker registrado', reg);
-                    // Forçar atualização
-                    reg.update();
-                })
-                .catch(err => console.log('❌ Erro ao registrar Service Worker', err));
-            */
+            // Limpar todos os caches
+            caches.keys().then(cacheNames => {
+                return Promise.all(
+                    cacheNames.map(cacheName => caches.delete(cacheName))
+                );
+            }).then(() => {
+                console.log('✅ Todos os caches limpos');
+            });
         }
 
         // PWA - Botão Instalar App

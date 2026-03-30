@@ -76,11 +76,29 @@ const TEMPLATES = {
 
 // ==================== INICIALIZAÇÃO ====================
 document.addEventListener('DOMContentLoaded', () => {
+    aplicarPermissoesSubUsuario();
     inicializarTabs();
     inicializarFormulario();
     inicializarTemplates();
     carregarAlunos(); // Carregar alunos do servidor
 });
+
+// ==================== PERMISSÕES DE SUB-USUÁRIO ====================
+function aplicarPermissoesSubUsuario() {
+    const usuarioStr = localStorage.getItem('usuario');
+    if (!usuarioStr) return;
+    
+    try {
+        const usuario = JSON.parse(usuarioStr);
+        if (usuario.tipo === 'subUsuario') {
+            // Esconder aba "Gerenciar Usuários" para sub-usuários
+            const tabUsuarios = document.querySelector('[data-tab="usuarios"]');
+            if (tabUsuarios) tabUsuarios.style.display = 'none';
+        }
+    } catch (e) {
+        // Ignorar erro de parse
+    }
+}
 
 // ==================== GERENCIAMENTO DE TABS ====================
 function inicializarTabs() {
@@ -3733,12 +3751,25 @@ function abrirFormSubUsuario() {
     document.getElementById('subEmail').value = '';
     document.getElementById('subCargo').value = 'Funcionário';
     document.getElementById('subSenha').value = '';
+    atualizarLabelSenha(false);
     document.getElementById('permCadastrarAlunos').checked = true;
     document.getElementById('permEditarAlunos').checked = true;
     document.getElementById('permExcluirAlunos').checked = false;
     document.getElementById('permGerarCertificados').checked = true;
     document.getElementById('permEditarModelos').checked = false;
     document.getElementById('permVerLogs').checked = false;
+}
+
+function atualizarLabelSenha(isEdit) {
+    const label = document.getElementById('labelSubSenha');
+    const input = document.getElementById('subSenha');
+    if (isEdit) {
+        label.textContent = 'Nova Senha (deixe em branco para manter a atual)';
+        input.placeholder = 'Deixe em branco para manter a senha atual';
+    } else {
+        label.textContent = 'Senha (deixe em branco para gerar automaticamente)';
+        input.placeholder = 'Senha será gerada automaticamente';
+    }
 }
 
 function fecharFormSubUsuario() {
@@ -3758,6 +3789,11 @@ async function salvarSubUsuario() {
         return;
     }
 
+    if (senha && senha.length < 6) {
+        alert('A senha deve ter no mínimo 6 caracteres.');
+        return;
+    }
+
     const permissoes = {
         cadastrarAlunos: document.getElementById('permCadastrarAlunos').checked,
         editarAlunos: document.getElementById('permEditarAlunos').checked,
@@ -3768,7 +3804,7 @@ async function salvarSubUsuario() {
     };
 
     const body = { nome, email, cargo, permissoes };
-    if (!editId && senha) body.senha = senha;
+    if (senha) body.senha = senha;
 
     try {
         const url = editId ? `${API_URL}/subusuarios/${editId}` : `${API_URL}/subusuarios`;
@@ -3784,6 +3820,8 @@ async function salvarSubUsuario() {
 
         if (data.senhaGerada) {
             alert(`✅ Usuário criado com sucesso!\n\n📧 Email: ${email}\n🔑 Senha gerada: ${data.senhaGerada}\n\n⚠️ Anote esta senha, ela não será exibida novamente!`);
+        } else if (editId && senha) {
+            alert(`✅ Usuário atualizado e senha alterada com sucesso!`);
         } else {
             alert(`✅ Usuário ${editId ? 'atualizado' : 'criado'} com sucesso!`);
         }
@@ -3814,6 +3852,7 @@ async function editarSubUsuario(id) {
         document.getElementById('subEmail').value = usuario.email;
         document.getElementById('subCargo').value = usuario.cargo || 'Funcionário';
         document.getElementById('subSenha').value = '';
+        atualizarLabelSenha(true);
 
         const p = usuario.permissoes || {};
         document.getElementById('permCadastrarAlunos').checked = !!p.cadastrarAlunos;

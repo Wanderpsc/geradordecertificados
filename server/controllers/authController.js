@@ -1,11 +1,12 @@
 const Usuario = require('../models/Usuario');
+const SubUsuario = require('../models/SubUsuario');
 const Licenca = require('../models/Licenca');
 const jwt = require('jsonwebtoken');
 const { logLogin, logRegistro } = require('../middlewares/logger');
 
 // Gerar JWT Token
-const gerarToken = (id) => {
-    return jwt.sign({ id }, process.env.JWT_SECRET, {
+const gerarToken = (id, tipo = 'usuario') => {
+    return jwt.sign({ id, tipo }, process.env.JWT_SECRET, {
         expiresIn: '30d'
     });
 };
@@ -112,7 +113,7 @@ exports.registrar = async (req, res) => {
     }
 };
 
-// @desc    Login de usuário
+// @desc    Login de usuário (principal ou sub-usuário)
 // @route   POST /api/auth/login
 // @access  Public
 exports.login = async (req, res) => {
@@ -127,11 +128,60 @@ exports.login = async (req, res) => {
             });
         }
 
-        // Buscar usuário (incluindo senha)
+        // 1) Buscar primeiro na coleção de usuários principais
         const usuario = await Usuario.findOne({ email }).select('+senha').populate('licenca');
 
-        if (!usuario) {
-            // Log de tentativa falhada
+        if (usuario) {
+            // Verificar senha
+            const senhaCorreta = await usuario.compararSenha(senha);
+            if (!senhaCorreta) {
+                await logLogin(req, usuario, false);
+                return res.status(401).json({
+                    success: false,
+                    message: 'Credenciais inválidas.'
+                });
+            }
+
+            // Verificar se usuário está ativo
+            if (!usuario.ativo) {
+                await logLogin(req, usuario, false);
+                return res.status(403).json({
+                    success: false,
+                    message: 'Conta desativada. Entre em contato com o suporte.'
+                });
+            }
+
+            // Log de login bem-sucedido
+            await logLogin(req, usuario, true);
+
+            const token = gerarToken(usuario._id, 'usuario');
+
+            return res.json({
+                success: true,
+                token,
+                usuario: {
+                    id: usuario._id,
+                    nome: usuario.nome,
+                    email: usuario.email,
+                    instituicao: usuario.instituicao,
+                    role: usuario.role,
+                    tipo: 'usuario'
+                },
+                licenca: usuario.licenca ? {
+                    tipo: usuario.licenca.tipo,
+                    status: usuario.licenca.status,
+                    dataExpiracao: usuario.licenca.dataExpiracao,
+                    certificadosRestantes: usuario.licenca.limiteCertificados === -1 
+                        ? 'Ilimitado' 
+                        : usuario.licenca.limiteCertificados - usuario.licenca.certificadosGerados
+                } : null
+            });
+        }
+
+        // 2) Se não encontrou em Usuario, buscar em SubUsuario
+        const subUsuario = await SubUsuario.findOne({ email }).select('+senha');
+
+        if (!subUsuario) {
             await logLogin(req, { email }, false);
             return res.status(401).json({
                 success: false,
@@ -139,48 +189,57 @@ exports.login = async (req, res) => {
             });
         }
 
-        // Verificar senha
-        const senhaCorreta = await usuario.compararSenha(senha);
-        if (!senhaCorreta) {
-            // Log de tentativa falhada
-            await logLogin(req, usuario, false);
+        // Verificar senha do sub-usuário
+        const senhaSubCorreta = await subUsuario.compararSenha(senha);
+        if (!senhaSubCorreta) {
+            await logLogin(req, { email: subUsuario.email, nome: subUsuario.nome }, false);
             return res.status(401).json({
                 success: false,
                 message: 'Credenciais inválidas.'
             });
         }
 
-        // Verificar se usuário está ativo
-        if (!usuario.ativo) {
-            await logLogin(req, usuario, false);
+        // Verificar se sub-usuário está ativo
+        if (!subUsuario.ativo) {
+            await logLogin(req, { email: subUsuario.email, nome: subUsuario.nome }, false);
             return res.status(403).json({
                 success: false,
-                message: 'Conta desativada. Entre em contato com o suporte.'
+                message: 'Conta desativada. Entre em contato com o administrador da sua escola.'
             });
         }
 
-        // Log de login bem-sucedido
-        await logLogin(req, usuario, true);
+        // Buscar o dono (escola) para obter a licença
+        const dono = await Usuario.findById(subUsuario.escola).populate('licenca');
 
-        const token = gerarToken(usuario._id);
+        // Atualizar último acesso
+        subUsuario.ultimoAcesso = new Date();
+        await subUsuario.save();
 
-        res.json({
+        await logLogin(req, { email: subUsuario.email, nome: subUsuario.nome, _id: subUsuario._id }, true);
+
+        const token = gerarToken(subUsuario._id, 'subUsuario');
+
+        return res.json({
             success: true,
             token,
             usuario: {
-                id: usuario._id,
-                nome: usuario.nome,
-                email: usuario.email,
-                instituicao: usuario.instituicao,
-                role: usuario.role
+                id: subUsuario._id,
+                nome: subUsuario.nome,
+                email: subUsuario.email,
+                instituicao: dono ? dono.instituicao : '',
+                role: 'user',
+                tipo: 'subUsuario',
+                escola: subUsuario.escola,
+                permissoes: subUsuario.permissoes,
+                cargo: subUsuario.cargo
             },
-            licenca: usuario.licenca ? {
-                tipo: usuario.licenca.tipo,
-                status: usuario.licenca.status,
-                dataExpiracao: usuario.licenca.dataExpiracao,
-                certificadosRestantes: usuario.licenca.limiteCertificados === -1 
+            licenca: dono && dono.licenca ? {
+                tipo: dono.licenca.tipo,
+                status: dono.licenca.status,
+                dataExpiracao: dono.licenca.dataExpiracao,
+                certificadosRestantes: dono.licenca.limiteCertificados === -1 
                     ? 'Ilimitado' 
-                    : usuario.licenca.limiteCertificados - usuario.licenca.certificadosGerados
+                    : dono.licenca.limiteCertificados - dono.licenca.certificadosGerados
             } : null
         });
     } catch (error) {
@@ -197,11 +256,34 @@ exports.login = async (req, res) => {
 // @access  Private
 exports.obterUsuarioAtual = async (req, res) => {
     try {
+        // Se for sub-usuário, retornar dados do sub com a licença do dono
+        if (req.isSubUsuario && req.subUsuario) {
+            const dono = req.usuario; // já populado no middleware
+            return res.json({
+                success: true,
+                usuario: {
+                    id: req.subUsuario._id,
+                    nome: req.subUsuario.nome,
+                    email: req.subUsuario.email,
+                    instituicao: dono.instituicao,
+                    role: 'user',
+                    tipo: 'subUsuario',
+                    escola: req.subUsuario.escola,
+                    permissoes: req.subUsuario.permissoes,
+                    cargo: req.subUsuario.cargo,
+                    licenca: dono.licenca
+                }
+            });
+        }
+
         const usuario = await Usuario.findById(req.usuario.id).populate('licenca');
 
         res.json({
             success: true,
-            usuario
+            usuario: {
+                ...usuario.toObject(),
+                tipo: 'usuario'
+            }
         });
     } catch (error) {
         res.status(500).json({

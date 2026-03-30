@@ -2,14 +2,15 @@
  * © 2026 Wander Pires Silva Coelho - Software Proprietário
  */
 // Service Worker para PWA
-const CACHE_NAME = 'certificados-v25';
+const CACHE_NAME = 'certificados-v27';
 const urlsToCache = [
   '/login.html',
   '/index.html',
   '/admin.html',
   '/auth.js',
   '/app.js',
-  '/admin.js'
+  '/admin.js',
+  '/styles.css'
 ];
 
 // Instalar Service Worker - ativa imediatamente

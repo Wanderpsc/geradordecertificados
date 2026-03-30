@@ -75,7 +75,7 @@ exports.criar = async (req, res) => {
 // @route   PUT /api/subusuarios/:id
 exports.atualizar = async (req, res) => {
     try {
-        const { nome, email, cargo, permissoes, ativo } = req.body;
+        const { nome, email, cargo, permissoes, ativo, senha } = req.body;
 
         const sub = await SubUsuario.findOne({ _id: req.params.id, escola: req.usuario._id });
         if (!sub) {
@@ -87,14 +87,16 @@ exports.atualizar = async (req, res) => {
         if (cargo !== undefined) sub.cargo = cargo;
         if (permissoes) sub.permissoes = { ...sub.permissoes, ...permissoes };
         if (ativo !== undefined) sub.ativo = ativo;
+        if (senha && senha.trim().length >= 6) sub.senha = senha.trim();
 
         await sub.save();
 
+        const senhaAlterada = senha && senha.trim().length >= 6 ? ' — SENHA ALTERADA' : '';
         await Log.create({
             usuario: req.usuario._id,
             acao: 'EDITAR_ALUNO',
-            descricao: `Atualizou sub-usuário: ${sub.nome} (${sub.email})${ativo === false ? ' — BLOQUEADO' : ativo === true ? ' — DESBLOQUEADO' : ''}`,
-            nivel: 'INFO'
+            descricao: `Atualizou sub-usuário: ${sub.nome} (${sub.email})${ativo === false ? ' — BLOQUEADO' : ativo === true ? ' — DESBLOQUEADO' : ''}${senhaAlterada}`,
+            nivel: senha ? 'WARNING' : 'INFO'
         });
 
         res.json({ success: true, message: 'Usuário atualizado!', subUsuario: sub });

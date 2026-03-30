@@ -24,6 +24,14 @@
                 window.location.replace('admin.html');
             }
         }
+
+        // Desregistrar service workers antigos e limpar cache
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(registrations => {
+                registrations.forEach(reg => reg.unregister());
+            });
+            caches.keys().then(names => names.forEach(n => caches.delete(n)));
+        }
     </script>
 </head>
 <body>
@@ -957,8 +965,9 @@
                             <input type="text" id="subCargo" class="form-control" placeholder="Ex: Secretária, Coordenador" value="Funcionário">
                         </div>
                         <div>
-                            <label class="form-label">Senha (deixe em branco para gerar automaticamente)</label>
-                            <input type="text" id="subSenha" class="form-control" placeholder="Senha será gerada automaticamente">
+                            <label class="form-label" id="labelSubSenha">Senha (deixe em branco para gerar automaticamente)</label>
+                            <input type="text" id="subSenha" class="form-control" placeholder="Senha será gerada automaticamente" minlength="6">
+                            <small style="color:#6b7280;font-size:12px;">Mínimo 6 caracteres</small>
                         </div>
                     </div>
 
