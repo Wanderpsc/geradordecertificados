@@ -868,7 +868,8 @@ function obterConfigCert() {
             corTitulo: document.getElementById('certCorFrenteTitulo')?.value || '#1e3a8a',
             assinatura1: document.getElementById('certAssinatura1')?.value || 'SECRETÁRIO(A)',
             assinatura2: document.getElementById('certAssinatura2')?.value || 'DIRETOR(A)',
-            assinatura3: document.getElementById('certAssinatura3')?.value || 'CONCLUDENTE'
+            assinatura3: document.getElementById('certAssinatura3')?.value || 'CONCLUDENTE',
+            localData: document.getElementById('certLocalData')?.value || ''
         },
         verso: {
             municipio: document.getElementById('certVersoMunicipio')?.value || 'Curimatá',
@@ -883,7 +884,8 @@ function obterConfigCert() {
             estiloTitulo: document.getElementById('certVersoEstiloTitulo')?.value || 'bolditalic',
             alinhamentoTitulo: document.getElementById('certVersoAlinhamentoTitulo')?.value || 'center',
             corTexto: document.getElementById('certCorVersoTexto')?.value || '#000000',
-            corTitulo: document.getElementById('certCorVersoTitulo')?.value || '#1e3a8a'
+            corTitulo: document.getElementById('certCorVersoTitulo')?.value || '#1e3a8a',
+            localData: document.getElementById('certVersoLocalData')?.value || ''
         },
         rodape: {
             exibir: document.getElementById('certRodapeExibir')?.value || 'sim',
@@ -968,6 +970,7 @@ function aplicarConfigNosInputs(cfg) {
         ['certAssinatura1', cfg.frente.assinatura1],
         ['certAssinatura2', cfg.frente.assinatura2],
         ['certAssinatura3', cfg.frente.assinatura3],
+        ['certLocalData', cfg.frente.localData || ''],
         ['certVersoMunicipio', cfg.verso.municipio],
         ['certVersoUF', cfg.verso.uf],
         ['certVersoTitulo', cfg.verso.titulo],
@@ -983,6 +986,7 @@ function aplicarConfigNosInputs(cfg) {
         ['certCorVersoTextoHex', cfg.verso.corTexto || '#000000'],
         ['certCorVersoTitulo', cfg.verso.corTitulo || '#1e3a8a'],
         ['certCorVersoTituloHex', cfg.verso.corTitulo || '#1e3a8a'],
+        ['certVersoLocalData', cfg.verso.localData || ''],
         ['certRodapeExibir', cfg.rodape.exibir],
         ['certRodapeLinha1', cfg.rodape.linha1],
         ['certRodapeLinha2', cfg.rodape.linha2],
@@ -1254,6 +1258,21 @@ function _criarOverlaysFrente(wrapper, cfg, sx, sy, pw, ph, ds, aj) {
         textAlign: 'center',
         ds: ds, sy: sy
     });
+
+    // Local e Data (frente)
+    if (document.getElementById('certLocalData')) {
+        const ldFontPx = 10 * sx / 2.2;
+        _addEditOverlay(wrapper, 'certLocalData', {
+            x: pw * 0.15, y: assY - 18 * sy / 2 - ldFontPx + (aj.certLocalData || 0) * sy,
+            w: pw * 0.7, h: ldFontPx * 2.2,
+            fontSize: ldFontPx,
+            fontFamily: fmtCanvasFamily(fmt.fonteCabecalho || 'helvetica'),
+            fontWeight: 'bold',
+            color: cfg.cores.texto,
+            textAlign: 'center',
+            ds: ds, sy: sy
+        });
+    }
 }
 
 function _criarOverlaysVerso(wrapper, cfg, sx, sy, pw, ph, ds, aj) {
@@ -1273,6 +1292,22 @@ function _criarOverlaysVerso(wrapper, cfg, sx, sy, pw, ph, ds, aj) {
         textTransform: 'uppercase',
         ds: ds, sy: sy
     });
+
+    // Local e Data (verso)
+    if (document.getElementById('certVersoLocalData')) {
+        const ldVFontPx = 9 * sx / 2.2;
+        const ldVY = ph - 15 * sy + (aj.certVersoLocalData || 0) * sy;
+        _addEditOverlay(wrapper, 'certVersoLocalData', {
+            x: pw * 0.15, y: ldVY - ldVFontPx,
+            w: pw * 0.7, h: ldVFontPx * 2.2,
+            fontSize: ldVFontPx,
+            fontFamily: fmtCanvasFamily(cfg.verso.fonteCabecalho || 'helvetica'),
+            fontWeight: 'bold',
+            color: cfg.verso.corTexto || cfg.cores.texto,
+            textAlign: 'center',
+            ds: ds, sy: sy
+        });
+    }
 }
 
 function _addEditOverlay(wrapper, inputId, o) {
@@ -2033,8 +2068,17 @@ function desenharPreviewFrente(ctx, cfg, sx, sy, pw, ph, imgs) {
 
     wrapText(ctx, textoPreview, margemEsq, yBase + (aj.certCorpoTexto || 0) * sy, maxW, (fmt.espacoLinha || 8) * sy / 2.5, cfg.frente.alinhamento || 'justify');
 
-    // Linhas de assinatura
+    // Local e Data (frente)
     const assY = ph - 60 * sy / 2;
+    if (cfg.frente.localData) {
+        const ldY = assY - 18 * sy / 2 + (aj.certLocalData || 0) * sy;
+        ctx.fillStyle = cfg.cores.texto;
+        ctx.font = `bold ${10 * sx / 2.2}px ${fmtCanvasFamily(fmt.fonteCabecalho || 'helvetica')}`;
+        ctx.textAlign = 'center';
+        ctx.fillText(cfg.frente.localData, pw / 2, ldY);
+    }
+
+    // Linhas de assinatura
     ctx.strokeStyle = cfg.cores.assinatura;
     ctx.lineWidth = 1;
     ctx.textAlign = 'center';
@@ -2178,6 +2222,15 @@ function desenharPreviewVerso(ctx, cfg, sx, sy, pw, ph, imgs) {
     ctx.fillStyle = '#9ca3af';
     ctx.font = `italic ${10 * sx / 2.2}px sans-serif`;
     ctx.fillText('Área para Histórico Escolar', mx + tabelaW * 0.325, yPos + tabelaH / 2);
+
+    // Local e Data (verso)
+    if (cfg.verso.localData) {
+        const ldVY = ph - 15 * sy + (aj.certVersoLocalData || 0) * sy;
+        ctx.fillStyle = cfg.verso.corTexto || cfg.cores.texto;
+        ctx.font = `bold ${9 * sx / 2.2}px ${fmtCanvasFamily(cfg.verso.fonteCabecalho || 'helvetica')}`;
+        ctx.textAlign = 'center';
+        ctx.fillText(cfg.verso.localData, pw / 2, ldVY);
+    }
 }
 
 function fmtCanvasFamily(fonte) {
@@ -2937,6 +2990,15 @@ async function gerarFrenteCertificado(pdf, aluno, cfg) {
         renderizarLinha(linhaAtual, true);
     }
     
+    // Local e Data (frente) - campo manual
+    if (cfg.frente.localData) {
+        yPos += 10;
+        yPos += aj.certLocalData || 0;
+        pdf.setFont('times', 'bold');
+        pdf.setTextColor(corTit.r, corTit.g, corTit.b);
+        pdf.text(cfg.frente.localData, pageWidth / 2, yPos, { align: 'center' });
+    }
+
     // Data de confecção
     yPos += 12;
     let dataFormatada = '';
@@ -3233,6 +3295,15 @@ function gerarVersoCertificado(pdf, aluno, cfg) {
             pdf.setFontSize(8);
             pdf.text(aluno.observacoes, obsX + 3, obsY + 18, { maxWidth: colunaDirLargura - 6 });
         }
+    }
+
+    // Local e Data (verso)
+    if (cfg.verso.localData) {
+        const ldVY = pageHeight - 8 + (aj.certVersoLocalData || 0);
+        pdf.setFont('times', 'bold');
+        pdf.setFontSize(9);
+        pdf.setTextColor(corT.r, corT.g, corT.b);
+        pdf.text(cfg.verso.localData, pageWidth / 2, ldVY, { align: 'center' });
     }
 }
 
