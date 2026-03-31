@@ -214,11 +214,17 @@ function navegarParaTab(targetTab, atualizarHash = true) {
         if (targetTab === 'gerar' && typeof atualizarListaAlunosLote === 'function') {
             if (typeof atualizarFiltrosTurmaLote === 'function') atualizarFiltrosTurmaLote();
             atualizarListaAlunosLote();
+            carregarModelosNoSeletorGerar();
         }
 
         // Ao entrar na aba usuários, carregar sub-usuários
         if (targetTab === 'usuarios' && typeof carregarSubUsuarios === 'function') {
             carregarSubUsuarios();
+        }
+
+        // Ao entrar na aba histórico, inicializar
+        if (targetTab === 'historico' && typeof inicializarHistorico === 'function') {
+            inicializarHistorico();
         }
     }
 }
@@ -2777,6 +2783,76 @@ function atualizarTemplateInfo() {
 }
 
 // ==================== GERAÇÃO DE CERTIFICADOS ====================
+
+// Cache de modelos carregados para evitar re-fetch
+const _modelosCache = {};
+
+async function carregarModelosNoSeletorGerar() {
+    const select = document.getElementById('selectModeloGerar');
+    if (!select) return;
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    // Manter opção padrão
+    select.innerHTML = '<option value="">⚙️ Usar configuração atual do editor</option>';
+
+    try {
+        const resp = await fetch(`${API_URL}/modelos`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await resp.json();
+        if (data.success && data.modelos.length) {
+            data.modelos.forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m._id;
+                opt.textContent = `📄 ${m.nome}`;
+                select.appendChild(opt);
+            });
+        }
+    } catch(e) {
+        console.error('Erro ao carregar modelos para geração:', e);
+    }
+}
+
+function atualizarModeloSelecionadoGerar() {
+    const select = document.getElementById('selectModeloGerar');
+    const status = document.getElementById('statusModeloGerar');
+    if (!select || !status) return;
+    if (select.value) {
+        const nome = select.options[select.selectedIndex].textContent;
+        status.textContent = '✅ Modelo selecionado';
+        status.style.color = '#16a34a';
+    } else {
+        status.textContent = '';
+    }
+}
+
+async function carregarModeloParaGeracao(modeloId) {
+    if (!modeloId) return; // Usar config atual do editor
+
+    // Verificar cache
+    if (_modelosCache[modeloId]) {
+        CERT_CONFIG = _modelosCache[modeloId].config;
+        CERT_UPLOADS = _modelosCache[modeloId].uploads || {};
+        aplicarConfigNosInputs(CERT_CONFIG);
+        return;
+    }
+
+    const token = localStorage.getItem('token');
+    const resp = await fetch(`${API_URL}/modelos/${modeloId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await resp.json();
+    if (!data.success) throw new Error(data.message || 'Erro ao carregar modelo');
+
+    const m = data.modelo;
+    // Cachear
+    _modelosCache[modeloId] = { config: m.config, uploads: m.uploads };
+    CERT_CONFIG = m.config;
+    CERT_UPLOADS = m.uploads || {};
+    aplicarConfigNosInputs(CERT_CONFIG);
+}
+
 async function gerarCertificadoIndividual() {
     const selectAluno = document.getElementById('selectAluno');
     const alunoId = selectAluno.value; // MongoDB usa string _id, não número
@@ -2788,6 +2864,18 @@ async function gerarCertificadoIndividual() {
 
     const aluno = APP_STATE.alunos.find(a => a.id === alunoId);
     if (!aluno) return;
+
+    // Carregar modelo selecionado antes de gerar
+    const modeloId = document.getElementById('selectModeloGerar')?.value;
+    try {
+        if (modeloId) {
+            mostrarNotificacao('Carregando modelo...', 'info');
+            await carregarModeloParaGeracao(modeloId);
+        }
+    } catch(e) {
+        mostrarNotificacao('Erro ao carregar modelo: ' + e.message, 'error');
+        return;
+    }
 
     await gerarCertificado(aluno);
     mostrarNotificacao(`Certificado de ${aluno.nome} gerado com sucesso!`, 'success');
@@ -2804,6 +2892,18 @@ async function gerarCertificadosLote() {
     const alunosParaGerar = APP_STATE.alunos.filter(a => selecionados.has(a.id));
 
     if (!confirm(`Deseja gerar ${alunosParaGerar.length} certificado(s)?`)) {
+        return;
+    }
+
+    // Carregar modelo selecionado antes de gerar
+    const modeloId = document.getElementById('selectModeloGerar')?.value;
+    try {
+        if (modeloId) {
+            mostrarNotificacao('Carregando modelo...', 'info');
+            await carregarModeloParaGeracao(modeloId);
+        }
+    } catch(e) {
+        mostrarNotificacao('Erro ao carregar modelo: ' + e.message, 'error');
         return;
     }
 

@@ -53,6 +53,7 @@
             <button class="tab-btn" data-tab="lista">Lista de Alunos</button>
             <button class="tab-btn" data-tab="templates">Modelos</button>
             <button class="tab-btn" data-tab="gerar">Gerar Certificados</button>
+            <button class="tab-btn" data-tab="historico">📋 Histórico Escolar</button>
             <button class="tab-btn" data-tab="usuarios">👥 Gerenciar Usuários</button>
             <button class="tab-btn" data-tab="assinatura">📊 Minha Assinatura</button>
         </nav>
@@ -953,6 +954,22 @@
         <div class="tab-content" id="gerar">
             <div class="card">
                 <h2>Gerar Certificados</h2>
+
+                <!-- Seletor de Modelo -->
+                <div style="background: linear-gradient(135deg, #eff6ff, #dbeafe); border: 2px solid #93c5fd; border-radius: 12px; padding: 16px 20px; margin-bottom: 16px;">
+                    <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                        <span style="font-size: 20px;">📋</span>
+                        <strong style="color: #1e3a8a; font-size: 14px;">Modelo de Certificado:</strong>
+                        <select id="selectModeloGerar" onchange="atualizarModeloSelecionadoGerar()" 
+                            style="flex: 1; min-width: 250px; padding: 10px 14px; border: 2px solid #93c5fd; border-radius: 8px; font-size: 14px; background: white; font-weight: 600; color: #1e3a8a;">
+                            <option value="">⚙️ Usar configuração atual do editor</option>
+                        </select>
+                        <span id="statusModeloGerar" style="font-size: 13px; color: #6b7280;"></span>
+                    </div>
+                    <div style="font-size: 12px; color: #6b7280; margin-top: 6px;">
+                        💡 Selecione o modelo correto para o tipo de certificado (Ex: Ensino Fundamental, Ensino Médio).
+                    </div>
+                </div>
                 
                 <div class="generate-options">
                     <div class="option-card">
@@ -999,11 +1016,6 @@
                         </div>
                         <button class="btn btn-success" id="btnGerarLote">🖨️ Gerar Certificados Selecionados</button>
                     </div>
-                </div>
-
-                <div class="selected-template-info">
-                    <strong>Modelo Selecionado:</strong> 
-                    <span id="templateSelecionado">Clássico Azul</span>
                 </div>
             </div>
 
@@ -1266,6 +1278,63 @@
             </div>
         </div>
 
+        <!-- Tab: Histórico Escolar -->
+        <div class="tab-content" id="historico">
+            <!-- Seção 1: Grades de Disciplinas -->
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h2>📋 Grades de Disciplinas</h2>
+                    <button class="btn btn-primary" onclick="abrirModalNovaGrade()">+ Nova Grade</button>
+                </div>
+                <p style="color: #6b7280; font-size: 13px; margin-bottom: 15px;">Configure as disciplinas para cada modalidade de ensino. A grade será usada para todos os alunos dessa modalidade.</p>
+                <div id="listaGrades" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px;">
+                    <div style="text-align: center; color: #9ca3af; padding: 30px; grid-column: 1/-1;">Carregando grades...</div>
+                </div>
+            </div>
+
+            <!-- Seção 2: Lançar Notas -->
+            <div class="card" style="margin-top: 20px;">
+                <h2>📝 Lançar Notas do Histórico</h2>
+                <p style="color: #6b7280; font-size: 13px; margin-bottom: 15px;">Selecione um aluno e a grade para lançar as notas de cada disciplina por série/ano.</p>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 15px;">
+                    <div>
+                        <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 4px;">Modalidade</label>
+                        <select id="histTipo" class="form-control" onchange="carregarGradesParaNotas()">
+                            <option value="">Selecione...</option>
+                            <option value="medio">Ensino Médio</option>
+                            <option value="fundamental">Ensino Fundamental</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 4px;">Grade</label>
+                        <select id="histGrade" class="form-control" onchange="carregarFormNotas()">
+                            <option value="">Selecione a modalidade primeiro...</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 4px;">Aluno</label>
+                        <select id="histAluno" class="form-control" onchange="carregarHistoricoAluno()">
+                            <option value="">Selecione...</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="formNotas" style="display: none;">
+                    <!-- Tabela de notas será gerada dinamicamente -->
+                </div>
+            </div>
+
+            <!-- Seção 3: Históricos Salvos -->
+            <div class="card" style="margin-top: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h2>📄 Históricos Salvos</h2>
+                    <button class="btn btn-primary" onclick="gerarHistoricoPDF()" id="btnGerarHistPDF" disabled>🖨️ Gerar PDF dos Selecionados</button>
+                </div>
+                <div id="listaHistoricos" style="overflow-x: auto;">
+                    <div style="text-align: center; color: #9ca3af; padding: 30px;">Selecione uma modalidade acima para ver os históricos.</div>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <div id="notification" class="notification"></div>
@@ -1274,5 +1343,6 @@
     <script src="brasao-data.js"></script>
     <script src="bordas-data.js"></script>
     <script src="app.js"></script>
+    <script src="historico.js"></script>
 </body>
 </html>
