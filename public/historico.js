@@ -832,6 +832,211 @@ function salvarFichaIndividual() {
     mostrarNotificacao('Ficha Individual salva localmente. Clique em "Salvar Notas" para persistir.', 'success');
 }
 
+// ==================== CRIAR GRADES POR TURMA (2025) ====================
+
+async function criarGradesTurmas2025() {
+    const token = localStorage.getItem('token');
+    if (!token) { mostrarNotificacao('Faça login primeiro!', 'error'); return; }
+
+    if (!confirm('Criar 4 grades de disciplinas para as turmas de 2025?\n\n• EFP-FUND II - 9° ANO - I-A\n• EMRINTEGRAL - 3ª SÉRIE I-A\n• EMTPDES-SIS - 3ª SÉRIE 1-A\n• EMTPDES-SIS - 3ª SÉRIE 1-B\n\nApós criar, você pode editar cada grade pela interface.')) return;
+
+    const grades = [
+        // ========== TURMA 1: FUNDAMENTAL 9° ANO ==========
+        {
+            tipo: 'fundamental',
+            nome: 'EFP-FUND II ANOS FINAIS INT - 9° ANO - I-A',
+            numSeries: 9,
+            nomesSeries: ['1º Ano', '2º Ano', '3º Ano', '4º Ano', '5º Ano', '6º Ano', '7º Ano', '8º Ano', '9º Ano'],
+            disciplinas: [
+                // Linguagens, Códigos e Suas Tecnologias
+                { nome: 'Língua Portuguesa', categoria: 'linguagens', cargaHorariaPadrao: 0 },
+                { nome: 'Leitura, Interpretação e Produção Textual', categoria: 'linguagens', cargaHorariaPadrao: 0 },
+                { nome: 'Arte', categoria: 'linguagens', cargaHorariaPadrao: 0 },
+                { nome: 'Educação Física', categoria: 'linguagens', cargaHorariaPadrao: 0 },
+                // Ciências Humanas e Suas Tecnologias
+                { nome: 'História', categoria: 'ciencias_humanas', cargaHorariaPadrao: 0 },
+                { nome: 'Geografia', categoria: 'ciencias_humanas', cargaHorariaPadrao: 0 },
+                { nome: 'História e Cultura Afro-Brasileira e Indígena', categoria: 'ciencias_humanas', cargaHorariaPadrao: 0 },
+                // Ciências da Natureza e Suas Tecnologias
+                { nome: 'Física', categoria: 'ciencias_natureza', cargaHorariaPadrao: 0 },
+                { nome: 'Química', categoria: 'ciencias_natureza', cargaHorariaPadrao: 0 },
+                { nome: 'Biologia', categoria: 'ciencias_natureza', cargaHorariaPadrao: 0 },
+                // Matemática e Suas Tecnologias
+                { nome: 'Matemática', categoria: 'matematica', cargaHorariaPadrao: 0 },
+                // Parte Flexível (Diversificada)
+                { nome: 'Língua Inglesa', categoria: 'parte_flexivel', cargaHorariaPadrao: 0 },
+                { nome: 'Computação', categoria: 'parte_flexivel', cargaHorariaPadrao: 0 },
+                { nome: 'Inteligência Artificial', categoria: 'parte_flexivel', cargaHorariaPadrao: 0 },
+                { nome: 'Esporte (Clube de Leitura ou Robótica - Eletiva Obrigatória)', categoria: 'parte_flexivel', cargaHorariaPadrao: 0 },
+                { nome: 'Aprendizagem Interdisciplinar', categoria: 'parte_flexivel', cargaHorariaPadrao: 0 },
+                { nome: 'Matemática/Recomposição da Aprendizagem', categoria: 'parte_flexivel', cargaHorariaPadrao: 0 },
+                { nome: 'Língua Portuguesa/Recomposição da Aprendizagem', categoria: 'parte_flexivel', cargaHorariaPadrao: 0 },
+                { nome: 'Acompanhamento Pedagógico', categoria: 'parte_flexivel', cargaHorariaPadrao: 0 },
+                { nome: 'Música/Dança/Teatro/Esporte', categoria: 'parte_flexivel', cargaHorariaPadrao: 0 },
+                { nome: 'Horário de Estudo', categoria: 'parte_flexivel', cargaHorariaPadrao: 0 },
+                { nome: 'Projeto de Vida', categoria: 'parte_flexivel', cargaHorariaPadrao: 0 },
+                // Ensino Religioso
+                { nome: 'Ensino Religioso', categoria: 'ensino_religioso', cargaHorariaPadrao: 0 },
+            ]
+        },
+
+        // ========== TURMA 2: ENSINO MÉDIO REGULAR INTEGRAL ==========
+        {
+            tipo: 'medio',
+            nome: 'EMRINTEGRAL - 3ª SÉRIE I-A',
+            numSeries: 3,
+            nomesSeries: ['1ª Série', '2ª Série', '3ª Série'],
+            disciplinas: [
+                // Formação Geral Básica
+                { nome: 'Língua Portuguesa', categoria: 'formacao_geral', cargaHorariaPadrao: 0 },
+                { nome: 'Arte', categoria: 'formacao_geral', cargaHorariaPadrao: 0 },
+                { nome: 'Educação Física', categoria: 'formacao_geral', cargaHorariaPadrao: 0 },
+                { nome: 'Língua Estrangeira Inglês', categoria: 'formacao_geral', cargaHorariaPadrao: 0 },
+                { nome: 'Língua Estrangeira Espanhol', categoria: 'formacao_geral', cargaHorariaPadrao: 0 },
+                { nome: 'Matemática', categoria: 'formacao_geral', cargaHorariaPadrao: 0 },
+                { nome: 'Física', categoria: 'formacao_geral', cargaHorariaPadrao: 0 },
+                { nome: 'Química', categoria: 'formacao_geral', cargaHorariaPadrao: 0 },
+                { nome: 'Biologia', categoria: 'formacao_geral', cargaHorariaPadrao: 0 },
+                { nome: 'História', categoria: 'formacao_geral', cargaHorariaPadrao: 0 },
+                { nome: 'Geografia', categoria: 'formacao_geral', cargaHorariaPadrao: 0 },
+                { nome: 'Filosofia', categoria: 'formacao_geral', cargaHorariaPadrao: 0 },
+                { nome: 'Sociologia', categoria: 'formacao_geral', cargaHorariaPadrao: 0 },
+                // Itinerários Formativos
+                { nome: 'Inteligência Artificial Aplicada a Automação', categoria: 'itinerarios', cargaHorariaPadrao: 0 },
+                { nome: 'Inteligência Artificial', categoria: 'itinerarios', cargaHorariaPadrao: 0 },
+                { nome: 'Língua Inglesa', categoria: 'itinerarios', cargaHorariaPadrao: 0 },
+                { nome: 'Leitura e Produção Textual', categoria: 'itinerarios', cargaHorariaPadrao: 0 },
+                { nome: 'Matemática/Recomposição da Aprendizagem', categoria: 'itinerarios', cargaHorariaPadrao: 0 },
+                { nome: 'Percursos de Aprofundamento - Língua Portuguesa', categoria: 'itinerarios', cargaHorariaPadrao: 0 },
+                { nome: 'Orientação Profissional e Empreendedorismo', categoria: 'itinerarios', cargaHorariaPadrao: 0 },
+                { nome: 'Língua Inglesa - Aprofundamento', categoria: 'itinerarios', cargaHorariaPadrao: 0 },
+                { nome: 'Música/Dança/Teatro/Esporte', categoria: 'itinerarios', cargaHorariaPadrao: 0 },
+                { nome: 'Biologia - Aprofundamento', categoria: 'itinerarios', cargaHorariaPadrao: 0 },
+                { nome: 'Física - Aprofundamento', categoria: 'itinerarios', cargaHorariaPadrao: 0 },
+                { nome: 'Química - Aprofundamento', categoria: 'itinerarios', cargaHorariaPadrao: 0 },
+                { nome: 'Língua Espanhola', categoria: 'itinerarios', cargaHorariaPadrao: 0 },
+                { nome: 'Projeto de Vida e Empreendedorismo', categoria: 'itinerarios', cargaHorariaPadrao: 0 },
+                { nome: 'Língua Portuguesa/Recomposição da Aprendizagem', categoria: 'itinerarios', cargaHorariaPadrao: 0 },
+                { nome: 'Horário de Estudo', categoria: 'itinerarios', cargaHorariaPadrao: 0 },
+                { nome: 'Internet das Coisas - IoT', categoria: 'itinerarios', cargaHorariaPadrao: 0 },
+                // Atividades Integradoras
+                { nome: 'Atividades Integradoras - Esporte Integrado a Educação Física', categoria: 'atividades_integradoras', cargaHorariaPadrao: 0 },
+                { nome: 'Atividades Integradoras - Inteligência Artificial', categoria: 'atividades_integradoras', cargaHorariaPadrao: 0 },
+                { nome: 'Teste de Sistemas e Segurança de Dados', categoria: 'atividades_integradoras', cargaHorariaPadrao: 0 },
+                { nome: 'Atividades Integradoras - Monitoria/Horário de Estudo', categoria: 'atividades_integradoras', cargaHorariaPadrao: 0 },
+                { nome: 'Atividades Integradoras - Cultura Integrada a Arte', categoria: 'atividades_integradoras', cargaHorariaPadrao: 0 },
+                { nome: 'Projeto Integrador', categoria: 'atividades_integradoras', cargaHorariaPadrao: 0 },
+                { nome: 'Atividades Integradoras - Educação do Trânsito', categoria: 'atividades_integradoras', cargaHorariaPadrao: 0 },
+            ]
+        },
+
+        // ========== TURMA 3: ENSINO MÉDIO TÉCNICO 1-A ==========
+        {
+            tipo: 'medio',
+            nome: 'EMTPDES-SIS - 3ª SÉRIE INTEGRAL 1-A',
+            numSeries: 3,
+            nomesSeries: ['1ª Série', '2ª Série', '3ª Série'],
+            disciplinas: [
+                // Formação Geral Básica
+                { nome: 'Língua Portuguesa', categoria: 'formacao_geral', cargaHorariaPadrao: 0 },
+                { nome: 'Arte', categoria: 'formacao_geral', cargaHorariaPadrao: 0 },
+                { nome: 'Educação Física', categoria: 'formacao_geral', cargaHorariaPadrao: 0 },
+                { nome: 'Língua Estrangeira Inglês', categoria: 'formacao_geral', cargaHorariaPadrao: 0 },
+                { nome: 'Língua Estrangeira Espanhol', categoria: 'formacao_geral', cargaHorariaPadrao: 0 },
+                { nome: 'Matemática', categoria: 'formacao_geral', cargaHorariaPadrao: 0 },
+                { nome: 'Física', categoria: 'formacao_geral', cargaHorariaPadrao: 0 },
+                { nome: 'Química', categoria: 'formacao_geral', cargaHorariaPadrao: 0 },
+                { nome: 'Biologia', categoria: 'formacao_geral', cargaHorariaPadrao: 0 },
+                { nome: 'História', categoria: 'formacao_geral', cargaHorariaPadrao: 0 },
+                { nome: 'Geografia', categoria: 'formacao_geral', cargaHorariaPadrao: 0 },
+                { nome: 'Filosofia', categoria: 'formacao_geral', cargaHorariaPadrao: 0 },
+                { nome: 'Sociologia', categoria: 'formacao_geral', cargaHorariaPadrao: 0 },
+                // Itinerários Formativos
+                { nome: 'Inteligência Artificial Aplicada a Automação', categoria: 'itinerarios', cargaHorariaPadrao: 0 },
+                { nome: 'Percursos de Aprofundamento - Língua Portuguesa', categoria: 'itinerarios', cargaHorariaPadrao: 0 },
+                { nome: 'Orientação Profissional', categoria: 'itinerarios', cargaHorariaPadrao: 0 },
+                { nome: 'Empreendedorismo', categoria: 'itinerarios', cargaHorariaPadrao: 0 },
+                { nome: 'Percursos de Aprofundamento - Ciências da Natureza', categoria: 'itinerarios', cargaHorariaPadrao: 0 },
+                { nome: 'Língua Portuguesa/Recomposição da Aprendizagem', categoria: 'itinerarios', cargaHorariaPadrao: 0 },
+                { nome: 'Educação Física - Percursos de Aprofundamento/Matemática', categoria: 'itinerarios', cargaHorariaPadrao: 0 },
+                { nome: 'Internet das Coisas - IoT', categoria: 'itinerarios', cargaHorariaPadrao: 0 },
+                // Atividades Integradoras
+                { nome: 'Atividades Integradoras - Esporte Integrado a Educação Física', categoria: 'atividades_integradoras', cargaHorariaPadrao: 0 },
+                { nome: 'Atividades Integradoras - Inteligência Artificial', categoria: 'atividades_integradoras', cargaHorariaPadrao: 0 },
+                { nome: 'Teste de Sistemas e Segurança de Dados', categoria: 'atividades_integradoras', cargaHorariaPadrao: 0 },
+                { nome: 'Atividades Integradoras - Monitoria/Horário de Estudo', categoria: 'atividades_integradoras', cargaHorariaPadrao: 0 },
+                { nome: 'Atividades Integradoras - Cultura Integrada a Arte', categoria: 'atividades_integradoras', cargaHorariaPadrao: 0 },
+                { nome: 'Projeto Integrador', categoria: 'atividades_integradoras', cargaHorariaPadrao: 0 },
+                { nome: 'Atividades Integradoras - Educação do Trânsito', categoria: 'atividades_integradoras', cargaHorariaPadrao: 0 },
+            ]
+        },
+
+        // ========== TURMA 4: ENSINO MÉDIO TÉCNICO 1-B ==========
+        {
+            tipo: 'medio',
+            nome: 'EMTPDES-SIS - 3ª SÉRIE INTEGRAL 1-B',
+            numSeries: 3,
+            nomesSeries: ['1ª Série', '2ª Série', '3ª Série'],
+            disciplinas: [
+                // Formação Geral Básica
+                { nome: 'Língua Portuguesa', categoria: 'formacao_geral', cargaHorariaPadrao: 0 },
+                { nome: 'Arte', categoria: 'formacao_geral', cargaHorariaPadrao: 0 },
+                { nome: 'Educação Física', categoria: 'formacao_geral', cargaHorariaPadrao: 0 },
+                { nome: 'Língua Estrangeira Inglês', categoria: 'formacao_geral', cargaHorariaPadrao: 0 },
+                { nome: 'Língua Estrangeira Espanhol', categoria: 'formacao_geral', cargaHorariaPadrao: 0 },
+                { nome: 'Matemática', categoria: 'formacao_geral', cargaHorariaPadrao: 0 },
+                { nome: 'Física', categoria: 'formacao_geral', cargaHorariaPadrao: 0 },
+                { nome: 'Química', categoria: 'formacao_geral', cargaHorariaPadrao: 0 },
+                { nome: 'Biologia', categoria: 'formacao_geral', cargaHorariaPadrao: 0 },
+                { nome: 'História', categoria: 'formacao_geral', cargaHorariaPadrao: 0 },
+                { nome: 'Geografia', categoria: 'formacao_geral', cargaHorariaPadrao: 0 },
+                { nome: 'Filosofia', categoria: 'formacao_geral', cargaHorariaPadrao: 0 },
+                { nome: 'Sociologia', categoria: 'formacao_geral', cargaHorariaPadrao: 0 },
+                // Itinerários Formativos
+                { nome: 'Inteligência Artificial Aplicada a Automação', categoria: 'itinerarios', cargaHorariaPadrao: 0 },
+                { nome: 'Percursos de Aprofundamento - Língua Portuguesa', categoria: 'itinerarios', cargaHorariaPadrao: 0 },
+                { nome: 'Orientação Profissional', categoria: 'itinerarios', cargaHorariaPadrao: 0 },
+                { nome: 'Empreendedorismo', categoria: 'itinerarios', cargaHorariaPadrao: 0 },
+                { nome: 'Percursos de Aprofundamento - Ciências da Natureza', categoria: 'itinerarios', cargaHorariaPadrao: 0 },
+                { nome: 'Língua Portuguesa/Recomposição da Aprendizagem', categoria: 'itinerarios', cargaHorariaPadrao: 0 },
+                { nome: 'Educação Física - Percursos de Aprofundamento/Matemática', categoria: 'itinerarios', cargaHorariaPadrao: 0 },
+                { nome: 'Internet das Coisas - IoT', categoria: 'itinerarios', cargaHorariaPadrao: 0 },
+                // Atividades Integradoras
+                { nome: 'Atividades Integradoras - Esporte Integrado a Educação Física', categoria: 'atividades_integradoras', cargaHorariaPadrao: 0 },
+                { nome: 'Atividades Integradoras - Inteligência Artificial', categoria: 'atividades_integradoras', cargaHorariaPadrao: 0 },
+                { nome: 'Teste de Sistemas e Segurança de Dados', categoria: 'atividades_integradoras', cargaHorariaPadrao: 0 },
+                { nome: 'Atividades Integradoras - Monitoria/Horário de Estudo', categoria: 'atividades_integradoras', cargaHorariaPadrao: 0 },
+                { nome: 'Atividades Integradoras - Cultura Integrada a Arte', categoria: 'atividades_integradoras', cargaHorariaPadrao: 0 },
+                { nome: 'Projeto Integrador', categoria: 'atividades_integradoras', cargaHorariaPadrao: 0 },
+                { nome: 'Atividades Integradoras - Educação do Trânsito', categoria: 'atividades_integradoras', cargaHorariaPadrao: 0 },
+            ]
+        },
+    ];
+
+    let criadas = 0;
+    for (const grade of grades) {
+        try {
+            const resp = await fetch(`${API_URL}/historicos/grades`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(grade)
+            });
+            const data = await resp.json();
+            if (data.success) {
+                criadas++;
+                console.log(`✅ Grade criada: ${grade.nome} (${grade.disciplinas.length} disciplinas)`);
+            } else {
+                console.error(`❌ Erro: ${grade.nome} - ${data.message}`);
+            }
+        } catch (e) {
+            console.error(`❌ Falha: ${grade.nome}`, e);
+        }
+    }
+
+    carregarListaGrades();
+    mostrarNotificacao(`${criadas} de ${grades.length} grades criadas com sucesso! Verifique e ajuste as disciplinas se necessário.`, criadas === grades.length ? 'success' : 'warning');
+}
+
 // ==================== GERAÇÃO DE PDF (placeholder) ====================
 function gerarHistoricoPDF() {
     mostrarNotificacao('Geração de PDF do Histórico será implementada na próxima fase.', 'info');
