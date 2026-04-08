@@ -14,8 +14,8 @@ services:
       - key: MONGODB_URI
         sync: false
       - key: JWT_SECRET
-        generateValue: true
+        sync: false
       - key: LICENSE_ENCRYPTION_KEY
-        generateValue: true
+        sync: false
       - key: ALLOWED_ORIGINS
         value: https://gerador-certificados.onrender.com,https://gerador-certificados.surge.sh
