@@ -1560,7 +1560,7 @@ async function previewHistorico(id) {
         const hist = data.historico;
         const cfg = obterConfigHist();
         const { jsPDF } = window.jspdf;
-        const orientacao = document.getElementById('histOrientacao')?.value || 'portrait';
+        const orientacao = _getOrientacaoHist(hist);
         const pdf = new jsPDF({ orientation: orientacao, unit: 'mm', format: 'a4' });
 
         _histFrente(pdf, hist, cfg);
@@ -1590,6 +1590,18 @@ async function previewHistorico(id) {
     }
 }
 
+function _atualizarOrientacaoHist(tipo) {
+    const sel = document.getElementById('histOrientacao');
+    if (!sel) return;
+    sel.value = tipo === 'medio' ? 'landscape' : 'portrait';
+}
+
+function _getOrientacaoHist(hist) {
+    const sel = document.getElementById('histOrientacao');
+    if (sel && sel.value) return sel.value;
+    return (hist?.tipo === 'medio') ? 'landscape' : 'portrait';
+}
+
 function fecharHistPreview() {
     const card = document.getElementById('histPreviewCard');
     const frame = document.getElementById('histPreviewFrame');
@@ -1613,8 +1625,8 @@ async function gerarHistoricoPDF() {
     mostrarNotificacao(`Gerando ${ids.length} histórico(s)...`, 'info');
     const { jsPDF } = window.jspdf;
     const cfg = obterConfigHist();
-    const orientacao = document.getElementById('histOrientacao')?.value || 'portrait';
-    const pdf = new jsPDF({ orientation: orientacao, unit: 'mm', format: 'a4' });
+    // orientacão será definida por histórico individualmente abaixo
+    let pdf = null;
     let primeiroDoc = true;
     const token = localStorage.getItem('token');
 
@@ -1627,11 +1639,16 @@ async function gerarHistoricoPDF() {
             if (!data.success) continue;
 
             const hist = data.historico;
-            if (!primeiroDoc) pdf.addPage();
+            const orientacao = _getOrientacaoHist(hist);
+            if (!primeiroDoc) {
+                pdf.addPage({ orientation: orientacao });
+            } else {
+                pdf = new jsPDF({ orientation: orientacao, unit: 'mm', format: 'a4' });
+            }
             primeiroDoc = false;
 
             _histFrente(pdf, hist, cfg);
-            pdf.addPage();
+            pdf.addPage({ orientation: orientacao });
             _histVerso(pdf, hist, cfg);
         } catch (e) {
             console.error('Erro ao gerar histórico:', histId, e);
@@ -2024,6 +2041,10 @@ function _histFrente(pdf, hist, cfg) {
 // ---------- Página do verso ----------
 
 function _histVerso(pdf, hist, cfg) {
+    return hist.tipo === 'medio' ? _histVersoMedio(pdf, hist, cfg) : _histVersoFundamental(pdf, hist, cfg);
+}
+
+function _histVersoFundamental(pdf, hist, cfg) {
     const aluno = hist.aluno || {};
     const grade = hist.grade || {};
     const fichaIndividual = hist.fichaIndividual || [];
@@ -2057,14 +2078,14 @@ function _histVerso(pdf, hist, cfg) {
     _hText(pdf, ' Preencher somente em caso do aluno solicitar transferência durante o período letivo.', ML + 14, y, { size: 6 });
     y += 5;
 
-    // tabela de avaliações
-    const cDiscW = isFundamental(hist.tipo) ? 52 : 55;
+    // tabela — Fundamental: 8 avaliações, cada uma com Notas + Faltas
+    const cDiscW = 52;
     const availAvalW = UW - cDiscW;
     const avalW = availAvalW / numAvals;
     const notaW = avalW * 0.54;
-    const faltaW = availAvalW / numAvals - notaW;
+    const faltaW = avalW - notaW;
     const hH = 5;
-    const rH = isFundamental(hist.tipo) ? 3.6 : 3.8;
+    const rH = 3.6;
 
     // header linha 1
     pdf.setFillColor(0, 40, 120);
@@ -2113,7 +2134,6 @@ function _histVerso(pdf, hist, cfg) {
         pdf.text(disc.nome, ML + 1, y + rH - 1, { maxWidth: cDiscW - 2 });
         pdf.setDrawColor(160, 190, 220);
         pdf.line(ML + cDiscW, y, ML + cDiscW, y + rH);
-
         ax = ML + cDiscW;
         for (let a = 1; a <= numAvals; a++) {
             const av = avs.find(v => v.num === a) || {};
@@ -2132,38 +2152,208 @@ function _histVerso(pdf, hist, cfg) {
     pdf.rect(ML, tblAvalStart - 2 * hH, UW, y - tblAvalStart + 2 * hH, 'S');
     y += 4;
 
+    _histVersoRodape(pdf, hist, cfg, { PW, PH, ML, MR, UW, y, isMedio: false });
+}
+
+function _histVersoMedio(pdf, hist, cfg) {
+    const aluno = hist.aluno || {};
+    const grade = hist.grade || {};
+    const fichaIndividual = hist.fichaIndividual || [];
+    const discs = grade.disciplinas || [];
+
+    // Em paisagem A4: 297 x 210
+    const PW = 297, PH = 210, ML = 7, MR = 7, MT = 7;
+    const UW = PW - ML - MR;
+    let y = MT;
+
+    // linhas do topo
+    _hLine(pdf, ML, y, PW - MR, y, 0.6, [0, 40, 120]);
+    _hLine(pdf, ML, y + 1.3, PW - MR, y + 1.3, 0.2, [0, 40, 120]);
+    y += 3;
+
+    // título
+    pdf.setFillColor(0, 40, 120);
+    pdf.rect(ML, y, UW, 7, 'F');
+    _hText(pdf, 'FICHA INDIVIDUAL DO RENDIMENTO ESCOLAR E FREQUÊNCIA DO ALUNO', PW / 2, y + 5, { bold: true, size: 9, align: 'center', color: [255, 255, 255] });
+    y += 9;
+
+    // aluno + ano
+    const fichaEntry = fichaIndividual.length ? fichaIndividual[0] : {};
+    const fichaAno = fichaEntry.ano || '';
+    _hText(pdf, `ALUNO(A): ${aluno.nome || ''}`, ML, y + 3, { bold: true, size: 7 });
+    _hText(pdf, `ANO: ${fichaAno}`, PW - MR - 40, y + 3, { bold: true, size: 7 });
+    y += 7;
+
+    // atenção
+    _hText(pdf, 'ATENÇÃO:', ML, y, { bold: true, size: 6, color: [100, 50, 0] });
+    _hText(pdf, ' Preencher somente em caso do aluno solicitar transferência durante o período letivo.', ML + 14, y, { size: 6 });
+    y += 6;
+
+    // Estrutura do Médio:
+    // Blocos: [1ªAVAL(N+F) | 2ªAVAL(N+F) | 1ºBIMS(MB+FTB)] x4 = 4 bimestres
+    // Colunas: DISCIPLINAS | 1ªAVAL Notas | 1ªAVAL Faltas | 2ªAVAL Notas | 2ªAVAL Faltas | 1ºBIMESTRE MB | 1ºBIMESTRE FTB | ... (x4)
+    const cDiscW = 40;
+    // Cada bimestre = 2 avals (N+F cada) + 1 bimestre (MB+FTB) = 6 sub-colunas
+    const numBim = 4;
+    const bimW = (UW - cDiscW) / numBim;
+    const avalUnitW = bimW / 3; // cada bloco tem 3 partes: 1ªAVAL, 2ªAVAL, BIMESTRE
+    const subW = avalUnitW / 2; // cada parte tem 2 sub-colunas
+
+    const hH1 = 5; // altura header linha1 (avaliação/frequência)
+    const hH2 = 5; // altura header linha2 (1ªAVAL etc)
+    const hH3 = 4; // altura header linha3 (Notas/Faltas/MB/FTB)
+    const rH = 3.8;
+
+    // header linha 1: AVALIAÇÃO / FREQUÊNCIA
+    pdf.setFillColor(0, 40, 120);
+    pdf.rect(ML + cDiscW, y, UW - cDiscW, hH1, 'F');
+    _hText(pdf, 'AVALIAÇÃO / FREQUÊNCIA', ML + cDiscW + (UW - cDiscW) / 2, y + 3.5, { bold: true, size: 7, align: 'center', color: [255, 255, 255] });
+    pdf.setDrawColor(80, 120, 200); pdf.setLineWidth(0.15);
+    pdf.rect(ML + cDiscW, y, UW - cDiscW, hH1, 'S');
+    y += hH1;
+
+    // header linha 2: DISCIPLINAS | 1ªAVAL | 2ªAVAL | 1ºBIMESTRE | ...
+    pdf.setFillColor(0, 40, 120);
+    pdf.rect(ML, y, cDiscW, hH2, 'F');
+    _hText(pdf, 'DISCIPLINAS', ML + cDiscW / 2, y + 3.3, { bold: true, size: 6, align: 'center', color: [255, 255, 255] });
+    pdf.setFillColor(15, 55, 150);
+    pdf.rect(ML + cDiscW, y, UW - cDiscW, hH2, 'F');
+    const bimLabels = ['1ª AVAL', '2ª AVAL', '1º BIMESTRE', '3ª AVAL', '4ª AVAL', '2º BIMESTRE', '5ª AVAL', '6ª AVAL', '3º BIMESTRE', '7ª AVAL', '8ª AVAL', '4º BIMESTRE'];
+    let bx = ML + cDiscW;
+    for (let i = 0; i < 12; i++) {
+        pdf.setFont('helvetica', 'bold'); pdf.setFontSize(4.2); pdf.setTextColor(255, 255, 255);
+        pdf.text(bimLabels[i], bx + avalUnitW / 2, y + 3.3, { align: 'center' });
+        pdf.setDrawColor(80, 150, 220); pdf.setLineWidth(0.15);
+        pdf.line(bx + avalUnitW, y, bx + avalUnitW, y + hH2);
+        bx += avalUnitW;
+    }
+    pdf.setDrawColor(80, 120, 200); pdf.setLineWidth(0.15);
+    pdf.rect(ML, y, UW, hH2, 'S');
+    y += hH2;
+
+    // header linha 3: Notas/Faltas x2 | MB/FTB | ... x4
+    pdf.setFillColor(30, 70, 160);
+    pdf.rect(ML, y, UW, hH3, 'F');
+    pdf.setFont('helvetica', 'bold'); pdf.setFontSize(4); pdf.setTextColor(255, 255, 255);
+    bx = ML + cDiscW;
+    for (let b = 0; b < numBim; b++) {
+        // 1ª aval dentro do bimestre
+        pdf.text('Notas', bx + subW / 2, y + 2.8, { align: 'center' });
+        pdf.line(bx + subW, y, bx + subW, y + hH3);
+        pdf.text('Faltas', bx + subW + subW / 2, y + 2.8, { align: 'center' });
+        pdf.line(bx + avalUnitW, y, bx + avalUnitW, y + hH3);
+        // 2ª aval dentro do bimestre
+        pdf.text('Notas', bx + avalUnitW + subW / 2, y + 2.8, { align: 'center' });
+        pdf.line(bx + avalUnitW + subW, y, bx + avalUnitW + subW, y + hH3);
+        pdf.text('Faltas', bx + avalUnitW + subW + subW / 2, y + 2.8, { align: 'center' });
+        pdf.line(bx + avalUnitW * 2, y, bx + avalUnitW * 2, y + hH3);
+        // bimestre
+        pdf.text('MB', bx + avalUnitW * 2 + subW / 2, y + 2.8, { align: 'center' });
+        pdf.line(bx + avalUnitW * 2 + subW, y, bx + avalUnitW * 2 + subW, y + hH3);
+        pdf.text('FTB', bx + avalUnitW * 2 + subW + subW / 2, y + 2.8, { align: 'center' });
+        pdf.line(bx + bimW, y, bx + bimW, y + hH3);
+        bx += bimW;
+    }
+    pdf.setDrawColor(80, 120, 200); pdf.setLineWidth(0.15);
+    pdf.rect(ML, y, UW, hH3, 'S');
+    y += hH3;
+
+    // linhas disciplinas
+    const registros = fichaEntry.registros || [];
+    const tblStart = y;
+    discs.forEach((disc, idx) => {
+        const reg = registros.find(r => r.disciplina === disc.nome) || {};
+        const avs = reg.avaliacoes || [];
+        const bg = idx % 2 === 0 ? [248, 251, 255] : [255, 255, 255];
+        pdf.setFillColor(...bg);
+        pdf.rect(ML, y, UW, rH, 'F');
+        pdf.setDrawColor(205, 220, 235); pdf.setLineWidth(0.1);
+        pdf.rect(ML, y, UW, rH, 'S');
+        pdf.setFont('helvetica', 'normal'); pdf.setFontSize(5); pdf.setTextColor(10, 10, 10);
+        pdf.text(disc.nome, ML + 1, y + rH - 1, { maxWidth: cDiscW - 2 });
+        pdf.line(ML + cDiscW, y, ML + cDiscW, y + rH);
+
+        bx = ML + cDiscW;
+        const avalNums = [1, 2, 3, 4, 5, 6, 7, 8]; // avaliações reais
+        // Mapeamento: bimestre 1 → avals 1,2; bimestre 2 → 3,4; bimestre 3 → 5,6; bimestre 4 → 7,8
+        for (let b = 0; b < numBim; b++) {
+            const av1 = avs.find(v => v.num === b * 2 + 1) || {};
+            const av2 = avs.find(v => v.num === b * 2 + 2) || {};
+            const n1 = av1.nota !== undefined ? Number(av1.nota).toFixed(1) : '';
+            const f1 = av1.faltas !== undefined ? String(av1.faltas) : '';
+            const n2 = av2.nota !== undefined ? Number(av2.nota).toFixed(1) : '';
+            const f2 = av2.faltas !== undefined ? String(av2.faltas) : '';
+            // MB = média das duas avaliações; FTB = soma das faltas
+            const mb = (av1.nota !== undefined && av2.nota !== undefined)
+                ? ((Number(av1.nota) + Number(av2.nota)) / 2).toFixed(1) : '';
+            const ftb = (av1.faltas !== undefined || av2.faltas !== undefined)
+                ? String((Number(av1.faltas) || 0) + (Number(av2.faltas) || 0)) : '';
+            pdf.setFont('helvetica', 'normal'); pdf.setFontSize(4.8); pdf.setTextColor(0, 0, 0);
+            const vals = [n1, f1, n2, f2, mb, ftb];
+            for (let s = 0; s < 6; s++) {
+                pdf.text(String(vals[s]), bx + subW / 2, y + rH - 1, { align: 'center' });
+                pdf.line(bx + subW, y, bx + subW, y + rH);
+                bx += subW;
+            }
+        }
+        y += rH;
+    });
+    pdf.setDrawColor(0, 40, 120); pdf.setLineWidth(0.35);
+    pdf.rect(ML, tblStart - hH1 - hH2 - hH3, UW, y - tblStart + hH1 + hH2 + hH3, 'S');
+    y += 3;
+
+    _histVersoRodape(pdf, hist, cfg, { PW, PH, ML, MR, UW, y, isMedio: true });
+}
+
+function _histVersoRodape(pdf, hist, cfg, { PW, PH, ML, MR, UW, y, isMedio }) {
+    // LEGENDA (só no médio)
+    if (isMedio) {
+        pdf.setFont('helvetica', 'bold'); pdf.setFontSize(6); pdf.setTextColor(0, 0, 0);
+        pdf.text('LEGENDA:', ML, y);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(' MB - Média Bimestral          FTB - Falta Total do Bimestre', ML + 14, y);
+        y += 5;
+    }
+
     // VERIFICAÇÃO
     pdf.setFillColor(230, 237, 255);
-    pdf.rect(ML, y, UW, 11, 'F');
+    const verH = isMedio ? 15 : 11;
+    pdf.rect(ML, y, UW, verH, 'F');
     pdf.setDrawColor(0, 40, 120); pdf.setLineWidth(0.3);
-    pdf.rect(ML, y, UW, 11, 'S');
+    pdf.rect(ML, y, UW, verH, 'S');
     pdf.setFont('helvetica', 'bold'); pdf.setFontSize(6.5); pdf.setTextColor(0, 40, 120);
     pdf.text('VERIFICAÇÃO DO RENDIMENTO E FREQUÊNCIA ESCOLAR', ML + 2, y + 4);
-    pdf.setFont('helvetica', 'normal'); pdf.setFontSize(6); pdf.setTextColor(20, 20, 20);
-    pdf.text('Nota mínima para aprovação: 60 (sessenta). Frequência mínima obrigatória: 75%.', ML + 2, y + 8.5);
-    y += 13;
+    pdf.setFont('helvetica', 'normal'); pdf.setFontSize(5.8); pdf.setTextColor(20, 20, 20);
+    if (isMedio) {
+        pdf.text('Considerar-se-á aprovado o aluno que quanto a:', ML + 2, y + 8);
+        pdf.text('1. Nota/ Média obtiver o mínimo de 60 % (sessenta por cento) de rendimento escolar em cada componente curricular;', ML + 2, y + 11.5);
+        pdf.text('2. Assiduidade  obtiver frequência mínima de 75% (setenta e cinco por cento) do total da carga horária trabalhada pela escola durante o ano letivo.', ML + 2, y + 14.5);
+    } else {
+        pdf.text('Nota mínima para aprovação: 60 (sessenta). Frequência mínima obrigatória: 75%.', ML + 2, y + 8.5);
+    }
+    y += verH + 3;
 
     // OBSERVAÇÃO
-    y += 3;
     _hText(pdf, 'OBSERVAÇÃO:', ML, y, { bold: true, size: 7 });
-    y += 3;
+    y += 4;
+    const fichaEntry = (hist.fichaIndividual || []).length ? hist.fichaIndividual[0] : {};
     const obsText = fichaEntry.observacao || '';
     pdf.setFont('helvetica', 'normal'); pdf.setFontSize(6.5); pdf.setTextColor(10, 10, 10);
     const obsLines = pdf.splitTextToSize(obsText || ' ', UW);
     pdf.text(obsLines.slice(0, 2), ML, y);
     pdf.setDrawColor(180, 180, 180); pdf.setLineWidth(0.2);
-    [0, 4].forEach(dy => pdf.line(ML, y + dy, ML + UW, y + dy));
+    [0, 5].forEach(dy => pdf.line(ML, y + dy, ML + UW, y + dy));
     y += 12;
 
     // sem emendas
     _hText(pdf, 'Neste documento não há emendas nem rasuras.', PW / 2, y, { size: 7, align: 'center', bold: true });
-    y += 8;
+    y += 7;
 
     // data
     _hText(pdf, hist.dataEmissao || '', PW / 2, y, { size: 7, align: 'center' });
-    y += 9;
+    y += 8;
 
-    // assinaturas — centralizadas em 1/4 e 3/4 da largura útil
+    // assinaturas
     const sig1 = cfg?.frente?.assinatura1 || 'SECRETÁRIO(A)';
     const sig2 = cfg?.frente?.assinatura2 || 'DIRETOR(A)';
     const cx1 = ML + UW * 0.25;
@@ -2177,7 +2367,7 @@ function _histVerso(pdf, hist, cfg) {
 
     // RESERVADO PARA AUTENTICAÇÃO — cresce até perto da borda inferior
     const fyBot = PH - 10;
-    const autH = Math.max(28, fyBot - y - 3);
+    const autH = Math.max(isMedio ? 12 : 28, fyBot - y - 3);
     pdf.setDrawColor(0, 40, 120); pdf.setLineWidth(0.5);
     pdf.rect(ML, y, UW, autH, 'S');
     pdf.setFont('helvetica', 'bold'); pdf.setFontSize(8); pdf.setTextColor(0, 40, 120);
@@ -2187,5 +2377,3 @@ function _histVerso(pdf, hist, cfg) {
     _hLine(pdf, ML, fyBot, PW - MR, fyBot, 0.6, [0, 40, 120]);
     _hLine(pdf, ML, fyBot + 1.2, PW - MR, fyBot + 1.2, 0.2, [0, 40, 120]);
 }
-
-function isFundamental(tipo) { return tipo === 'fundamental'; }
