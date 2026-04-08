@@ -1298,8 +1298,64 @@
 
         <!-- Tab: Histórico Escolar -->
         <div class="tab-content" id="historico">
-            <!-- Seção 1: Grades de Disciplinas -->
+
+            <!-- Seção 0: Editor de Cabeçalho do Histórico -->
             <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px;">
+                    <h2>⚙️ Configurações do Histórico Escolar</h2>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <button class="btn btn-secondary btn-sm" onclick="resetarConfigHist()">↺ Restaurar Padrão</button>
+                        <button class="btn btn-primary" onclick="salvarConfigHist()">💾 Salvar Configurações</button>
+                    </div>
+                </div>
+                <p style="color: #6b7280; font-size: 13px; margin-bottom: 16px;">Estes campos aparecem no cabeçalho e rodapé do PDF do Histórico Escolar gerado.</p>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
+                    <div>
+                        <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 4px;">Linha 1 (País)</label>
+                        <input type="text" id="histCfgLinha1" class="form-control" placeholder="REPÚBLICA FEDERATIVA DO BRASIL">
+                    </div>
+                    <div>
+                        <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 4px;">Linha 2 (Estado)</label>
+                        <input type="text" id="histCfgLinha2" class="form-control" placeholder="ESTADO DO PIAUÍ">
+                    </div>
+                    <div>
+                        <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 4px;">Linha 3 (Secretaria)</label>
+                        <input type="text" id="histCfgLinha3" class="form-control" placeholder="SECRETARIA DE ESTADO DA EDUCAÇÃO">
+                    </div>
+                    <div style="grid-column: 1 / -1;">
+                        <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 4px;">Nome do Estabelecimento de Ensino</label>
+                        <input type="text" id="histCfgInstituicao" class="form-control" placeholder="Ex: Centro Estadual de Tempo Integral Desembargador Amaral">
+                    </div>
+                    <div style="grid-column: 1 / -1;">
+                        <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 4px;">Endereço</label>
+                        <input type="text" id="histCfgEndereco" class="form-control" placeholder="Ex: Praça Tiradentes – 96 – Centro – Curimatá – Piauí">
+                    </div>
+                    <div>
+                        <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 4px;">CNPJ</label>
+                        <input type="text" id="histCfgCNPJ" class="form-control" placeholder="00.000.000/0000-00">
+                    </div>
+                    <div>
+                        <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 4px;">INEP</label>
+                        <input type="text" id="histCfgINEP" class="form-control" placeholder="00000000">
+                    </div>
+                    <div>
+                        <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 4px;">Resolução</label>
+                        <input type="text" id="histCfgResolucao" class="form-control" placeholder="Ex: Resolução CEE/PI Nº 123/2025">
+                    </div>
+                    <div>
+                        <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 4px;">Assinatura 1 (esquerda)</label>
+                        <input type="text" id="histCfgAssinatura1" class="form-control" placeholder="SECRETÁRIO(A)">
+                    </div>
+                    <div>
+                        <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 4px;">Assinatura 2 (direita)</label>
+                        <input type="text" id="histCfgAssinatura2" class="form-control" placeholder="DIRETOR(A)">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Seção 1: Grades de Disciplinas -->
+            <div class="card" style="margin-top: 20px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                     <h2>📋 Grades de Disciplinas</h2>
                     <button class="btn btn-primary" onclick="abrirModalNovaGrade()">+ Nova Grade</button>

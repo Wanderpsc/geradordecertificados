@@ -15,9 +15,106 @@ const HIST_STATE = {
 // Inicialização é chamada por navegarParaTab('historico') em app.js
 
 function inicializarHistorico() {
+    carregarConfigHist();
     carregarListaGrades();
     popularSelectAlunos();
     carregarListaHistoricos();
+}
+
+// ==================== CONFIGURAÇÕES DO HISTÓRICO ====================
+
+const HIST_CONFIG_DEFAULTS = {
+    cabecalho: {
+        linha1: 'REPÚBLICA FEDERATIVA DO BRASIL',
+        linha2: 'ESTADO DO PIAUÍ',
+        linha3: 'SECRETARIA DE ESTADO DA EDUCAÇÃO',
+        nomeInstituicao: '',
+        endereco: '',
+        cnpj: '',
+        inep: ''
+    },
+    frente: {
+        resolucao: '',
+        assinatura1: 'SECRETÁRIO(A)',
+        assinatura2: 'DIRETOR(A)'
+    }
+};
+
+function obterConfigHist() {
+    // Lê dos inputs do editor; se não existirem, retorna o salvo no localStorage
+    const saved = JSON.parse(localStorage.getItem('histConfig') || 'null');
+    const el = id => document.getElementById(id);
+    if (!el('histCfgLinha1')) return saved || HIST_CONFIG_DEFAULTS;
+    return {
+        cabecalho: {
+            linha1: el('histCfgLinha1').value.trim() || HIST_CONFIG_DEFAULTS.cabecalho.linha1,
+            linha2: el('histCfgLinha2').value.trim() || HIST_CONFIG_DEFAULTS.cabecalho.linha2,
+            linha3: el('histCfgLinha3').value.trim() || HIST_CONFIG_DEFAULTS.cabecalho.linha3,
+            nomeInstituicao: el('histCfgInstituicao').value.trim(),
+            endereco: el('histCfgEndereco').value.trim(),
+            cnpj: el('histCfgCNPJ').value.trim(),
+            inep: el('histCfgINEP').value.trim()
+        },
+        frente: {
+            resolucao: el('histCfgResolucao').value.trim(),
+            assinatura1: el('histCfgAssinatura1').value.trim() || HIST_CONFIG_DEFAULTS.frente.assinatura1,
+            assinatura2: el('histCfgAssinatura2').value.trim() || HIST_CONFIG_DEFAULTS.frente.assinatura2
+        }
+    };
+}
+
+function _aplicarConfigHistNosInputs(cfg) {
+    const el = id => document.getElementById(id);
+    if (!el('histCfgLinha1')) return;
+    el('histCfgLinha1').value = cfg?.cabecalho?.linha1 || '';
+    el('histCfgLinha2').value = cfg?.cabecalho?.linha2 || '';
+    el('histCfgLinha3').value = cfg?.cabecalho?.linha3 || '';
+    el('histCfgInstituicao').value = cfg?.cabecalho?.nomeInstituicao || '';
+    el('histCfgEndereco').value = cfg?.cabecalho?.endereco || '';
+    el('histCfgCNPJ').value = cfg?.cabecalho?.cnpj || '';
+    el('histCfgINEP').value = cfg?.cabecalho?.inep || '';
+    el('histCfgResolucao').value = cfg?.frente?.resolucao || '';
+    el('histCfgAssinatura1').value = cfg?.frente?.assinatura1 || '';
+    el('histCfgAssinatura2').value = cfg?.frente?.assinatura2 || '';
+}
+
+function carregarConfigHist() {
+    // Tentar carregar do localStorage; se vazio, pré-preencher com valores do certificado (se existirem)
+    let cfg = JSON.parse(localStorage.getItem('histConfig') || 'null');
+    if (!cfg) {
+        // Importar valores do editor de certificados como ponto de partida
+        const certCfg = JSON.parse(localStorage.getItem('certConfig') || 'null');
+        cfg = {
+            cabecalho: {
+                linha1: certCfg?.cabecalho?.linha1 || HIST_CONFIG_DEFAULTS.cabecalho.linha1,
+                linha2: certCfg?.cabecalho?.linha2 || HIST_CONFIG_DEFAULTS.cabecalho.linha2,
+                linha3: certCfg?.cabecalho?.linha3 || HIST_CONFIG_DEFAULTS.cabecalho.linha3,
+                nomeInstituicao: certCfg?.cabecalho?.nomeInstituicao || '',
+                endereco: certCfg?.cabecalho?.endereco || '',
+                cnpj: certCfg?.cnpj || certCfg?.cabecalho?.cnpj || '',
+                inep: certCfg?.inep || certCfg?.cabecalho?.inep || ''
+            },
+            frente: {
+                resolucao: certCfg?.frente?.resolucao || '',
+                assinatura1: HIST_CONFIG_DEFAULTS.frente.assinatura1,
+                assinatura2: HIST_CONFIG_DEFAULTS.frente.assinatura2
+            }
+        };
+    }
+    _aplicarConfigHistNosInputs(cfg);
+}
+
+function salvarConfigHist() {
+    const cfg = obterConfigHist();
+    localStorage.setItem('histConfig', JSON.stringify(cfg));
+    mostrarNotificacao('Configurações do histórico salvas!', 'success');
+}
+
+function resetarConfigHist() {
+    if (!confirm('Restaurar todos os campos para os valores padrão?')) return;
+    localStorage.removeItem('histConfig');
+    _aplicarConfigHistNosInputs(HIST_CONFIG_DEFAULTS);
+    mostrarNotificacao('Configurações restauradas para o padrão.', 'info');
 }
 
 // ==================== GRADES (Templates de Disciplinas) ====================
@@ -1399,7 +1496,7 @@ async function gerarHistoricoPDF() {
 
     mostrarNotificacao(`Gerando ${ids.length} histórico(s)...`, 'info');
     const { jsPDF } = window.jspdf;
-    const cfg = typeof obterConfigCert === 'function' ? obterConfigCert() : null;
+    const cfg = obterConfigHist();
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     let primeiroDoc = true;
     const token = localStorage.getItem('token');
