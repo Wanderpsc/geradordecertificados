@@ -3,10 +3,21 @@ const Pagamento = require('../models/Pagamento');
 const PlanoVenda = require('../models/PlanoVenda');
 const { provisionarLicencaParaPlano } = require('./planoController');
 
+// Extrair mensagem legível de erros do SDK do Mercado Pago
+function mpErrMsg(err) {
+    // SDK v2: err.cause pode ser array de objetos { code, description }
+    if (Array.isArray(err?.cause) && err.cause.length > 0) {
+        return err.cause.map(c => `${c.code}: ${c.description}`).join(' | ');
+    }
+    if (err?.error && err?.message) return `${err.error} — ${err.message}`;
+    if (err?.message && err.message !== '[object Object]') return err.message;
+    try { return JSON.stringify(err); } catch (_) { return String(err); }
+}
+
 // Inicializar cliente MP com access token do .env
 function getMPClient() {
     const token = process.env.MP_ACCESS_TOKEN;
-    if (!token) throw new Error('MP_ACCESS_TOKEN não configurado nas variáveis de ambiente.');
+    if (!token) throw new Error('MP_ACCESS_TOKEN não configurado nas variáveis de ambiente. Configure a variável no painel do Render.');
     return new MercadoPagoConfig({ accessToken: token });
 }
 
@@ -73,8 +84,9 @@ exports.criarPix = async (req, res) => {
             plano: { nome: plano.nome, preco: plano.preco }
         });
     } catch (err) {
-        console.error('Erro ao criar PIX:', err.message);
-        res.status(500).json({ success: false, message: 'Erro ao gerar pagamento PIX.', error: err.message });
+        const detalhe = mpErrMsg(err);
+        console.error('Erro ao criar PIX:', detalhe);
+        res.status(500).json({ success: false, message: 'Erro ao gerar pagamento PIX.', error: detalhe });
     }
 };
 
@@ -158,8 +170,9 @@ exports.criarPixRenovacao = async (req, res) => {
             plano: { nome: plano.nome, preco: plano.preco }
         });
     } catch (err) {
-        console.error('Erro ao criar PIX de renovação:', err.message);
-        res.status(500).json({ success: false, message: 'Erro ao gerar PIX de renovação.', error: err.message });
+        const detalhe = mpErrMsg(err);
+        console.error('Erro ao criar PIX de renovação:', detalhe);
+        res.status(500).json({ success: false, message: 'Erro ao gerar PIX de renovação.', error: detalhe });
     }
 };
 
@@ -241,8 +254,9 @@ exports.criarCheckoutCartao = async (req, res) => {
             plano: { nome: plano.nome, preco: plano.preco, maxParcelas: plano.maxParcelas }
         });
     } catch (err) {
-        console.error('Erro ao criar checkout cartão:', err.message);
-        res.status(500).json({ success: false, message: 'Erro ao criar checkout.', error: err.message });
+        const detalhe = mpErrMsg(err);
+        console.error('Erro ao criar checkout cartão:', detalhe);
+        res.status(500).json({ success: false, message: 'Erro ao criar checkout.', error: detalhe });
     }
 };
 

@@ -399,8 +399,16 @@ async function abrirModalPix(planoId) {
             </div>`;
         iniciarPollingPix(_mpPaymentId);
     } catch (err) {
+        // Tentar mostrar o detalhe real do erro quando disponível
+        const detalheEl = (typeof data !== 'undefined' && data?.error && data.error !== err.message)
+            ? `<details style="margin-top:6px;cursor:pointer"><summary style="font-size:11px;color:#9ca3af">Detalhes técnicos</summary><code style="font-size:10px;word-break:break-all">${data.error}</code></details>`
+            : '';
         document.getElementById('checkoutConteudo').innerHTML +=
-            `<p style="color:#dc2626;text-align:center;margin-top:10px">❌ ${err.message}</p>`;
+            `<div style="text-align:center;margin-top:10px">
+               <p style="color:#dc2626">❌ ${err.message}</p>
+               ${detalheEl}
+               <p style="font-size:11px;color:#6b7280;margin-top:8px">Se o problema persistir, entre em contato com o suporte ou tente novamente em alguns instantes.</p>
+             </div>`;
     }
 }
 
