@@ -1364,6 +1364,8 @@ async function carregarListaHistoricos() {
                 <td style="padding:4px;border:1px solid #e5e7eb;text-align:center;">
                     <button class="btn btn-primary btn-sm" onclick="editarHistorico('${h._id}')"
                         style="font-size:11px;padding:3px 8px;">✏️</button>
+                    <button class="btn btn-secondary btn-sm" onclick="previewHistorico('${h._id}')"
+                        style="font-size:11px;padding:3px 8px;" title="Pré-visualizar">👁️</button>
                     <button class="btn btn-danger btn-sm" onclick="excluirHistorico('${h._id}')"
                         style="font-size:11px;padding:3px 8px;">🗑️</button>
                 </td>
@@ -1532,6 +1534,72 @@ async function carregarFormNotasAsync() {
     } catch (e) {
         mostrarNotificacao('Erro ao carregar grade.', 'error');
     }
+}
+
+// ==================== GERAÇÃO DE PDF ====================
+
+// ==================== PRÉ-VISUALIZAÇÃO ====================
+
+let _histPreviewBlobUrl = null; // guarda a URL atual para abrir em nova página
+
+async function previewHistorico(id) {
+    if (!window.jspdf?.jsPDF) {
+        mostrarNotificacao('Biblioteca jsPDF não carregada. Recarregue a página.', 'error');
+        return;
+    }
+    const token = localStorage.getItem('token');
+    mostrarNotificacao('Gerando pré-visualização...', 'info');
+
+    try {
+        const resp = await fetch(`${API_URL}/historicos/${id}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await resp.json();
+        if (!data.success) { mostrarNotificacao('Histórico não encontrado.', 'error'); return; }
+
+        const hist = data.historico;
+        const cfg = obterConfigHist();
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+        _histFrente(pdf, hist, cfg);
+        pdf.addPage();
+        _histVerso(pdf, hist, cfg);
+
+        // Revogar blob anterior para liberar memória
+        if (_histPreviewBlobUrl) URL.revokeObjectURL(_histPreviewBlobUrl);
+        _histPreviewBlobUrl = URL.createObjectURL(pdf.output('blob'));
+
+        const card = document.getElementById('histPreviewCard');
+        const frame = document.getElementById('histPreviewFrame');
+        const label = document.getElementById('histPreviewNomeAluno');
+
+        if (card) card.style.display = '';
+        if (frame) frame.src = _histPreviewBlobUrl;
+        if (label) label.textContent = `Aluno: ${hist.aluno?.nome || '—'}`;
+
+        setTimeout(() => {
+            if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 200);
+
+        mostrarNotificacao('Pré-visualização pronta!', 'success');
+    } catch (e) {
+        console.error('Erro ao gerar pré-visualização:', e);
+        mostrarNotificacao('Erro ao gerar pré-visualização.', 'error');
+    }
+}
+
+function fecharHistPreview() {
+    const card = document.getElementById('histPreviewCard');
+    const frame = document.getElementById('histPreviewFrame');
+    if (frame) frame.src = '';
+    if (card) card.style.display = 'none';
+    if (_histPreviewBlobUrl) { URL.revokeObjectURL(_histPreviewBlobUrl); _histPreviewBlobUrl = null; }
+}
+
+function abrirHistPreviewNovaPagina() {
+    if (_histPreviewBlobUrl) window.open(_histPreviewBlobUrl, '_blank');
+    else mostrarNotificacao('Gere uma pré-visualização primeiro.', 'error');
 }
 
 // ==================== GERAÇÃO DE PDF ====================

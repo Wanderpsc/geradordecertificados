@@ -1467,6 +1467,24 @@
                     <div style="text-align: center; color: #9ca3af; padding: 30px;">Selecione uma modalidade acima para ver os históricos.</div>
                 </div>
             </div>
+
+            <!-- Seção 4: Pré-visualização do Histórico -->
+            <div class="card" id="histPreviewCard" style="margin-top: 20px; display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px;">
+                    <h2>👁️ Pré-visualização do Histórico</h2>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <button class="btn btn-secondary btn-sm" id="btnHistPreviewNovaPagina" onclick="abrirHistPreviewNovaPagina()">🔗 Ver em página separada</button>
+                        <button class="btn btn-secondary btn-sm" onclick="fecharHistPreview()">✕ Fechar</button>
+                    </div>
+                </div>
+                <p id="histPreviewNomeAluno" style="font-size: 13px; color: #374151; margin-bottom: 12px; font-weight: 600;"></p>
+                <div style="background: #f1f5f9; border-radius: 10px; padding: 12px; overflow: auto;">
+                    <iframe id="histPreviewFrame"
+                        style="width: 100%; min-height: 600px; border: none; border-radius: 6px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); background: white;"
+                        title="Pré-visualização do Histórico Escolar">
+                    </iframe>
+                </div>
+            </div>
         </div>
 
     </div>
