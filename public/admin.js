@@ -1571,10 +1571,10 @@ async function carregarPlanos() {
             <tr>
                 <td>${p.ordem}</td>
                 <td><strong>${p.icone || ''} ${p.nome}</strong><br><small style="color:#6b7280">${p.subtitulo || ''}</small></td>
-                <td><span class="badge ${p.tipo === 'limpo' ? 'badge-info' : 'badge-success'}">${p.tipo === 'limpo' ? 'Limpo' : 'Com Templates'}</span></td>
+                <td><span class="badge ${p.tipo === 'limpo' ? 'badge-info' : p.tipo === 'creditos' ? 'badge-warning' : 'badge-success'}">${p.tipo === 'limpo' ? 'Limpo' : p.tipo === 'creditos' ? '📦 Créditos' : 'Com Templates'}</span></td>
                 <td><strong>R$ ${Number(p.preco).toFixed(2)}</strong></td>
                 <td>${p.maxParcelas}x de R$ ${Number(p.preco / p.maxParcelas).toFixed(2)}</td>
-                <td>${(p.templatesCertificado?.length || 0)} certif. + ${(p.templatesHistorico?.length || 0)} hist.</td>
+                <td style="font-size:12px;line-height:1.6">${p.tipo === 'creditos' ? `+${p.quantidadeCreditos ?? 0} ${p.subtipoCredito === 'historicos' ? 'hist.' : p.subtipoCredito === 'ambos' ? 'cert.+hist.' : 'cert.'}` : (() => { const r = p.recursos || {}; const lc = r.limiteCertificados === -1 ? '∞' : (r.limiteCertificados ?? 0); const lh = r.limiteHistoricos === -1 ? '∞' : (r.limiteHistoricos ?? (r.historicos ? '∞' : '—')); return `Cert: ${lc}<br>Hist: ${lh}<br>Sub: ${r.subUsuarios ?? 0}`; })()}</td>
                 <td>${p.validadeDias} dias</td>
                 <td><span class="badge ${p.ativo ? 'badge-success' : 'badge-danger'}">${p.ativo ? 'Ativo' : 'Inativo'}</span>${p.destaque ? ' <span class="badge badge-warning">⭐ Destaque</span>' : ''}</td>
                 <td>
@@ -1688,6 +1688,9 @@ function abrirModalPlano(plano = null) {
             <div style="display:flex;gap:8px;align-items:center;font-size:13px">
               Limite certif.: <input type="number" id="rLimite" class="form-control" style="width:90px" value="${rec.limiteCertificados ?? -1}" min="-1" title="-1 = ilimitado">
             </div>
+            <div style="display:flex;gap:8px;align-items:center;font-size:13px">
+              Limite hist.: <input type="number" id="rLimiteHist" class="form-control" style="width:90px" value="${rec.limiteHistoricos ?? -1}" min="-1" title="-1 = ilimitado">
+            </div>
           </div>
         </div>
 
@@ -1756,6 +1759,7 @@ async function salvarPlano() {
             marcaDagua: document.getElementById('rMarcaDagua')?.checked ?? false,
             subUsuarios: parseInt(document.getElementById('rSubUsers')?.value) || 0,
             limiteCertificados: parseInt(document.getElementById('rLimite')?.value) ?? -1,
+            limiteHistoricos: parseInt(document.getElementById('rLimiteHist')?.value) ?? -1,
             exportacaoPDF: true,
             templatesCustomizados: true
         }

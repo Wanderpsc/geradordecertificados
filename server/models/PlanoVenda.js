@@ -78,7 +78,8 @@ const planoVendaSchema = new mongoose.Schema({
         exportacaoPDF: { type: Boolean, default: true },
         marcaDagua: { type: Boolean, default: false },    // false = sem marca d'água
         multiplosTemplates: { type: Boolean, default: false },
-        templatesCustomizados: { type: Boolean, default: true }
+        templatesCustomizados: { type: Boolean, default: true },
+        limiteHistoricos: { type: Number, default: -1 }   // -1 = ilimitado
     },
     // Templates padrão enviados junto ao plano
     templatesCertificado: [templatePadraoSchema],
