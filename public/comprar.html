@@ -124,14 +124,33 @@ let _mpPaymentId = null;
 
 // ─── Carregar planos ───
 async function carregarPlanos() {
+    // Aviso de carregamento lento (Render free tier pode demorar ~60s ao acordar)
+    const timer = setTimeout(() => {
+        const g = document.getElementById('gradePlanos');
+        if (g && g.querySelector('.spinner')) {
+            g.innerHTML = `<div style="text-align:center;color:#64748b;padding:20px">
+                <div class="spinner"></div>
+                <p style="margin-top:12px">O servidor está acordando, aguarde mais alguns segundos...</p>
+            </div>`;
+        }
+    }, 8000);
+
     try {
-        const resp = await fetch(`${API_URL}/planos`);
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 90000);
+        const resp = await fetch(`${API_URL}/planos`, { signal: controller.signal });
+        clearTimeout(timeout);
+        clearTimeout(timer);
         const data = await resp.json();
         if (!data.success) throw new Error(data.message);
         renderizarPlanos(data.planos);
     } catch (err) {
+        clearTimeout(timer);
+        const msg = err.name === 'AbortError'
+            ? 'O servidor demorou muito para responder. Atualize a página e tente novamente.'
+            : err.message;
         document.getElementById('gradePlanos').innerHTML =
-            `<p style="color:#dc2626;text-align:center">Erro ao carregar planos: ${err.message}</p>`;
+            `<p style="color:#dc2626;text-align:center;padding:20px">Erro ao carregar planos: ${msg}</p>`;
     }
 }
 
