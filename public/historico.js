@@ -1560,7 +1560,8 @@ async function previewHistorico(id) {
         const hist = data.historico;
         const cfg = obterConfigHist();
         const { jsPDF } = window.jspdf;
-        const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        const orientacao = document.getElementById('histOrientacao')?.value || 'portrait';
+        const pdf = new jsPDF({ orientation: orientacao, unit: 'mm', format: 'a4' });
 
         _histFrente(pdf, hist, cfg);
         pdf.addPage();
@@ -1612,7 +1613,8 @@ async function gerarHistoricoPDF() {
     mostrarNotificacao(`Gerando ${ids.length} histórico(s)...`, 'info');
     const { jsPDF } = window.jspdf;
     const cfg = obterConfigHist();
-    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const orientacao = document.getElementById('histOrientacao')?.value || 'portrait';
+    const pdf = new jsPDF({ orientation: orientacao, unit: 'mm', format: 'a4' });
     let primeiroDoc = true;
     const token = localStorage.getItem('token');
 
@@ -2002,14 +2004,14 @@ function _histFrente(pdf, hist, cfg) {
     _hText(pdf, hist.dataEmissao || '', PW / 2, y, { size: 7, align: 'center' });
     y += 8;
 
-    // assinaturas
+    // assinaturas — centralizadas em ¼ e ¾
     const sig1 = cfg?.frente?.assinatura1 || 'SECRETÁRIO(A)';
     const sig2 = cfg?.frente?.assinatura2 || 'DIRETOR(A)';
-    const sigW2 = UW / 3;
-    [sig1, sig2].forEach((sig, i) => {
-        const cx = ML + i * sigW2 + sigW2 / 2;
+    const cx1f = ML + UW * 0.25;
+    const cx2f = ML + UW * 0.75;
+    [{ cx: cx1f, sig: sig1 }, { cx: cx2f, sig: sig2 }].forEach(({ cx, sig }) => {
         pdf.setLineWidth(0.4); pdf.setDrawColor(0, 0, 0);
-        pdf.line(cx - 26, y, cx + 26, y);
+        pdf.line(cx - 35, y, cx + 35, y);
         _hText(pdf, sig, cx, y + 4, { size: 6.5, align: 'center', bold: true });
     });
 
@@ -2173,14 +2175,15 @@ function _histVerso(pdf, hist, cfg) {
     });
     y += 8;
 
-    // RESERVADO PARA AUTENTICAÇÃO
-    pdf.setDrawColor(0, 40, 120); pdf.setLineWidth(0.4);
-    pdf.rect(ML, y, UW, 28, 'S');
-    pdf.setFont('helvetica', 'bold'); pdf.setFontSize(7.5); pdf.setTextColor(0, 40, 120);
-    pdf.text('RESERVADO PARA AUTENTICAÇÃO', ML + UW / 2, y + 6, { align: 'center' });
+    // RESERVADO PARA AUTENTICAÇÃO — cresce até perto da borda inferior
+    const fyBot = PH - 10;
+    const autH = Math.max(28, fyBot - y - 3);
+    pdf.setDrawColor(0, 40, 120); pdf.setLineWidth(0.5);
+    pdf.rect(ML, y, UW, autH, 'S');
+    pdf.setFont('helvetica', 'bold'); pdf.setFontSize(8); pdf.setTextColor(0, 40, 120);
+    pdf.text('RESERVADO PARA AUTENTICAÇÃO', ML + UW / 2, y + 7, { align: 'center' });
 
     // linha dupla final
-    const fyBot = PH - 8;
     _hLine(pdf, ML, fyBot, PW - MR, fyBot, 0.6, [0, 40, 120]);
     _hLine(pdf, ML, fyBot + 1.2, PW - MR, fyBot + 1.2, 0.2, [0, 40, 120]);
 }

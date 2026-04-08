@@ -1461,7 +1461,13 @@
             <div class="card" style="margin-top: 20px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                     <h2>📄 Históricos Salvos</h2>
-                    <button class="btn btn-primary" onclick="gerarHistoricoPDF()" id="btnGerarHistPDF" disabled>🖨️ Gerar PDF dos Selecionados</button>
+                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                        <select id="histOrientacao" class="form-control" style="font-size:13px;padding:5px 10px;width:auto;">
+                            <option value="portrait">🖨️ Retrato (Portrait)</option>
+                            <option value="landscape">🖨️ Paisagem (Landscape)</option>
+                        </select>
+                        <button class="btn btn-primary" onclick="gerarHistoricoPDF()" id="btnGerarHistPDF" disabled>🖨️ Gerar PDF dos Selecionados</button>
+                    </div>
                 </div>
                 <div id="listaHistoricos" style="overflow-x: auto;">
                     <div style="text-align: center; color: #9ca3af; padding: 30px;">Selecione uma modalidade acima para ver os históricos.</div>
