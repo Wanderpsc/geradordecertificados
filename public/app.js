@@ -288,7 +288,7 @@ function inicializarFormulario() {
 
     btnLimpar.addEventListener('click', () => {
         form.reset();
-        APP_STATE.alunoEditando = null;
+        resetarModoEdicao();
         mostrarNotificacao('Formulário limpo', 'info');
     });
 
@@ -365,11 +365,12 @@ async function cadastrarAluno() {
 
         if (data.success) {
             document.getElementById('formAluno').reset();
-            APP_STATE.alunoEditando = null;
+            resetarModoEdicao();
             aplicarTurmaPadraoNoCadastro();
             await carregarAlunos(); // Recarrega a lista do servidor
             const acao = isEdicao ? 'atualizado' : 'cadastrado';
             mostrarNotificacao(`Aluno ${aluno.nome} ${acao} com sucesso!`, 'success');
+            if (isEdicao) navegarParaTab('lista');
         } else {
             mostrarNotificacao(data.message || 'Erro ao processar aluno', 'error');
         }
@@ -428,6 +429,32 @@ async function carregarAlunos() {
     }
 }
 
+function entrarModoEdicao() {
+    const btn = document.getElementById('btnCadastrarAluno');
+    const btnCancelar = document.getElementById('btnCancelarEdicao');
+    const btnLote = document.getElementById('btnCadastroLoteCadastro');
+    if (btn) { btn.textContent = '💾 Salvar Edição'; btn.classList.add('btn-warning'); btn.classList.remove('btn-primary'); }
+    if (btnCancelar) btnCancelar.style.display = 'inline-block';
+    if (btnLote) btnLote.style.display = 'none';
+}
+
+function resetarModoEdicao() {
+    const btn = document.getElementById('btnCadastrarAluno');
+    const btnCancelar = document.getElementById('btnCancelarEdicao');
+    const btnLote = document.getElementById('btnCadastroLoteCadastro');
+    if (btn) { btn.textContent = '✓ Cadastrar Aluno'; btn.classList.remove('btn-warning'); btn.classList.add('btn-primary'); }
+    if (btnCancelar) btnCancelar.style.display = 'none';
+    if (btnLote) btnLote.style.display = 'inline-block';
+    APP_STATE.alunoEditando = null;
+}
+
+function cancelarEdicao() {
+    document.getElementById('formAluno').reset();
+    resetarModoEdicao();
+    aplicarTurmaPadraoNoCadastro();
+    navegarParaTab('lista');
+}
+
 function editarAluno(id) {
     if (!_temPermissao('editarAlunos')) {
         mostrarNotificacao('Sem permissao para editar alunos.', 'error');
@@ -459,9 +486,10 @@ function editarAluno(id) {
     // Armazenar ID do aluno sendo editado
     APP_STATE.alunoEditando = id;
     
-    // Mudar para a aba de cadastro
-    document.querySelector('[data-tab="cadastro"]').click();
-    mostrarNotificacao('Aluno carregado para edicao. Faca as alteracoes e clique em Cadastrar.', 'info');
+    // Mudar para a aba de cadastro e ativar modo edição
+    navegarParaTab('cadastro');
+    entrarModoEdicao();
+    mostrarNotificacao('Aluno carregado para edicao. Faca as alteracoes e clique em Salvar Edicao.', 'info');
 }
 
 async function excluirAluno(id, mostrarMensagem = true) {
@@ -2870,6 +2898,10 @@ function carregarModeloLocal(chave) {
     aplicarConfigNosInputs(CERT_CONFIG);
     atualizarPreviewCert();
     mostrarNotificacao(`Modelo "${m.nome}" carregado!`, 'success');
+    setTimeout(() => {
+        const preview = document.getElementById('previewContainer');
+        if (preview) preview.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 300);
 }
 
 function excluirModeloLocal(chave) {
@@ -2882,19 +2914,79 @@ function excluirModeloLocal(chave) {
     mostrarNotificacao('Modelo local excluído.', 'success');
 }
 
+function ocultarTemplatePredefinido(key) {
+    const ocultos = JSON.parse(localStorage.getItem('templatesPredefinidosOcultos') || '[]');
+    if (!ocultos.includes(key)) ocultos.push(key);
+    localStorage.setItem('templatesPredefinidosOcultos', JSON.stringify(ocultos));
+    if (APP_STATE.templateSelecionado === key) {
+        APP_STATE.templateSelecionado = 'estadual-pi';
+    }
+    renderizarTemplatesGrid();
+    mostrarNotificacao(`Template "${TEMPLATES[key]?.nome || key}" ocultado.`, 'info');
+}
+
+function restaurarTemplatesOcultos() {
+    localStorage.removeItem('templatesPredefinidosOcultos');
+    renderizarTemplatesGrid();
+    mostrarNotificacao('Todos os templates predefinidos foram restaurados.', 'success');
+}
+
+function importarModeloArquivo(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const dados = JSON.parse(e.target.result);
+            if (!dados.config) {
+                mostrarNotificacao('Arquivo inválido: não contém configuração de modelo.', 'error');
+                return;
+            }
+            const nome = dados.nome || file.name.replace('.json', '').slice(0, 40);
+            const modelos = obterModelosLocais();
+            const chave = 'importado_' + Date.now();
+            modelos[chave] = {
+                nome: nome,
+                config: dados.config,
+                uploads: dados.uploads || {},
+                cor1: dados.config?.cores?.principal || '#1e3a8a',
+                cor2: dados.config?.cores?.secundaria || '#3b82f6',
+                criadoEm: new Date().toISOString()
+            };
+            salvarModelosLocais(modelos);
+            renderizarTemplatesGrid();
+            mostrarNotificacao(`Modelo "${nome}" importado com sucesso!`, 'success');
+        } catch (_) {
+            mostrarNotificacao('Erro ao ler o arquivo. Certifique-se de que é um JSON válido.', 'error');
+        }
+        event.target.value = '';
+    };
+    reader.readAsText(file);
+}
+
 function renderizarTemplatesGrid() {
     const grid = document.getElementById('templatesGrid');
     if (!grid) return;
+    const ocultos = JSON.parse(localStorage.getItem('templatesPredefinidosOcultos') || '[]');
     // Templates predefinidos
-    let html = Object.keys(TEMPLATES).map(key => `
-        <div class="template-card ${key === APP_STATE.templateSelecionado ? 'selected' : ''}" 
-             onclick="selecionarTemplate('${key}')">
-            <div class="template-preview" style="background: linear-gradient(135deg, ${TEMPLATES[key].cor1}, ${TEMPLATES[key].cor2})">
+    let html = Object.keys(TEMPLATES).filter(k => !ocultos.includes(k)).map(key => `
+        <div class="template-card ${key === APP_STATE.templateSelecionado ? 'selected' : ''}" style="position: relative;">
+            <button title="Ocultar template" onclick="event.stopPropagation(); ocultarTemplatePredefinido('${key}')"
+                style="position:absolute; top:4px; right:4px; background:#fee2e2; border:none; border-radius:50%; width:22px; height:22px; cursor:pointer; font-size:12px; line-height:1; color:#dc2626; z-index:1; display:flex; align-items:center; justify-content:center;">✕</button>
+            <div class="template-preview" style="background: linear-gradient(135deg, ${TEMPLATES[key].cor1}, ${TEMPLATES[key].cor2}); cursor: pointer;"
+                 onclick="selecionarTemplate('${key}')">
                 📜
             </div>
-            <div class="template-name">${TEMPLATES[key].nome}</div>
+            <div class="template-name" onclick="selecionarTemplate('${key}')" style="cursor:pointer;">${TEMPLATES[key].nome}</div>
         </div>
     `).join('');
+    if (ocultos.length) {
+        html += `<div style="display:flex; align-items:center; justify-content:center; grid-column:1/-1; margin-top:8px;">
+            <button onclick="restaurarTemplatesOcultos()" style="background:#eff6ff; border:1px solid #93c5fd; border-radius:8px; padding:6px 16px; font-size:13px; color:#1e3a8a; cursor:pointer;">
+                ↺ Restaurar ${ocultos.length} template(s) oculto(s)
+            </button>
+        </div>`;
+    }
     // Templates locais salvos
     const locais = obterModelosLocais();
     const chaves = Object.keys(locais);
@@ -2981,6 +3073,11 @@ function selecionarTemplate(key) {
     atualizarTemplateInfo();
     atualizarPreviewCert();
     mostrarNotificacao(`Template "${TEMPLATES[key].nome}" selecionado`, 'success');
+    // Rolar para a pré-visualização
+    setTimeout(() => {
+        const preview = document.getElementById('previewContainer');
+        if (preview) preview.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 300);
 }
 
 function atualizarTemplateInfo() {

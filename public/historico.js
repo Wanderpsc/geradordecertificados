@@ -1218,6 +1218,8 @@ async function carregarListaHistoricos() {
                 <td style="padding:6px 10px;border:1px solid #e5e7eb;font-size:12px;">${escapeHtml(h.grade?.nome||'—')}</td>
                 <td style="padding:6px 10px;border:1px solid #e5e7eb;text-align:center;font-size:12px;">${dt}</td>
                 <td style="padding:4px;border:1px solid #e5e7eb;text-align:center;">
+                    <button class="btn btn-primary btn-sm" onclick="editarHistorico('${h._id}')"
+                        style="font-size:11px;padding:3px 8px;">✏️</button>
                     <button class="btn btn-danger btn-sm" onclick="excluirHistorico('${h._id}')"
                         style="font-size:11px;padding:3px 8px;">🗑️</button>
                 </td>
@@ -1271,6 +1273,120 @@ async function excluirHistorico(id) {
         }
     } catch (e) {
         mostrarNotificacao('Erro de conexão.', 'error');
+    }
+}
+
+async function editarHistorico(id) {
+    const token = localStorage.getItem('token');
+    mostrarNotificacao('Carregando histórico para edição...', 'info');
+    try {
+        const resp = await fetch(`${API_URL}/historicos/${id}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await resp.json();
+        if (!data.success) { mostrarNotificacao(data.message || 'Erro ao carregar histórico.', 'error'); return; }
+
+        const hist = data.historico;
+        HIST_STATE.historicoAtual = hist;
+
+        // 1. Definir modalidade e carregar grades do tipo correto
+        const selTipo = document.getElementById('histTipo');
+        if (selTipo) selTipo.value = hist.tipo;
+
+        // 2. Carregar grades e depois selecionar a grade correta
+        await carregarGradesParaNotasAsync(hist.tipo);
+
+        const selGrade = document.getElementById('histGrade');
+        if (selGrade) selGrade.value = hist.grade?._id || hist.grade;
+
+        // 3. Carregar o form de notas com a grade selecionada
+        await carregarFormNotasAsync();
+
+        // 4. Preencher notas existentes
+        if (HIST_STATE.gradeAtual) {
+            renderizarTabelaNotas(HIST_STATE.gradeAtual, hist.notas || {});
+        }
+
+        // 5. Restaurar campos extras
+        const reg = document.getElementById('histRegistro');
+        if (reg) reg.value = hist.registro || '';
+        const emissao = document.getElementById('histDataEmissao');
+        if (emissao) emissao.value = hist.dataEmissao || '';
+        const obs = document.getElementById('histObservacoes');
+        if (obs) obs.value = hist.observacoes || '';
+
+        // 6. Selecionar aluno na barra de seleção
+        const aluno = hist.aluno || {};
+        const hiddenInput = document.getElementById('histAluno');
+        if (hiddenInput) hiddenInput.value = aluno._id || aluno;
+        const infoBar = document.getElementById('alunoHistoricoSelecionado');
+        const nomeEl = document.getElementById('alunoHistoricoNome');
+        if (infoBar && nomeEl) {
+            nomeEl.textContent = aluno.nome || 'Aluno';
+            infoBar.style.display = 'flex';
+        }
+        filtrarListaAlunosHistorico();
+
+        // 7. Mostrar form e navegar
+        const formNotas = document.getElementById('formNotas');
+        if (formNotas) formNotas.style.display = 'block';
+
+        // Ir para a aba histórico e rolar até o form de notas
+        navegarParaTab('historico');
+        setTimeout(() => {
+            formNotas?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 200);
+
+        mostrarNotificacao(`Editando histórico de ${aluno.nome || 'aluno'}. Faça as alterações e clique em "Salvar Notas".`, 'success');
+    } catch (e) {
+        console.error('Erro ao editar histórico:', e);
+        mostrarNotificacao('Erro de conexão.', 'error');
+    }
+}
+
+// Versão assíncrona de carregarGradesParaNotas que resolve quando termina
+async function carregarGradesParaNotasAsync(tipo) {
+    const sel = document.getElementById('histGrade');
+    if (sel) sel.innerHTML = '<option value="">Carregando...</option>';
+    document.getElementById('formNotas').style.display = 'none';
+    carregarListaHistoricos();
+    if (!tipo) { if (sel) sel.innerHTML = '<option value="">Selecione a modalidade...</option>'; return; }
+    const token = localStorage.getItem('token');
+    try {
+        const resp = await fetch(`${API_URL}/historicos/grades?tipo=${tipo}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await resp.json();
+        if (data.success && data.grades.length) {
+            sel.innerHTML = '<option value="">Selecione a grade...</option>';
+            data.grades.forEach(g => {
+                sel.innerHTML += `<option value="${g._id}">${escapeHtml(g.nome)} (${g.disciplinas.length} disc.)</option>`;
+            });
+        } else {
+            sel.innerHTML = '<option value="">Nenhuma grade para esta modalidade</option>';
+        }
+    } catch (e) {
+        sel.innerHTML = '<option value="">Erro ao carregar</option>';
+    }
+}
+
+// Versão assíncrona de carregarFormNotas que resolve quando termina
+async function carregarFormNotasAsync() {
+    const gradeId = document.getElementById('histGrade').value;
+    const container = document.getElementById('formNotas');
+    if (!gradeId) { container.style.display = 'none'; return; }
+    const token = localStorage.getItem('token');
+    try {
+        const resp = await fetch(`${API_URL}/historicos/grades/${gradeId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await resp.json();
+        if (!data.success) return;
+        HIST_STATE.gradeAtual = data.grade;
+        renderizarTabelaNotas(data.grade, {});
+        container.style.display = 'block';
+    } catch (e) {
+        mostrarNotificacao('Erro ao carregar grade.', 'error');
     }
 }
 

@@ -226,7 +226,8 @@
                     </div>
 
                     <div class="form-actions">
-                        <button type="submit" class="btn btn-primary">✓ Cadastrar Aluno</button>
+                        <button type="submit" class="btn btn-primary" id="btnCadastrarAluno">✓ Cadastrar Aluno</button>
+                        <button type="button" class="btn btn-danger" id="btnCancelarEdicao" style="display:none;" onclick="cancelarEdicao()">✗ Cancelar</button>
                         <button type="button" class="btn btn-success" id="btnCadastroLoteCadastro">📋 Cadastro em Lote</button>
                         <button type="button" class="btn btn-secondary" id="btnLimpar">✗ Limpar Campos</button>
                     </div>
@@ -281,8 +282,14 @@
 
             <!-- Modelos Predefinidos -->
             <div class="card" style="margin-top: 20px;">
-                <h2>🎨 Modelos Base</h2>
-                <p style="margin-bottom: 15px; color: #6b7280;">Selecione um modelo base para começar a personalizar</p>
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 15px;">
+                    <h2>🎨 Modelos Base</h2>
+                    <label class="btn btn-success btn-sm" style="cursor: pointer; margin: 0;">
+                        📤 Importar Modelo (.json)
+                        <input type="file" id="inputImportarModelo" accept=".json" style="display: none;" onchange="importarModeloArquivo(event)">
+                    </label>
+                </div>
+                <p style="margin-bottom: 15px; color: #6b7280;">Clique em um modelo para carregá-lo na Pré-visualização abaixo e começar a personalizar.</p>
                 
                 <div class="templates-grid" id="templatesGrid">
                     <!-- Templates serão carregados aqui -->
@@ -1307,41 +1314,43 @@
             <div class="card" style="margin-top: 20px;">
                 <h2>📝 Lançar Notas do Histórico</h2>
                 <p style="color: #6b7280; font-size: 13px; margin-bottom: 15px;">Selecione um aluno e a grade para lançar as notas de cada disciplina por série/ano.</p>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
-                    <div>
-                        <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 4px;">Modalidade</label>
-                        <select id="histTipo" class="form-control" onchange="carregarGradesParaNotas()">
+
+                <!-- Barra de filtros unificada -->
+                <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 12px;">
+                    <div style="flex: 0 0 auto; min-width: 160px;">
+                        <label style="font-weight: 600; font-size: 12px; display: block; margin-bottom: 3px; color: #374151;">Modalidade</label>
+                        <select id="histTipo" class="form-control" style="font-size: 13px;" onchange="carregarGradesParaNotas()">
                             <option value="">Selecione...</option>
                             <option value="medio">Ensino Médio</option>
                             <option value="fundamental">Ensino Fundamental</option>
                         </select>
                     </div>
-                    <div>
-                        <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 4px;">Grade</label>
-                        <select id="histGrade" class="form-control" onchange="carregarFormNotas()">
-                            <option value="">Selecione a modalidade primeiro...</option>
+                    <div style="flex: 1 1 180px; min-width: 160px;">
+                        <label style="font-weight: 600; font-size: 12px; display: block; margin-bottom: 3px; color: #374151;">Grade</label>
+                        <select id="histGrade" class="form-control" style="font-size: 13px;" onchange="carregarFormNotas()">
+                            <option value="">Selecione a modalidade...</option>
                         </select>
+                    </div>
+                    <div style="flex: 1 1 160px; min-width: 140px;">
+                        <label style="font-weight: 600; font-size: 12px; display: block; margin-bottom: 3px; color: #374151;">Série</label>
+                        <select id="histFiltroSerie" class="form-control" style="font-size: 13px;" onchange="aoMudarSerieHistorico()">
+                            <option value="">Todas as séries</option>
+                        </select>
+                    </div>
+                    <div style="flex: 0 0 auto; min-width: 120px;">
+                        <label style="font-weight: 600; font-size: 12px; display: block; margin-bottom: 3px; color: #374151;">Turma</label>
+                        <select id="histFiltroTurma" class="form-control" style="font-size: 13px;" onchange="aoMudarTurmaHistorico()">
+                            <option value="">Todas</option>
+                        </select>
+                    </div>
+                    <div style="flex: 1 1 160px; min-width: 150px;">
+                        <label style="font-weight: 600; font-size: 12px; display: block; margin-bottom: 3px; color: #374151;">Buscar por nome</label>
+                        <input id="histBuscarAluno" type="text" class="form-control" style="font-size: 13px;" placeholder="🔍 Nome do aluno..." oninput="filtrarListaAlunosHistorico()">
                     </div>
                 </div>
 
-                <!-- Seleção de Aluno com filtros -->
-                <div style="border: 1px solid #e5e7eb; border-radius: 10px; padding: 12px; background: #f8fafc; margin-bottom: 15px;">
-                    <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 8px; color: #1e3a8a;">👤 Aluno</label>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 8px;">
-                        <div>
-                            <select id="histFiltroSerie" class="form-control" style="font-size: 12px;" onchange="aoMudarSerieHistorico()">
-                                <option value="">Todas as séries</option>
-                            </select>
-                        </div>
-                        <div>
-                            <select id="histFiltroTurma" class="form-control" style="font-size: 12px;" onchange="aoMudarTurmaHistorico()">
-                                <option value="">Todas as turmas</option>
-                            </select>
-                        </div>
-                        <div>
-                            <input id="histBuscarAluno" type="text" class="form-control" style="font-size: 12px;" placeholder="🔍 Buscar por nome..." oninput="filtrarListaAlunosHistorico()">
-                        </div>
-                    </div>
+                <!-- Lista de alunos -->
+                <div style="border: 1px solid #e5e7eb; border-radius: 10px; background: #f8fafc; padding: 10px;">
                     <div id="listaAlunosHistorico" style="border: 1px solid #e5e7eb; border-radius: 8px; max-height: 220px; overflow-y: auto; background: white;">
                         <div style="text-align: center; color: #9ca3af; padding: 20px; font-size: 13px;">Nenhum aluno cadastrado.</div>
                     </div>
