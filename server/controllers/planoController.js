@@ -2,6 +2,7 @@ const PlanoVenda = require('../models/PlanoVenda');
 const Licenca = require('../models/Licenca');
 const Usuario = require('../models/Usuario');
 const Modelo = require('../models/Modelo');
+const { enviarConfirmacaoPagamento, enviarNotificacaoVenda } = require('../services/emailService');
 
 // ─────────────────────────── ADMIN: CRUD DE PLANOS ────────────────────────────
 
@@ -130,7 +131,7 @@ exports.obterPlano = async (req, res) => {
 // ─────────────────── PROVISIONAR LICENÇA APÓS PAGAMENTO ──────────────────────
 
 // Chamado internamente após confirmação de pagamento
-exports.provisionarLicencaParaPlano = async (planoId, usuarioId) => {
+exports.provisionarLicencaParaPlano = async (planoId, usuarioId, metodo = 'desconhecido') => {
     const plano = await PlanoVenda.findById(planoId);
     if (!plano) throw new Error('Plano não encontrado para provisionamento.');
     const usuario = await Usuario.findById(usuarioId);
@@ -176,6 +177,29 @@ exports.provisionarLicencaParaPlano = async (planoId, usuarioId) => {
             ativo: true
         })));
     }
+
+    // Enviar emails de confirmação (sem bloquear)
+    setImmediate(async () => {
+        try {
+            await enviarConfirmacaoPagamento({
+                nome: usuario.nome || usuario.email,
+                email: usuario.email,
+                plano: plano.nome,
+                valor: plano.preco,
+                metodo,
+                expiracao: dataExpiracao
+            });
+            await enviarNotificacaoVenda({
+                compradorNome: usuario.nome || usuario.email,
+                compradorEmail: usuario.email,
+                plano: plano.nome,
+                valor: plano.preco,
+                metodo
+            });
+        } catch (emailErr) {
+            console.error('Erro ao enviar emails de venda:', emailErr.message);
+        }
+    });
 
     return licenca;
 };

@@ -56,6 +56,12 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4ff;color:#1e293b;mi
 /* ─── Login gate ─── */
 .gate{text-align:center;padding:20px;background:#fef9c3;border-radius:12px;margin-bottom:16px;font-size:14px}
 .gate a{color:#1e40af;font-weight:700}
+/* ─── Barra de usuário ─── */
+.user-bar{background:#1e3a8a;color:#fff;padding:10px 24px;display:flex;align-items:center;justify-content:space-between;font-size:13.5px;gap:12px;flex-wrap:wrap}
+.user-bar .lic-ok{background:#16a34a;color:#fff;padding:4px 12px;border-radius:20px;font-weight:700;font-size:12px}
+.user-bar .lic-no{background:#dc2626;color:#fff;padding:4px 12px;border-radius:20px;font-weight:700;font-size:12px}
+.user-bar a{color:#93c5fd;font-size:12px}
+.aviso-lic{background:#f0fdf4;border:2px solid #86efac;color:#166534;padding:16px 20px;margin:0 auto 16px;max-width:760px;border-radius:12px;text-align:center;font-weight:600;font-size:14px}
 /* ─── Rodapé ─── */
 footer{text-align:center;padding:32px;color:#94a3b8;font-size:13px}
 .spinner{width:22px;height:22px;border:3px solid #e0e7ff;border-top-color:#1e40af;border-radius:50%;animation:spin .7s linear infinite;margin:20px auto}
@@ -71,6 +77,10 @@ footer{text-align:center;padding:32px;color:#94a3b8;font-size:13px}
     <p>Comece sem templates e crie do zero — ou adquira modelos prontos adaptáveis à sua escola.</p>
   </div>
 </div>
+
+<!-- Barra de usuário logado -->
+<div id="userBar" class="user-bar" style="display:none"></div>
+<div id="avisoLicenca" class="aviso-lic" style="display:none"></div>
 
 <!-- Banner de resultado de pagamento -->
 <div id="statusBanner" class="status-banner" style="display:none;margin-top:24px"></div>
@@ -233,7 +243,7 @@ function abrirModalLogin() {
         <div class="gate">
             <p>Para comprar, você precisa estar <strong>logado</strong> no sistema.</p>
             <br>
-            <a href="/login.html" class="btn-card" style="display:inline-block;padding:10px 24px;border-radius:8px;color:#fff;text-decoration:none;font-weight:700">Fazer Login / Criar Conta</a>
+            <a href="/login.html?returnTo=/comprar.html" class="btn-card" style="display:inline-block;padding:10px 24px;border-radius:8px;color:#fff;text-decoration:none;font-weight:700">Fazer Login / Criar Conta</a>
         </div>`;
     document.getElementById('backdrop').classList.add('open');
 }
@@ -366,6 +376,56 @@ function fecharCheckout() {
 document.getElementById('backdrop').addEventListener('click', e => {
     if (e.target === document.getElementById('backdrop')) fecharCheckout();
 });
+
+// ─── Detectar usuário logado ───
+(function detectarUsuario() {
+    const usuarioStr = localStorage.getItem('usuario');
+    const token = localStorage.getItem('token');
+    if (!usuarioStr || !token) return;
+
+    const u = JSON.parse(usuarioStr);
+    const bar = document.getElementById('userBar');
+    bar.style.display = 'flex';
+    bar.innerHTML = `
+        <span>👤 Olá, <strong>${u.nome || u.email}</strong> — ${u.instituicao || ''}</span>
+        <span style="display:flex;gap:10px;align-items:center">
+            <span id="badgeLicenca">⏳ Verificando licença...</span>
+            <a href="/index.html">Ir para o sistema →</a>
+            <a href="#" onclick="logout()" style="color:#fca5a5">Sair</a>
+        </span>`;
+
+    // Verificar licença ativa no servidor
+    fetch(`${API_URL}/auth/me`, { headers: { 'Authorization': `Bearer ${token}` } })
+        .then(r => r.json())
+        .then(data => {
+            const badge = document.getElementById('badgeLicenca');
+            if (!badge) return;
+            const lic = data.licenca || data.usuario?.licenca;
+            if (lic && lic.status === 'ativa') {
+                const expira = lic.dataExpiracao ? new Date(lic.dataExpiracao).toLocaleDateString('pt-BR') : '—';
+                badge.className = 'lic-ok';
+                badge.textContent = `✅ Licença ativa até ${expira}`;
+                // Mostrar aviso de que já tem licença ativa
+                const aviso = document.getElementById('avisoLicenca');
+                aviso.style.display = 'block';
+                aviso.innerHTML = `✅ Você já possui licença ativa (${lic.tipo || ''} — válida até ${expira}). Adquirir um novo plano irá renovar/substituir sua licença atual.`;
+            } else {
+                badge.className = 'lic-no';
+                badge.textContent = '⚠️ Sem licença ativa';
+            }
+        })
+        .catch(() => {
+            const badge = document.getElementById('badgeLicenca');
+            if (badge) badge.textContent = '';
+        });
+})();
+
+function logout() {
+    localStorage.removeItem('token');
+    localStorage.removeItem('usuario');
+    localStorage.removeItem('licenca');
+    location.reload();
+}
 
 carregarPlanos();
 </script>

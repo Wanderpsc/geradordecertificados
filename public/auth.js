@@ -69,8 +69,10 @@ document.getElementById('formLogin').addEventListener('submit', async (e) => {
             }
             showSuccess('Login realizado com sucesso!');
             setTimeout(() => {
-                // Redirecionar baseado no role
-                if (data.usuario.role === 'admin') {
+                const returnTo = new URLSearchParams(location.search).get('returnTo');
+                if (returnTo && returnTo.startsWith('/')) {
+                    window.location.href = returnTo;
+                } else if (data.usuario.role === 'admin') {
                     window.location.href = 'admin.html';
                 } else {
                     window.location.href = 'index.html';
@@ -134,7 +136,12 @@ document.getElementById('formRegister').addEventListener('submit', async (e) => 
             }
             showSuccess('Conta criada com sucesso! Redirecionando...');
             setTimeout(() => {
-                window.location.href = 'index.html';
+                const returnTo = new URLSearchParams(location.search).get('returnTo');
+                if (returnTo && returnTo.startsWith('/')) {
+                    window.location.href = returnTo;
+                } else {
+                    window.location.href = 'index.html';
+                }
             }, 1500);
         } else {
             showError(data.message || 'Erro ao criar conta');
@@ -151,8 +158,10 @@ const token = localStorage.getItem('token');
 const usuarioLogado = localStorage.getItem('usuario');
 if (token && usuarioLogado) {
     const usuario = JSON.parse(usuarioLogado);
-    // Redirecionar baseado no role
-    if (usuario.role === 'admin') {
+    const returnTo = new URLSearchParams(location.search).get('returnTo');
+    if (returnTo && returnTo.startsWith('/')) {
+        window.location.href = returnTo;
+    } else if (usuario.role === 'admin') {
         window.location.href = 'admin.html';
     } else {
         window.location.href = 'index.html';

@@ -3,6 +3,7 @@ const SubUsuario = require('../models/SubUsuario');
 const Licenca = require('../models/Licenca');
 const jwt = require('jsonwebtoken');
 const { logLogin, logRegistro } = require('../middlewares/logger');
+const { enviarBoasVindas } = require('../services/emailService');
 
 // Gerar JWT Token
 const gerarToken = (id, tipo = 'usuario') => {
@@ -85,6 +86,9 @@ exports.registrar = async (req, res) => {
 
         // Log de registro
         await logRegistro(req, usuario);
+
+        // Email de boas-vindas (sem bloquear resposta)
+        setImmediate(() => enviarBoasVindas({ nome: usuario.nome, email: usuario.email, instituicao: usuario.instituicao }).catch(() => {}));
 
         const token = gerarToken(usuario._id);
 

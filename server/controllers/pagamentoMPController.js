@@ -198,7 +198,8 @@ exports.webhook = async (req, res) => {
         );
 
         // Provisionar licença e templates
-        await provisionarLicencaParaPlano(planoId, usuarioId);
+        const metodo = mpPayment.payment_method_id === 'pix' ? 'pix' : 'cartao_credito';
+        await provisionarLicencaParaPlano(planoId, usuarioId, metodo);
 
         console.log(`✅ Pagamento ${mpPaymentId} aprovado → licença provisionada para usuário ${usuarioId}`);
     } catch (err) {
@@ -224,7 +225,7 @@ exports.verificarStatusPix = async (req, res) => {
             const pgto = await Pagamento.findOne({ codigoTransacao: String(req.params.mpPaymentId) });
             if (pgto && pgto.status !== 'aprovado') {
                 await Pagamento.findByIdAndUpdate(pgto._id, { status: 'aprovado', dataPagamento: new Date() });
-                await provisionarLicencaParaPlano(planoId, usuarioId);
+                await provisionarLicencaParaPlano(planoId, usuarioId, 'pix');
             }
         }
 
