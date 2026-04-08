@@ -2852,11 +2852,41 @@ function gerarModeloPreview() {
     };
 
     const cfg = obterConfigCert();
-    // Salvar config temporariamente
     CERT_CONFIG = cfg;
 
-    gerarCertificado(alunoFicticio);
-    mostrarNotificacao('PDF gerado com dados fictícios para pré-visualização!', 'info');
+    // Gerar PDF e abrir em nova aba SEM fazer download automático
+    _gerarModeloPreviewNovaPagina(alunoFicticio);
+}
+
+async function _gerarModeloPreviewNovaPagina(aluno) {
+    if (!window.jspdf || !window.jspdf.jsPDF) {
+        mostrarNotificacao('Biblioteca jsPDF não carregada. Recarregue a página.', 'error');
+        return;
+    }
+    try {
+        const { jsPDF } = window.jspdf;
+        CERT_CONFIG = obterConfigCert();
+        const cfg = CERT_CONFIG;
+        const orientacao = cfg.margens.orientacao || 'landscape';
+        const pdf = new jsPDF({ orientation: orientacao, unit: 'mm', format: 'a4' });
+
+        if (!CERT_UPLOADS.bordaVertical && !CERT_UPLOADS._bordaVFromH) {
+            const bordaH = CERT_UPLOADS.bordaHorizontal || (typeof BORDA_HORIZONTAL !== 'undefined' ? BORDA_HORIZONTAL : null);
+            if (bordaH) CERT_UPLOADS._bordaVFromH = await _rotateImageForBorder(bordaH);
+        }
+
+        await gerarFrenteCertificado(pdf, aluno, cfg);
+        pdf.addPage();
+        gerarVersoCertificado(pdf, aluno, cfg);
+
+        // Apenas abre em nova aba, sem download automático
+        const pdfUrl = URL.createObjectURL(pdf.output('blob'));
+        window.open(pdfUrl, '_blank');
+        mostrarNotificacao('Modelo aberto em nova aba com dados fictícios.', 'info');
+    } catch (e) {
+        console.error('Erro ao abrir modelo:', e);
+        mostrarNotificacao('Erro ao gerar modelo: ' + e.message, 'error');
+    }
 }
 
 // ==================== TEMPLATES ====================

@@ -947,10 +947,10 @@
                     <div style="display: flex; gap: 10px;">
                         <button class="btn btn-secondary" onclick="alternarPreviewLado()">🔄 Frente / Verso</button>
                         <button id="btnEditarPreview" class="btn btn-secondary" onclick="toggleEditarPreview()">✏️ Editar</button>
-                        <button class="btn btn-primary" onclick="gerarModeloPreview()">📄 Gerar PDF do Modelo</button>
+                        <button class="btn btn-secondary" onclick="gerarModeloPreview()" title="Abre o modelo como PDF em uma nova aba">🔗 Ver em página separada</button>
                     </div>
                 </div>
-                <p style="margin-bottom: 10px; color: #6b7280; font-size: 13px;">Visualização aproximada com dados fictícios. Clique em "✏️ Editar" para editar textos diretamente na imagem.</p>
+                <p style="margin-bottom: 10px; color: #6b7280; font-size: 13px;">Clique em qualquer modelo acima para atualizar esta pré-visualização. Use "🔗 Ver em página separada" para abrir como PDF completo em nova aba.</p>
 
                 <div id="previewContainer" style="position: relative; display: flex; justify-content: center; background: #f1f5f9; border-radius: 12px; padding: 20px; min-height: 300px; overflow: auto;">
                     <canvas id="previewCanvas" style="max-width: 100%; box-shadow: 0 4px 20px rgba(0,0,0,0.15); border-radius: 4px;"></canvas>
