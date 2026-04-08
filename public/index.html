@@ -1229,69 +1229,15 @@
                     </div>
                 </div>
 
-                <!-- Planos Disponíveis -->
-                <div style="margin-top: 40px;">
-                    <h3 style="color: #1e3a8a; margin-bottom: 20px; text-align: center;">💎 Escolha seu Plano</h3>
-                    <p style="text-align: center; color: #6b7280; margin-bottom: 30px;">Renove ou faça upgrade para continuar gerando certificados</p>
-                    
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
-                        <!-- Plano Trial -->
-                        <div style="border: 2px solid #10b981; border-radius: 12px; padding: 20px; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);">
-                            <div style="text-align: center;">
-                                <div style="font-size: 36px; margin-bottom: 10px;">🎁</div>
-                                <h3 style="color: #059669; margin-bottom: 8px; font-size: 20px;">Trial Gratuito</h3>
-                                <div style="font-size: 28px; font-weight: bold; color: #047857; margin-bottom: 5px;">GRÁTIS</div>
-                                <div style="color: #6b7280; font-size: 13px; margin-bottom: 15px;">7 dias</div>
-                            </div>
-                            <ul style="list-style: none; padding: 0; margin: 15px 0; font-size: 14px;">
-                                <li style="padding: 6px 0; color: #374151;">✅ 10 certificados</li>
-                                <li style="padding: 6px 0; color: #374151;">✅ Todos os templates</li>
-                                <li style="padding: 6px 0; color: #374151;">✅ Sem compromisso</li>
-                            </ul>
-                            <div style="text-align: center; margin-top: 15px; padding: 10px; background: #d1fae5; border-radius: 8px; font-size: 13px; color: #065f46;">
-                                <strong id="badge-trial">Seu plano atual</strong>
-                            </div>
-                        </div>
-
-                        <!-- Plano Pagar por Certificado -->
-                        <div style="border: 2px solid #3b82f6; border-radius: 12px; padding: 20px; background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); position: relative;">
-                            <div style="position: absolute; top: -10px; right: 15px; background: #ef4444; color: white; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: bold;">RECOMENDADO</div>
-                            <div style="text-align: center;">
-                                <div style="font-size: 36px; margin-bottom: 10px;">📜</div>
-                                <h3 style="color: #1e40af; margin-bottom: 8px; font-size: 20px;">Pagar por Certificado</h3>
-                                <div style="font-size: 28px; font-weight: bold; color: #1e3a8a; margin-bottom: 5px;">R$ 10,00</div>
-                                <div style="color: #6b7280; font-size: 13px; margin-bottom: 15px;">por certificado</div>
-                            </div>
-                            <ul style="list-style: none; padding: 0; margin: 15px 0; font-size: 14px;">
-                                <li style="padding: 6px 0; color: #374151;">✅ Pague apenas quando usar</li>
-                                <li style="padding: 6px 0; color: #374151;">✅ Sem mensalidade</li>
-                                <li style="padding: 6px 0; color: #374151;">✅ Pagamento via Pix</li>
-                                <li style="padding: 6px 0; color: #374151;">✅ Créditos nunca expiram</li>
-                            </ul>
-                            <button onclick="selecionarPlano('pay-per-certificate')" style="width: 100%; padding: 12px; font-size: 15px; border-radius: 8px; background: #3b82f6; color: white; border: none; cursor: pointer; font-weight: bold;">
-                                💰 Comprar Créditos
-                            </button>
-                        </div>
-
-                        <!-- Plano Mensal -->
-                        <div style="border: 2px solid #8b5cf6; border-radius: 12px; padding: 20px; background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);">
-                            <div style="text-align: center;">
-                                <div style="font-size: 36px; margin-bottom: 10px;">⚡</div>
-                                <h3 style="color: #7c3aed; margin-bottom: 8px; font-size: 20px;">Plano Ilimitado</h3>
-                                <div style="font-size: 28px; font-weight: bold; color: #6d28d9; margin-bottom: 5px;">R$ 199,90</div>
-                                <div style="color: #6b7280; font-size: 13px; margin-bottom: 15px;">por mês</div>
-                            </div>
-                            <ul style="list-style: none; padding: 0; margin: 15px 0; font-size: 14px;">
-                                <li style="padding: 6px 0; color: #374151;">✅ Certificados ilimitados</li>
-                                <li style="padding: 6px 0; color: #374151;">✅ Templates personalizados</li>
-                                <li style="padding: 6px 0; color: #374151;">✅ Suporte prioritário</li>
-                                <li style="padding: 6px 0; color: #374151;">✅ Históricos escolares</li>
-                            </ul>
-                            <button onclick="selecionarPlano('mensal')" style="width: 100%; padding: 12px; font-size: 15px; border-radius: 8px; background: #8b5cf6; color: white; border: none; cursor: pointer; font-weight: bold;">
-                                📞 Contratar
-                            </button>
-                        </div>
-                    </div>
+                <!-- Planos Disponíveis → vitrine real -->
+                <div style="margin-top: 40px; text-align: center;">
+                    <h3 style="color: #1e3a8a; margin-bottom: 12px;">💎 Renovar ou Adquirir um Plano</h3>
+                    <p style="color: #6b7280; margin-bottom: 24px;">Acesse a vitrine de planos para escolher o melhor para sua escola e pagar via PIX ou cartão parcelado.</p>
+                    <a href="/comprar.html" target="_blank"
+                       style="display: inline-block; padding: 16px 40px; background: linear-gradient(135deg,#1e40af,#3b82f6); color: white; border-radius: 12px; font-size: 17px; font-weight: 700; text-decoration: none; box-shadow: 0 4px 16px rgba(30,64,175,.3);">
+                        🛒 Ver Planos e Preços
+                    </a>
+                    <p style="margin-top: 14px; font-size: 12px; color: #9ca3af;">Pagamento seguro via Mercado Pago · PIX · Cartão parcelado</p>
                 </div>
             </div>
         </div>
