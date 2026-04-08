@@ -1249,9 +1249,9 @@
             <div class="card">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px;">
                     <h2>⚙️ Configurações do Histórico Escolar</h2>
-                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                        <button class="btn btn-secondary btn-sm" onclick="resetarConfigHist()">↺ Restaurar Padrão</button>
-                        <button class="btn btn-primary" onclick="salvarConfigHist()">💾 Salvar Configurações</button>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                        <button class="btn btn-secondary btn-sm" onclick="resetarConfigHist()" title="Desfazer todas as alterações e voltar ao padrão">↺ Restaurar Padrão</button>
+                        <button class="btn btn-primary" onclick="salvarConfigHist()" style="font-weight:700;">💾 Salvar Configurações</button>
                     </div>
                 </div>
                 <p style="color: #6b7280; font-size: 13px; margin-bottom: 16px;">Estes campos aparecem no cabeçalho e rodapé do PDF do Histórico Escolar gerado.</p>
@@ -1330,6 +1330,12 @@
                         <div id="previewEmblemaHist" style="margin-top: 10px;"></div>
                     </div>
                 </div>
+
+                <!-- Botões no rodapé da seção de configurações -->
+                <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px;padding-top:12px;border-top:1px solid #e5e7eb;">
+                    <button class="btn btn-secondary btn-sm" onclick="resetarConfigHist()">↺ Restaurar Padrão</button>
+                    <button class="btn btn-primary" onclick="salvarConfigHist()" style="font-weight:700;">💾 Salvar Configurações</button>
+                </div>
             </div>
 
             <!-- Seção 1: Grades de Disciplinas -->
@@ -1385,6 +1391,9 @@
 
                 <!-- Lista de alunos -->
                 <div style="border: 1px solid #e5e7eb; border-radius: 10px; background: #f8fafc; padding: 10px;">
+                    <div style="font-size:11px;color:#6b7280;font-weight:600;margin-bottom:6px;padding:0 2px;">
+                        👆 Alunos disponíveis <span style="color:#9ca3af;font-weight:400;">(alunos com histórico salvo não aparecem aqui)</span>
+                    </div>
                     <div id="listaAlunosHistorico" style="border: 1px solid #e5e7eb; border-radius: 8px; max-height: 220px; overflow-y: auto; background: white;">
                         <div style="text-align: center; color: #9ca3af; padding: 20px; font-size: 13px;">Nenhum aluno cadastrado.</div>
                     </div>

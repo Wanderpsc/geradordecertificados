@@ -10,7 +10,8 @@ const HIST_STATE = {
     grades: [],
     gradeAtual: null,
     historicoAtual: null,
-    historicosSelecionados: new Set()
+    historicosSelecionados: new Set(),
+    alunosComHistorico: new Set() // IDs de alunos que já têm histórico salvo (para o tipo atual)
 };
 
 // ==================== INICIALIZAÇÃO ====================
@@ -555,11 +556,24 @@ function filtrarListaAlunosHistorico() {
     const filtroTurma = document.getElementById('histFiltroTurma')?.value || '';
     const busca = (document.getElementById('histBuscarAluno')?.value || '').toLowerCase().trim();
     const alunoAbertoId = document.getElementById('histAluno')?.value || '';
+    const tipo = document.getElementById('histTipo')?.value || '';
 
-    let alunos = (APP_STATE.alunos || []).slice().sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+    // Deduplicar por ID (evita duplicações no APP_STATE)
+    const seen = new Set();
+    let alunos = (APP_STATE.alunos || [])
+        .filter(a => { if (seen.has(a.id)) return false; seen.add(a.id); return true; })
+        .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+
     if (filtroSerie) alunos = alunos.filter(a => (a.serie || '') === filtroSerie);
     if (filtroTurma) alunos = alunos.filter(a => (a.turma || '') === filtroTurma);
     if (busca) alunos = alunos.filter(a => a.nome.toLowerCase().includes(busca));
+
+    // Ocultar aluno em edição (já está no form abaixo)
+    if (alunoAbertoId) alunos = alunos.filter(a => a.id !== alunoAbertoId);
+
+    // Ocultar alunos que já têm histórico salvo para o tipo selecionado
+    if (tipo && HIST_STATE.alunosComHistorico.size)
+        alunos = alunos.filter(a => !HIST_STATE.alunosComHistorico.has(a.id));
 
     atualizarContadorHistorico(alunos.length);
 
@@ -1326,6 +1340,8 @@ async function carregarListaHistoricos() {
         if (!data.success || !data.historicos.length) {
             container.innerHTML = '<div style="text-align:center;padding:30px;color:#9ca3af;">Nenhum histórico salvo ainda.</div>';
             document.getElementById('btnGerarHistPDF').disabled = true;
+            HIST_STATE.alunosComHistorico = new Set();
+            filtrarListaAlunosHistorico();
             return;
         }
 
@@ -1375,6 +1391,11 @@ async function carregarListaHistoricos() {
         html += `</tbody></table>`;
         container.innerHTML = html;
         _atualizarBtnHistPDF();
+        // Atualizar lista de alunos com histórico salvo (para ocultar da lista de cima)
+        HIST_STATE.alunosComHistorico = new Set(
+            data.historicos.map(h => h.aluno?._id || h.aluno).filter(Boolean)
+        );
+        filtrarListaAlunosHistorico();
     } catch (e) {
         container.innerHTML = '<div style="text-align:center;padding:20px;color:#ef4444;">Erro ao carregar históricos.</div>';
     }
@@ -1560,11 +1581,11 @@ async function previewHistorico(id) {
         const hist = data.historico;
         const cfg = obterConfigHist();
         const { jsPDF } = window.jspdf;
-        const orientacao = _getOrientacaoHist(hist);
-        const pdf = new jsPDF({ orientation: orientacao, unit: 'mm', format: 'a4' });
+const isMedioPreview = hist.tipo === 'medio';
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
         _histFrente(pdf, hist, cfg);
-        pdf.addPage();
+        pdf.addPage({ orientation: isMedioPreview ? 'landscape' : 'portrait' });
         _histVerso(pdf, hist, cfg);
 
         // Revogar blob anterior para liberar memória
@@ -1639,16 +1660,16 @@ async function gerarHistoricoPDF() {
             if (!data.success) continue;
 
             const hist = data.historico;
-            const orientacao = _getOrientacaoHist(hist);
+            const isMedio = hist.tipo === 'medio';
             if (!primeiroDoc) {
-                pdf.addPage({ orientation: orientacao });
+                pdf.addPage('portrait'); // frente sempre retrato
             } else {
-                pdf = new jsPDF({ orientation: orientacao, unit: 'mm', format: 'a4' });
+                pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
             }
             primeiroDoc = false;
 
             _histFrente(pdf, hist, cfg);
-            pdf.addPage({ orientation: orientacao });
+            pdf.addPage({ orientation: isMedio ? 'landscape' : 'portrait' });
             _histVerso(pdf, hist, cfg);
         } catch (e) {
             console.error('Erro ao gerar histórico:', histId, e);
@@ -1698,8 +1719,8 @@ function _histFrente(pdf, hist, cfg) {
     const series = grade.nomesSeries || [];
     const numSeries = series.length;
 
-    const PW = 210, PH = 297, ML = 7, MR = 7, MT = 7;
-    const UW = PW - ML - MR; // 196mm
+    const PW = 210, PH = 297, ML = 5, MR = 5, MT = 5;
+    const UW = PW - ML - MR; // 200mm
     let y = MT;
 
     // --- cabeçalho dupla linha ---
