@@ -12,17 +12,37 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4ff;color:#1e293b;mi
 .topo::before{content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")}
 .topo h1{font-size:2.4rem;font-weight:800;margin-bottom:10px;position:relative}
 .topo p{font-size:1.1rem;opacity:.85;max-width:560px;margin:0 auto;position:relative}
-/* ─── Badge de status (retorno do MP) ─── */
+/* ─── Banner de status (retorno do MP) ─── */
 .status-banner{padding:14px 20px;margin:0 auto 24px;max-width:760px;border-radius:12px;font-size:15px;font-weight:600;text-align:center;display:none}
 .status-banner.aprovado{background:#dcfce7;color:#166534;border:1px solid #86efac}
 .status-banner.pendente{background:#fef9c3;color:#713f12;border:1px solid #fde047}
 .status-banner.falha{background:#fee2e2;color:#7f1d1d;border:1px solid #fca5a5}
+/* ─── Barra de usuário ─── */
+.user-bar{background:#1e3a8a;color:#fff;padding:10px 24px;display:flex;align-items:center;justify-content:space-between;font-size:13.5px;gap:12px;flex-wrap:wrap}
+.user-bar .lic-ok{background:#16a34a;color:#fff;padding:4px 12px;border-radius:20px;font-weight:700;font-size:12px}
+.user-bar .lic-no{background:#dc2626;color:#fff;padding:4px 12px;border-radius:20px;font-weight:700;font-size:12px}
+.user-bar a{color:#93c5fd;font-size:12px}
+/* ─── Card de licença atual ─── */
+.licenca-atual{background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:2px solid #86efac;border-radius:16px;padding:20px 24px;margin:20px auto;max-width:760px;display:none}
+.licenca-atual h3{color:#166534;font-size:1rem;margin-bottom:10px}
+.licenca-atual .lic-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+.licenca-atual .lic-item{background:#fff;border-radius:10px;padding:10px 14px;text-align:center}
+.licenca-atual .lic-item .val{font-size:1.3rem;font-weight:800;color:#1e3a8a}
+.licenca-atual .lic-item .lab{font-size:11px;color:#64748b;margin-top:2px}
+/* ─── Tabs ─── */
+.tabs-wrap{max-width:800px;margin:24px auto 0;padding:0 20px}
+.tabs{display:flex;background:#e0e7ff;border-radius:12px;padding:4px;gap:4px}
+.tab-btn{flex:1;padding:12px;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;background:none;color:#64748b;transition:all .2s}
+.tab-btn.active{background:#fff;color:#1e3a8a;box-shadow:0 2px 8px rgba(30,64,175,.15)}
+.tab-content{display:none}
+.tab-content.active{display:block}
 /* ─── Grade de planos ─── */
-.grade{display:flex;flex-wrap:wrap;gap:24px;justify-content:center;padding:40px 24px;max-width:1100px;margin:0 auto}
+.grade{display:flex;flex-wrap:wrap;gap:24px;justify-content:center;padding:32px 24px;max-width:1100px;margin:0 auto}
 .card{background:#fff;border-radius:18px;padding:32px 28px;flex:1 1 280px;max-width:340px;box-shadow:0 4px 24px rgba(30,64,175,.1);border:2px solid #e0e7ff;display:flex;flex-direction:column;position:relative;transition:transform .2s,box-shadow .2s}
 .card:hover{transform:translateY(-4px);box-shadow:0 12px 40px rgba(30,64,175,.18)}
 .card.destaque{border-color:var(--cor,#1e40af)}
 .card .badge-destaque{position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:var(--cor,#1e40af);color:#fff;font-size:12px;font-weight:700;padding:4px 16px;border-radius:20px;white-space:nowrap}
+.card .badge-upgrade{position:absolute;top:-14px;right:16px;background:#f59e0b;color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px}
 .card .ico{font-size:2.6rem;margin-bottom:12px}
 .card h2{font-size:1.3rem;font-weight:800;color:#1e3a8a;margin-bottom:4px}
 .card .sub{font-size:13px;color:#64748b;margin-bottom:14px}
@@ -34,10 +54,20 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4ff;color:#1e293b;mi
 .card ul li.neg::before{content:'✗';color:#dc2626}
 .tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
 .tag{font-size:11px;padding:3px 10px;border-radius:20px;background:#eff6ff;color:#1e40af;font-weight:600}
-/* ─── Botões do card ─── */
+/* ─── Card de créditos ─── */
+.card-cred{background:#fff;border-radius:16px;padding:24px;flex:1 1 220px;max-width:280px;box-shadow:0 4px 20px rgba(30,64,175,.1);border:2px solid #e0e7ff;text-align:center;transition:transform .2s,box-shadow .2s}
+.card-cred:hover{transform:translateY(-4px);box-shadow:0 10px 32px rgba(30,64,175,.18)}
+.card-cred .ico{font-size:2.2rem;margin-bottom:10px}
+.card-cred h3{font-size:1.1rem;font-weight:800;color:#1e3a8a;margin-bottom:4px}
+.card-cred .qtd{font-size:2rem;font-weight:800;color:#7c3aed;margin:8px 0 2px}
+.card-cred .preco{font-size:1.3rem;font-weight:800;color:#1e40af;margin:6px 0 14px}
+.card-cred .desc{font-size:12px;color:#64748b;margin-bottom:14px}
+/* ─── Botões ─── */
 .btn-pix{width:100%;padding:13px;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;margin-bottom:8px;transition:opacity .2s}
 .btn-card{width:100%;padding:13px;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;background:linear-gradient(135deg,var(--cor,#1e40af),#1e3a8a);color:#fff;transition:opacity .2s}
 .btn-pix:hover,.btn-card:hover{opacity:.88}
+.btn-upgrade{width:100%;padding:12px;border:2px solid #f59e0b;border-radius:10px;font-size:13.5px;font-weight:700;cursor:pointer;background:#fffbeb;color:#92400e;transition:all .2s;margin-bottom:6px}
+.btn-upgrade:hover{background:#fef3c7}
 /* ─── Modal de Checkout ─── */
 .backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:8888;display:none;align-items:center;justify-content:center;padding:16px}
 .backdrop.open{display:flex}
@@ -45,23 +75,17 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4ff;color:#1e293b;mi
 .modal h3{font-size:1.3rem;font-weight:800;color:#1e3a8a;margin-bottom:4px}
 .modal .resumo{background:#eff6ff;border-radius:10px;padding:14px;margin:14px 0;font-size:13.5px}
 .modal .fechar{position:absolute;top:16px;right:20px;background:none;border:none;font-size:24px;cursor:pointer;color:#64748b}
+.alerta-upgrade{background:#fef9c3;border:1px solid #fde047;border-radius:10px;padding:12px 14px;margin:10px 0;font-size:13px;color:#713f12}
 /* PIX */
 .qr-wrap{text-align:center;margin:16px 0}
 .qr-wrap img{max-width:200px;border:2px solid #e0e7ff;border-radius:12px;padding:8px}
 .pix-code{background:#f8fafc;border:1px dashed #cbd5e1;border-radius:8px;padding:10px 12px;font-size:11px;word-break:break-all;margin:10px 0}
 .btn-copiar{width:100%;padding:10px;background:#1e40af;color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;margin-top:6px;font-size:14px}
 .aguardando{text-align:center;color:#64748b;font-size:13px;margin-top:10px}
-/* Parcelas select */
 .parc-select{width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;margin:10px 0}
 /* ─── Login gate ─── */
 .gate{text-align:center;padding:20px;background:#fef9c3;border-radius:12px;margin-bottom:16px;font-size:14px}
 .gate a{color:#1e40af;font-weight:700}
-/* ─── Barra de usuário ─── */
-.user-bar{background:#1e3a8a;color:#fff;padding:10px 24px;display:flex;align-items:center;justify-content:space-between;font-size:13.5px;gap:12px;flex-wrap:wrap}
-.user-bar .lic-ok{background:#16a34a;color:#fff;padding:4px 12px;border-radius:20px;font-weight:700;font-size:12px}
-.user-bar .lic-no{background:#dc2626;color:#fff;padding:4px 12px;border-radius:20px;font-weight:700;font-size:12px}
-.user-bar a{color:#93c5fd;font-size:12px}
-.aviso-lic{background:#f0fdf4;border:2px solid #86efac;color:#166534;padding:16px 20px;margin:0 auto 16px;max-width:760px;border-radius:12px;text-align:center;font-weight:600;font-size:14px}
 /* ─── Rodapé ─── */
 footer{text-align:center;padding:32px;color:#94a3b8;font-size:13px}
 .spinner{width:22px;height:22px;border:3px solid #e0e7ff;border-top-color:#1e40af;border-radius:50%;animation:spin .7s linear infinite;margin:20px auto}
@@ -73,21 +97,36 @@ footer{text-align:center;padding:32px;color:#94a3b8;font-size:13px}
 <div class="topo">
   <div style="position:relative">
     <div style="font-size:1rem;opacity:.7;margin-bottom:8px">🎓 Gerador de Certificados e Históricos Escolares</div>
-    <h1>Escolha o Plano Ideal</h1>
-    <p>Comece sem templates e crie do zero — ou adquira modelos prontos adaptáveis à sua escola.</p>
+    <h1>Planos, Créditos e Upgrades</h1>
+    <p>Adquira um plano completo, compre créditos avulsos ou faça upgrade do seu plano atual.</p>
   </div>
 </div>
 
 <!-- Barra de usuário logado -->
 <div id="userBar" class="user-bar" style="display:none"></div>
-<div id="avisoLicenca" class="aviso-lic" style="display:none"></div>
+
+<!-- Card da licença atual -->
+<div id="licencaAtualCard" class="licenca-atual"></div>
 
 <!-- Banner de resultado de pagamento -->
-<div id="statusBanner" class="status-banner" style="display:none;margin-top:24px"></div>
+<div id="statusBanner" class="status-banner" style="display:none;margin-top:16px"></div>
 
-<!-- Grade de planos -->
-<div class="grade" id="gradePlanos">
-  <div class="spinner"></div>
+<!-- Tabs -->
+<div class="tabs-wrap">
+  <div class="tabs">
+    <button class="tab-btn active" onclick="trocarTab('planos', this)">🎓 Planos Completos</button>
+    <button class="tab-btn" onclick="trocarTab('creditos', this)">➕ Créditos Adicionais</button>
+  </div>
+</div>
+
+<!-- Tab: Planos -->
+<div id="tab-planos" class="tab-content active">
+  <div class="grade" id="gradePlanos"><div class="spinner"></div></div>
+</div>
+
+<!-- Tab: Créditos -->
+<div id="tab-creditos" class="tab-content">
+  <div class="grade" id="gradeCreditos"><div class="spinner"></div></div>
 </div>
 
 <!-- Modal de Checkout -->
@@ -111,6 +150,15 @@ const API_URL = window.location.hostname === 'localhost' || window.location.host
 let _planoAtual = null;
 let _pixPollingTimer = null;
 let _mpPaymentId = null;
+let _licencaAtual = null; // licença do usuário logado
+
+// ─── Troca de tabs ───
+function trocarTab(tab, btn) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + tab).classList.add('active');
+}
 
 // ─── Verificar retorno do MP (back_urls) ───
 (function verificarRetornoMP() {
@@ -132,15 +180,15 @@ let _mpPaymentId = null;
     history.replaceState({}, '', '/comprar.html');
 })();
 
-// ─── Carregar planos ───
-async function carregarPlanos() {
-    // Aviso de carregamento lento (Render free tier pode demorar ~60s ao acordar)
-    const timer = setTimeout(() => {
+// ─── Carregar planos e créditos ───
+async function carregarTudo() {
+    // Aviso de servidor acordando após 8s
+    const timerPlanos = setTimeout(() => {
         const g = document.getElementById('gradePlanos');
         if (g && g.querySelector('.spinner')) {
             g.innerHTML = `<div style="text-align:center;color:#64748b;padding:20px">
                 <div class="spinner"></div>
-                <p style="margin-top:12px">O servidor está acordando, aguarde mais alguns segundos...</p>
+                <p style="margin-top:12px">O servidor está acordando, aguarde alguns segundos...</p>
             </div>`;
         }
     }, 8000);
@@ -150,33 +198,43 @@ async function carregarPlanos() {
         const timeout = setTimeout(() => controller.abort(), 90000);
         const resp = await fetch(`${API_URL}/planos`, { signal: controller.signal });
         clearTimeout(timeout);
-        clearTimeout(timer);
+        clearTimeout(timerPlanos);
         const data = await resp.json();
         if (!data.success) throw new Error(data.message);
-        renderizarPlanos(data.planos);
+
+        const planos = data.planos || [];
+        const planosNormais = planos.filter(p => p.tipo !== 'creditos');
+        const planosCreditos = planos.filter(p => p.tipo === 'creditos');
+
+        renderizarPlanos(planosNormais);
+        renderizarCreditos(planosCreditos);
     } catch (err) {
-        clearTimeout(timer);
+        clearTimeout(timerPlanos);
         const msg = err.name === 'AbortError'
-            ? 'O servidor demorou muito para responder. Atualize a página e tente novamente.'
+            ? 'O servidor demorou muito. Atualize a página e tente novamente.'
             : err.message;
         document.getElementById('gradePlanos').innerHTML =
-            `<p style="color:#dc2626;text-align:center;padding:20px">Erro ao carregar planos: ${msg}</p>`;
+            `<p style="color:#dc2626;text-align:center;padding:20px">Erro ao carregar: ${msg}</p>`;
+        document.getElementById('gradeCreditos').innerHTML =
+            `<p style="color:#dc2626;text-align:center;padding:20px">Erro ao carregar: ${msg}</p>`;
     }
 }
 
 function renderizarPlanos(planos) {
     const grade = document.getElementById('gradePlanos');
     if (!planos.length) {
-        grade.innerHTML = '<p style="color:#64748b;text-align:center">Nenhum plano disponível no momento. Volte em breve!</p>';
+        grade.innerHTML = '<p style="color:#64748b;text-align:center;padding:32px">Nenhum plano disponível no momento. Volte em breve!</p>';
         return;
     }
     grade.innerHTML = planos.map(p => {
         const parcela = (p.preco / p.maxParcelas).toFixed(2);
         const listaRecursos = montarListaRecursos(p);
         const tagsHTML = (p.tags || []).map(t => `<span class="tag">${t}</span>`).join('');
+        const temLic = !!_licencaAtual;
         return `
         <div class="card${p.destaque ? ' destaque' : ''}" style="--cor:${p.corDestaque || '#1e40af'}">
           ${p.destaque ? `<div class="badge-destaque">⭐ Mais Popular</div>` : ''}
+          ${temLic ? `<div class="badge-upgrade">🔄 Upgrade</div>` : ''}
           <div class="ico">${p.icone || '🎓'}</div>
           <h2>${p.nome}</h2>
           <div class="sub">${p.subtitulo || ''}</div>
@@ -184,6 +242,8 @@ function renderizarPlanos(planos) {
           <div class="preco">R$ ${Number(p.preco).toFixed(2)}</div>
           <div class="preco-parc">${p.maxParcelas > 1 ? `ou ${p.maxParcelas}x de R$ ${parcela} no cartão` : 'à vista'}</div>
           <ul>${listaRecursos}</ul>
+          ${temLic ? `<p style="font-size:11px;color:#92400e;background:#fffbeb;padding:6px 10px;border-radius:6px;margin-bottom:10px;text-align:center">
+              🔄 Substituirá seu plano atual</p>` : ''}
           <button class="btn-pix" onclick="iniciarPagamento('${p._id}','pix')">
             🔐 Pagar com PIX
           </button>
@@ -192,6 +252,47 @@ function renderizarPlanos(planos) {
           </button>
         </div>`;
     }).join('');
+}
+
+function renderizarCreditos(planos) {
+    const grade = document.getElementById('gradeCreditos');
+    if (!planos.length) {
+        grade.innerHTML = `
+            <div style="text-align:center;padding:40px;color:#64748b;max-width:600px;margin:0 auto">
+                <div style="font-size:3rem;margin-bottom:16px">📦</div>
+                <h3 style="color:#1e3a8a;margin-bottom:8px">Pacotes de Créditos</h3>
+                <p>Pacotes de certificados e históricos avulsos em breve. <br>
+                Entre em contato: <a href="mailto:wanderpsc@gmail.com" style="color:#1e40af">wanderpsc@gmail.com</a></p>
+            </div>`;
+        return;
+    }
+
+    const subtipoIco = { certificados: '📜', historicos: '📋', ambos: '📦' };
+    const subtipoLabel = { certificados: 'certificados', historicos: 'históricos', ambos: 'certificados + históricos' };
+
+    grade.innerHTML = `
+        <div style="width:100%;text-align:center;padding:16px 0 8px">
+            <h3 style="color:#1e3a8a;font-size:1.1rem">Adicione créditos à sua licença atual — sem renovar o plano</h3>
+            <p style="color:#64748b;font-size:13px;margin-top:6px">Os créditos são somados ao seu saldo existente.</p>
+        </div>
+        ${planos.map(p => {
+            const sub = p.subtipoCredito || 'certificados';
+            return `
+            <div class="card-cred" style="--cor:#7c3aed">
+                <div class="ico">${subtipoIco[sub] || '📦'}</div>
+                <h3>${p.nome}</h3>
+                <div class="qtd">+${p.quantidadeCreditos}</div>
+                <div style="font-size:12px;color:#64748b;margin-bottom:6px">${subtipoLabel[sub] || sub}</div>
+                <div class="preco">R$ ${Number(p.preco).toFixed(2)}</div>
+                <div class="desc">${p.descricao || ''}</div>
+                <button class="btn-pix" style="background:linear-gradient(135deg,#7c3aed,#6d28d9)" onclick="iniciarPagamento('${p._id}','pix')">
+                    🔐 PIX
+                </button>
+                <button class="btn-card" style="background:linear-gradient(135deg,#7c3aed,#5b21b6)" onclick="iniciarPagamento('${p._id}','cartao')">
+                    💳 Cartão
+                </button>
+            </div>`;
+        }).join('')}`;
 }
 
 function montarListaRecursos(p) {
@@ -207,11 +308,8 @@ function montarListaRecursos(p) {
     if (rec.limiteCertificados === -1) items.push('Certificados ilimitados');
     else if (rec.limiteCertificados > 0) items.push(`Até ${rec.limiteCertificados} certificados`);
     const numTempl = (p.templatesCertificado?.length || 0) + (p.templatesHistorico?.length || 0);
-    if (p.tipo === 'com-templates' && numTempl > 0) {
-        items.push(`${numTempl} template(s) pronto(s) incluído(s)`);
-    } else if (p.tipo === 'limpo') {
-        items.push('Editor completo — crie seus próprios templates');
-    }
+    if (p.tipo === 'com-templates' && numTempl > 0) items.push(`${numTempl} template(s) pronto(s)`);
+    else if (p.tipo === 'limpo') items.push('Editor — crie seus próprios templates');
     const dias = p.validadeDias;
     if (dias >= 36500) items.push('Licença vitalícia');
     else if (dias >= 365) items.push(`Licença por ${Math.round(dias / 365)} ano(s)`);
@@ -222,10 +320,7 @@ function montarListaRecursos(p) {
 // ─── Fluxo de pagamento ───
 async function iniciarPagamento(planoId, metodo) {
     const token = localStorage.getItem('token');
-    if (!token) {
-        abrirModalLogin();
-        return;
-    }
+    if (!token) { abrirModalLogin(); return; }
     try {
         const resp = await fetch(`${API_URL}/planos/${planoId}`);
         const data = await resp.json();
@@ -233,17 +328,26 @@ async function iniciarPagamento(planoId, metodo) {
         _planoAtual = data.plano;
         if (metodo === 'pix') abrirModalPix(planoId);
         else abrirModalCartao(planoId);
-    } catch (err) {
-        alert('Erro: ' + err.message);
-    }
+    } catch (err) { alert('Erro: ' + err.message); }
+}
+
+function alertaUpgrade(plano) {
+    if (!_licencaAtual || plano.tipo === 'creditos') return '';
+    const expira = _licencaAtual.dataExpiracao
+        ? new Date(_licencaAtual.dataExpiracao).toLocaleDateString('pt-BR') : '—';
+    return `<div class="alerta-upgrade">
+        ⚠️ Você já tem uma licença <strong>${_licencaAtual.tipo}</strong> ativa até <strong>${expira}</strong>.<br>
+        Ao confirmar, ela será <strong>substituída</strong> pelo novo plano.
+    </div>`;
 }
 
 function abrirModalLogin() {
     document.getElementById('checkoutConteudo').innerHTML = `
         <div class="gate">
-            <p>Para comprar, você precisa estar <strong>logado</strong> no sistema.</p>
-            <br>
-            <a href="/login.html?returnTo=/comprar.html" class="btn-card" style="display:inline-block;padding:10px 24px;border-radius:8px;color:#fff;text-decoration:none;font-weight:700">Fazer Login / Criar Conta</a>
+            <p>Para comprar, você precisa estar <strong>logado</strong> no sistema.</p><br>
+            <a href="/login.html?returnTo=/comprar.html" class="btn-card"
+               style="display:inline-block;padding:10px 24px;border-radius:8px;color:#fff;text-decoration:none;font-weight:700">
+               Fazer Login / Criar Conta</a>
         </div>`;
     document.getElementById('backdrop').classList.add('open');
 }
@@ -251,12 +355,15 @@ function abrirModalLogin() {
 async function abrirModalPix(planoId) {
     const token = localStorage.getItem('token');
     const p = _planoAtual;
+    const isCredito = p.tipo === 'creditos';
     document.getElementById('checkoutConteudo').innerHTML = `
         <h3>🔐 Pagar com PIX</h3>
         <div class="resumo">
-            <strong>${p.icone} ${p.nome}</strong><br>
+            <strong>${p.icone || (isCredito ? '📦' : '🎓')} ${p.nome}</strong><br>
             Valor: <strong>R$ ${Number(p.preco).toFixed(2)}</strong>
+            ${isCredito ? `<br>+${p.quantidadeCreditos} créditos` : ''}
         </div>
+        ${alertaUpgrade(p)}
         <div class="spinner"></div>
         <p style="text-align:center;color:#64748b;font-size:13px">Gerando QR Code...</p>`;
     document.getElementById('backdrop').classList.add('open');
@@ -269,18 +376,20 @@ async function abrirModalPix(planoId) {
         });
         const data = await resp.json();
         if (!data.success) throw new Error(data.message || data.error);
-
         _mpPaymentId = data.mpPaymentId;
 
         document.getElementById('checkoutConteudo').innerHTML = `
             <h3>🔐 Pagar com PIX</h3>
             <div class="resumo">
-                <strong>${p.icone} ${p.nome}</strong><br>
+                <strong>${p.icone || '📦'} ${p.nome}</strong><br>
                 Valor: <strong>R$ ${Number(p.preco).toFixed(2)}</strong>
             </div>
-            <p style="font-size:13px;color:#374151;margin-bottom:8px">Escaneie o QR Code ou copie o código PIX abaixo:</p>
+            ${alertaUpgrade(p)}
+            <p style="font-size:13px;color:#374151;margin-bottom:8px">Escaneie o QR Code ou copie o código PIX:</p>
             <div class="qr-wrap">
-                ${data.qrCodeBase64 ? `<img src="data:image/png;base64,${data.qrCodeBase64}" alt="QR Code PIX">` : '<p style="color:#64748b;font-size:13px">QR Code não disponível — use o código copia e cola abaixo.</p>'}
+                ${data.qrCodeBase64
+                    ? `<img src="data:image/png;base64,${data.qrCodeBase64}" alt="QR Code PIX">`
+                    : '<p style="color:#64748b;font-size:13px">Use o código copia-e-cola abaixo.</p>'}
             </div>
             <div class="pix-code" id="pixCodeText">${data.qrCode || '(Código não disponível)'}</div>
             <button class="btn-copiar" onclick="copiarPix()">📋 Copiar Código PIX</button>
@@ -288,19 +397,17 @@ async function abrirModalPix(planoId) {
                 <div class="spinner" style="width:16px;height:16px;margin:8px auto;border-width:2px"></div>
                 Aguardando confirmação do pagamento...
             </div>`;
-
         iniciarPollingPix(_mpPaymentId);
     } catch (err) {
-        document.getElementById('checkoutConteudo').innerHTML += `<p style="color:#dc2626;text-align:center;margin-top:10px">❌ ${err.message}</p>`;
+        document.getElementById('checkoutConteudo').innerHTML +=
+            `<p style="color:#dc2626;text-align:center;margin-top:10px">❌ ${err.message}</p>`;
     }
 }
 
 function copiarPix() {
     const codigo = document.getElementById('pixCodeText')?.textContent;
     if (!codigo) return;
-    navigator.clipboard.writeText(codigo).then(() => {
-        alert('✅ Código PIX copiado!');
-    });
+    navigator.clipboard.writeText(codigo).then(() => alert('✅ Código PIX copiado!'));
 }
 
 function iniciarPollingPix(mpPaymentId) {
@@ -308,42 +415,45 @@ function iniciarPollingPix(mpPaymentId) {
     const token = localStorage.getItem('token');
     _pixPollingTimer = setInterval(async () => {
         try {
-            const resp = await fetch(`${API_URL}/pagamentos/status/${mpPaymentId}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const resp = await fetch(`${API_URL}/pagamentos/status/${mpPaymentId}`,
+                { headers: { 'Authorization': `Bearer ${token}` } });
             const data = await resp.json();
             if (data.aprovado) {
                 clearInterval(_pixPollingTimer);
                 fecharCheckout();
                 const banner = document.getElementById('statusBanner');
                 banner.className = 'status-banner aprovado';
-                banner.textContent = '✅ Pagamento PIX confirmado! Sua licença foi ativada. Acesse o sistema.';
+                banner.textContent = '✅ Pagamento PIX confirmado! Sua licença foi atualizada. Acesse o sistema.';
                 banner.style.display = 'block';
                 window.scrollTo({ top: 0, behavior: 'smooth' });
+                setTimeout(() => location.reload(), 3000); // atualiza card da licença
             }
         } catch (_) {}
-    }, 5000); // verificar a cada 5 segundos
+    }, 5000);
 }
 
 async function abrirModalCartao(planoId) {
-    const token = localStorage.getItem('token');
     const p = _planoAtual;
+    const isCredito = p.tipo === 'creditos';
     const maxParc = p.maxParcelas || 1;
     const parcOpts = Array.from({ length: maxParc }, (_, i) => {
         const n = i + 1;
         const val = (p.preco / n).toFixed(2);
-        return `<option value="${n}">${n}x de R$ ${val}${n === 1 ? ' (sem juros - à vista)' : ''}</option>`;
+        return `<option value="${n}">${n}x de R$ ${val}${n === 1 ? ' (à vista)' : ''}</option>`;
     }).join('');
 
     document.getElementById('checkoutConteudo').innerHTML = `
         <h3>💳 Pagar com Cartão</h3>
         <div class="resumo">
-            <strong>${p.icone} ${p.nome}</strong><br>
+            <strong>${p.icone || '📦'} ${p.nome}</strong><br>
             Valor: <strong>R$ ${Number(p.preco).toFixed(2)}</strong>
+            ${isCredito ? `<br>+${p.quantidadeCreditos} créditos` : ''}
         </div>
+        ${alertaUpgrade(p)}
         <label style="font-size:13px;font-weight:600;color:#374151">Número de parcelas:</label>
         <select class="parc-select" id="selectParcelas">${parcOpts}</select>
-        <p style="font-size:12px;color:#64748b;margin-bottom:14px">Você será redirecionado para o checkout seguro do Mercado Pago.</p>
+        <p style="font-size:12px;color:#64748b;margin-bottom:14px">
+            Você será redirecionado para o checkout seguro do Mercado Pago.</p>
         <button class="btn-card" onclick="confirmarCartao('${planoId}')">Continuar para pagamento →</button>`;
     document.getElementById('backdrop').classList.add('open');
 }
@@ -360,24 +470,19 @@ async function confirmarCartao(planoId) {
         const data = await resp.json();
         if (!data.success) throw new Error(data.message || data.error);
         window.location.href = data.checkoutUrl;
-    } catch (err) {
-        alert('Erro ao iniciar checkout: ' + err.message);
-    }
+    } catch (err) { alert('Erro ao iniciar checkout: ' + err.message); }
 }
 
 function fecharCheckout() {
     document.getElementById('backdrop').classList.remove('open');
     if (_pixPollingTimer) { clearInterval(_pixPollingTimer); _pixPollingTimer = null; }
-    _planoAtual = null;
-    _mpPaymentId = null;
+    _planoAtual = null; _mpPaymentId = null;
 }
-
-// Fechar ao clicar no backdrop
 document.getElementById('backdrop').addEventListener('click', e => {
     if (e.target === document.getElementById('backdrop')) fecharCheckout();
 });
 
-// ─── Detectar usuário logado ───
+// ─── Detectar usuário logado + licença ───
 (function detectarUsuario() {
     const usuarioStr = localStorage.getItem('usuario');
     const token = localStorage.getItem('token');
@@ -387,14 +492,13 @@ document.getElementById('backdrop').addEventListener('click', e => {
     const bar = document.getElementById('userBar');
     bar.style.display = 'flex';
     bar.innerHTML = `
-        <span>👤 Olá, <strong>${u.nome || u.email}</strong> — ${u.instituicao || ''}</span>
+        <span>👤 Olá, <strong>${u.nome || u.email}</strong>${u.instituicao ? ` — ${u.instituicao}` : ''}</span>
         <span style="display:flex;gap:10px;align-items:center">
-            <span id="badgeLicenca">⏳ Verificando licença...</span>
+            <span id="badgeLicenca">⏳ Verificando...</span>
             <a href="/index.html">Ir para o sistema →</a>
             <a href="#" onclick="logout()" style="color:#fca5a5">Sair</a>
         </span>`;
 
-    // Verificar licença ativa no servidor
     fetch(`${API_URL}/auth/me`, { headers: { 'Authorization': `Bearer ${token}` } })
         .then(r => r.json())
         .then(data => {
@@ -402,23 +506,57 @@ document.getElementById('backdrop').addEventListener('click', e => {
             if (!badge) return;
             const lic = data.licenca || data.usuario?.licenca;
             if (lic && lic.status === 'ativa') {
-                const expira = lic.dataExpiracao ? new Date(lic.dataExpiracao).toLocaleDateString('pt-BR') : '—';
+                _licencaAtual = lic;
+                const expira = lic.dataExpiracao
+                    ? new Date(lic.dataExpiracao).toLocaleDateString('pt-BR') : '—';
                 badge.className = 'lic-ok';
                 badge.textContent = `✅ Licença ativa até ${expira}`;
-                // Mostrar aviso de que já tem licença ativa
-                const aviso = document.getElementById('avisoLicenca');
-                aviso.style.display = 'block';
-                aviso.innerHTML = `✅ Você já possui licença ativa (${lic.tipo || ''} — válida até ${expira}). Adquirir um novo plano irá renovar/substituir sua licença atual.`;
+
+                // Montar card da licença atual
+                const certLimit = lic.limiteCertificados === -1 ? '∞' : lic.limiteCertificados;
+                const certGerados = lic.certificadosGerados || 0;
+                const histLimit = lic.limiteHistoricos === -1 ? '∞' : (lic.limiteHistoricos ?? '—');
+                const histGerados = lic.historicosGerados || 0;
+                const card = document.getElementById('licencaAtualCard');
+                card.style.display = 'block';
+                card.innerHTML = `
+                    <h3>📋 Sua Licença Atual</h3>
+                    <div class="lic-grid">
+                        <div class="lic-item">
+                            <div class="val">${lic.tipo?.toUpperCase() || '—'}</div>
+                            <div class="lab">Tipo</div>
+                        </div>
+                        <div class="lic-item">
+                            <div class="val">${expira}</div>
+                            <div class="lab">Válida até</div>
+                        </div>
+                        <div class="lic-item">
+                            <div class="val">${certGerados} / ${certLimit}</div>
+                            <div class="lab">Certificados usados</div>
+                        </div>
+                        <div class="lic-item">
+                            <div class="val">${histGerados} / ${histLimit}</div>
+                            <div class="lab">Históricos usados</div>
+                        </div>
+                    </div>
+                    <p style="font-size:12px;color:#64748b;margin-top:10px;text-align:center">
+                        Para trocar de plano, clique em qualquer plano na aba <strong>Planos Completos</strong>. 
+                        Para adicionar mais certificados/históricos, use a aba <strong>Créditos Adicionais</strong>.
+                    </p>`;
+
+                // Re-renderizar planos com badge de upgrade
+                carregarTudo();
             } else {
                 badge.className = 'lic-no';
                 badge.textContent = '⚠️ Sem licença ativa';
+                carregarTudo();
             }
         })
-        .catch(() => {
-            const badge = document.getElementById('badgeLicenca');
-            if (badge) badge.textContent = '';
-        });
+        .catch(() => { carregarTudo(); });
 })();
+
+// Se não logado, carregar planos diretamente
+if (!localStorage.getItem('token')) carregarTudo();
 
 function logout() {
     localStorage.removeItem('token');
@@ -426,8 +564,6 @@ function logout() {
     localStorage.removeItem('licenca');
     location.reload();
 }
-
-carregarPlanos();
 </script>
 </body>
 </html>

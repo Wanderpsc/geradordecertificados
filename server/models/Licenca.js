@@ -29,6 +29,14 @@ const licencaSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
+    limiteHistoricos: {
+        type: Number,
+        default: -1 // -1 = ilimitado
+    },
+    historicosGerados: {
+        type: Number,
+        default: 0
+    },
     dataInicio: {
         type: Date,
         default: Date.now

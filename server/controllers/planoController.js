@@ -134,48 +134,116 @@ exports.obterPlano = async (req, res) => {
 exports.provisionarLicencaParaPlano = async (planoId, usuarioId, metodo = 'desconhecido') => {
     const plano = await PlanoVenda.findById(planoId);
     if (!plano) throw new Error('Plano não encontrado para provisionamento.');
-    const usuario = await Usuario.findById(usuarioId);
+    const usuario = await Usuario.findById(usuarioId).populate('licenca');
     if (!usuario) throw new Error('Usuário não encontrado.');
 
-    const dataExpiracao = new Date();
-    dataExpiracao.setDate(dataExpiracao.getDate() + plano.validadeDias);
+    let licenca;
+    let dataExpiracao;
 
-    const licenca = await Licenca.create({
-        chaveLicenca: Licenca.gerarChaveLicenca(),
-        usuario: usuarioId,
-        tipo: plano.tipoLicenca,
-        status: 'ativa',
-        limiteCertificados: plano.recursos.limiteCertificados,
-        dataExpiracao,
-        recursos: {
-            multiplosTemplates: plano.recursos.multiplosTemplates,
-            templatesCustomizados: plano.recursos.templatesCustomizados,
-            exportacaoPDF: plano.recursos.exportacaoPDF,
-            historicosEscolares: plano.recursos.historicos,
-            marcaDagua: plano.recursos.marcaDagua
-        },
-        valorPago: plano.preco,
-        metodoPagamento: 'pix'
-    });
+    // ─── PACOTE DE CRÉDITOS: soma ao limite existente ────────────────────────
+    if (plano.tipo === 'creditos') {
+        const licencaAtual = usuario.licenca;
 
-    usuario.licenca = licenca._id;
-    await usuario.save();
+        if (licencaAtual && licencaAtual.status === 'ativa') {
+            // Somar créditos na licença ativa existente
+            const qty = plano.quantidadeCreditos || 0;
+            const sub = plano.subtipoCredito || 'certificados';
 
-    // Copiar templates do plano para a conta do usuário
-    const templatesParaCopiar = [
-        ...plano.templatesCertificado.map(t => ({ ...t.toObject(), usuario: usuarioId, ativo: true })),
-        ...plano.templatesHistorico.map(t => ({ ...t.toObject(), usuario: usuarioId, ativo: true }))
-    ];
+            const update = {};
+            if (sub === 'certificados' || sub === 'ambos') {
+                // -1 = ilimitado; não somar sobre ilimitado
+                if (licencaAtual.limiteCertificados !== -1) {
+                    update.limiteCertificados = licencaAtual.limiteCertificados + qty;
+                }
+            }
+            if (sub === 'historicos' || sub === 'ambos') {
+                if (licencaAtual.limiteHistoricos !== -1) {
+                    update.limiteHistoricos = (licencaAtual.limiteHistoricos || 0) + qty;
+                }
+                // Se não tinha histórico habilitado, habilitar
+                if (!licencaAtual.recursos?.historicosEscolares) {
+                    update['recursos.historicosEscolares'] = true;
+                }
+            }
 
-    if (templatesParaCopiar.length > 0) {
-        await Modelo.insertMany(templatesParaCopiar.map(t => ({
+            licenca = await Licenca.findByIdAndUpdate(licencaAtual._id, { $set: update }, { new: true });
+        } else {
+            // Sem licença ativa — criar uma nova licença de créditos com validade de 1 ano
+            dataExpiracao = new Date();
+            dataExpiracao.setFullYear(dataExpiracao.getFullYear() + 1);
+            const qty = plano.quantidadeCreditos || 0;
+            licenca = await Licenca.create({
+                chaveLicenca: Licenca.gerarChaveLicenca(),
+                usuario: usuarioId,
+                tipo: 'mensal',
+                status: 'ativa',
+                limiteCertificados: (plano.subtipoCredito === 'historicos') ? -1 : qty,
+                limiteHistoricos: (plano.subtipoCredito === 'certificados') ? -1 : qty,
+                dataExpiracao,
+                recursos: {
+                    multiplosTemplates: false,
+                    templatesCustomizados: true,
+                    exportacaoPDF: true,
+                    historicosEscolares: plano.subtipoCredito !== 'certificados',
+                    marcaDagua: false
+                },
+                valorPago: plano.preco,
+                metodoPagamento: metodo
+            });
+            usuario.licenca = licenca._id;
+            await usuario.save();
+        }
+
+    } else {
+        // ─── UPGRADE / NOVO PLANO: substitui licença atual ───────────────────
+        // Cancelar licença antiga se existir
+        if (usuario.licenca) {
+            await Licenca.findByIdAndUpdate(
+                typeof usuario.licenca === 'object' ? usuario.licenca._id : usuario.licenca,
+                { status: 'cancelada', observacoes: `Substituída por upgrade — plano: ${plano.nome}` }
+            );
+        }
+
+        dataExpiracao = new Date();
+        dataExpiracao.setDate(dataExpiracao.getDate() + plano.validadeDias);
+
+        licenca = await Licenca.create({
+            chaveLicenca: Licenca.gerarChaveLicenca(),
             usuario: usuarioId,
-            nome: t.nome,
-            descricao: t.descricao || '',
-            config: t.config,
-            uploads: t.uploads || {},
-            ativo: true
-        })));
+            tipo: plano.tipoLicenca,
+            status: 'ativa',
+            limiteCertificados: plano.recursos.limiteCertificados,
+            limiteHistoricos: plano.recursos.historicos ? -1 : 0,
+            dataExpiracao,
+            recursos: {
+                multiplosTemplates: plano.recursos.multiplosTemplates,
+                templatesCustomizados: plano.recursos.templatesCustomizados,
+                exportacaoPDF: plano.recursos.exportacaoPDF,
+                historicosEscolares: plano.recursos.historicos,
+                marcaDagua: plano.recursos.marcaDagua
+            },
+            valorPago: plano.preco,
+            metodoPagamento: metodo
+        });
+
+        usuario.licenca = licenca._id;
+        await usuario.save();
+
+        // Copiar templates do plano para a conta do usuário
+        const templatesParaCopiar = [
+            ...plano.templatesCertificado.map(t => ({ ...t.toObject(), usuario: usuarioId, ativo: true })),
+            ...plano.templatesHistorico.map(t => ({ ...t.toObject(), usuario: usuarioId, ativo: true }))
+        ];
+        if (templatesParaCopiar.length > 0) {
+            await Modelo.insertMany(templatesParaCopiar.map(t => ({
+                usuario: usuarioId,
+                nome: t.nome,
+                descricao: t.descricao || '',
+                config: t.config,
+                uploads: t.uploads || {},
+                ativo: true
+            })));
+        }
     }
 
     // Enviar emails de confirmação (sem bloquear)
@@ -187,7 +255,7 @@ exports.provisionarLicencaParaPlano = async (planoId, usuarioId, metodo = 'desco
                 plano: plano.nome,
                 valor: plano.preco,
                 metodo,
-                expiracao: dataExpiracao
+                expiracao: licenca.dataExpiracao
             });
             await enviarNotificacaoVenda({
                 compradorNome: usuario.nome || usuario.email,

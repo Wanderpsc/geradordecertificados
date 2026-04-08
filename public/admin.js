@@ -1623,9 +1623,10 @@ function abrirModalPlano(plano = null) {
           </div>
           <div>
             <label style="font-size:13px;font-weight:600;color:#374151">Tipo *</label>
-            <select id="pTipo" class="form-control">
+            <select id="pTipo" class="form-control" onchange="toggleCamposCredito()">
               <option value="limpo" ${p.tipo === 'limpo' ? 'selected' : ''}>Limpo (sem templates)</option>
               <option value="com-templates" ${p.tipo === 'com-templates' ? 'selected' : ''}>Com Templates prontos</option>
+              <option value="creditos" ${p.tipo === 'creditos' ? 'selected' : ''}>📦 Pacote de Créditos</option>
             </select>
           </div>
           <div>
@@ -1656,7 +1657,25 @@ function abrirModalPlano(plano = null) {
           </div>
         </div>
 
-        <div style="margin-top:18px;padding:14px;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0">
+        <div id="camposCredito" style="${p.tipo === 'creditos' ? '' : 'display:none'};margin-top:14px;padding:14px;background:#f5f3ff;border-radius:10px;border:1px solid #c4b5fd">
+          <strong style="font-size:13px;color:#5b21b6">📦 Configuração do Pacote</strong>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px">
+            <div>
+              <label style="font-size:13px;font-weight:600;color:#374151">Quantidade de Créditos</label>
+              <input id="pQtdCreditos" type="number" class="form-control" min="1" value="${p.quantidadeCreditos ?? 50}" placeholder="Ex: 50">
+            </div>
+            <div>
+              <label style="font-size:13px;font-weight:600;color:#374151">Tipo de Crédito</label>
+              <select id="pSubtipoCredito" class="form-control">
+                <option value="certificados" ${p.subtipoCredito === 'certificados' ? 'selected' : ''}>📜 Certificados</option>
+                <option value="historicos" ${p.subtipoCredito === 'historicos' ? 'selected' : ''}>📋 Históricos</option>
+                <option value="ambos" ${p.subtipoCredito === 'ambos' ? 'selected' : ''}>📦 Ambos (certificados + históricos)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div id="camposRecursos" style="${p.tipo === 'creditos' ? 'display:none' : ''};margin-top:18px;padding:14px;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0">
           <strong style="font-size:13px;color:#374151">Recursos incluídos</strong>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">
             <label style="display:flex;gap:8px;align-items:center;font-size:13px"><input type="checkbox" id="rCertif" ${rec.certificados !== false ? 'checked' : ''}> Certificados</label>
@@ -1686,6 +1705,15 @@ function abrirModalPlano(plano = null) {
     document.body.insertAdjacentHTML('beforeend', html);
 }
 
+function toggleCamposCredito() {
+    const tipo = document.getElementById('pTipo')?.value;
+    const isCredito = tipo === 'creditos';
+    const ccred = document.getElementById('camposCredito');
+    const crec = document.getElementById('camposRecursos');
+    if (ccred) ccred.style.display = isCredito ? '' : 'none';
+    if (crec) crec.style.display = isCredito ? 'none' : '';
+}
+
 function fecharModalPlano() {
     document.getElementById('modalPlano')?.remove();
     _planoEditandoId = null;
@@ -1705,12 +1733,14 @@ async function editarPlano(id) {
 
 async function salvarPlano() {
     const token = localStorage.getItem('token');
+    const tipo = document.getElementById('pTipo').value;
+    const isCredito = tipo === 'creditos';
     const body = {
         nome: document.getElementById('pNome').value.trim(),
         subtitulo: document.getElementById('pSubtitulo').value.trim(),
         descricao: document.getElementById('pDescricao').value.trim(),
         icone: document.getElementById('pIcone').value.trim(),
-        tipo: document.getElementById('pTipo').value,
+        tipo,
         tipoLicenca: document.getElementById('pTipoLic').value,
         preco: parseFloat(document.getElementById('pPreco').value) || 0,
         maxParcelas: parseInt(document.getElementById('pParcelas').value) || 1,
@@ -1720,16 +1750,22 @@ async function salvarPlano() {
         ativo: document.getElementById('pAtivo').checked,
         destaque: document.getElementById('pDestaque').checked,
         recursos: {
-            certificados: document.getElementById('rCertif').checked,
-            historicos: document.getElementById('rHistorico').checked,
-            multiplosTemplates: document.getElementById('rMultiTempl').checked,
-            marcaDagua: document.getElementById('rMarcaDagua').checked,
-            subUsuarios: parseInt(document.getElementById('rSubUsers').value) || 0,
-            limiteCertificados: parseInt(document.getElementById('rLimite').value) ?? -1,
+            certificados: document.getElementById('rCertif')?.checked ?? true,
+            historicos: document.getElementById('rHistorico')?.checked ?? false,
+            multiplosTemplates: document.getElementById('rMultiTempl')?.checked ?? false,
+            marcaDagua: document.getElementById('rMarcaDagua')?.checked ?? false,
+            subUsuarios: parseInt(document.getElementById('rSubUsers')?.value) || 0,
+            limiteCertificados: parseInt(document.getElementById('rLimite')?.value) ?? -1,
             exportacaoPDF: true,
             templatesCustomizados: true
         }
     };
+
+    if (isCredito) {
+        body.quantidadeCreditos = parseInt(document.getElementById('pQtdCreditos').value) || 0;
+        body.subtipoCredito = document.getElementById('pSubtipoCredito').value;
+        if (body.quantidadeCreditos <= 0) return alert('Informe a quantidade de créditos do pacote.');
+    }
 
     if (!body.nome) return alert('Informe o nome do plano.');
     if (body.preco <= 0) return alert('Informe um preço válido.');

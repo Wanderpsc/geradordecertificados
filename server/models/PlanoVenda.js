@@ -29,9 +29,20 @@ const planoVendaSchema = new mongoose.Schema({
     },
     tipo: {
         type: String,
-        enum: ['limpo', 'com-templates'],
+        enum: ['limpo', 'com-templates', 'creditos'],
         required: true,
         default: 'limpo'
+    },
+    // Para tipo='creditos': quantos créditos são adicionados
+    quantidadeCreditos: {
+        type: Number,
+        default: 0   // 0 = não é pacote de créditos
+    },
+    // Subtipo do crédito: 'certificados' | 'historicos' | 'ambos'
+    subtipoCredito: {
+        type: String,
+        enum: ['certificados', 'historicos', 'ambos'],
+        default: 'certificados'
     },
     // Preço base (à vista em R$)
     preco: {
