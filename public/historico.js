@@ -4,6 +4,8 @@
  */
 
 // ==================== ESTADO ====================
+let HIST_UPLOADS = JSON.parse(localStorage.getItem('histUploads') || '{}');
+
 const HIST_STATE = {
     grades: [],
     gradeAtual: null,
@@ -37,6 +39,12 @@ const HIST_CONFIG_DEFAULTS = {
         resolucao: '',
         assinatura1: 'SECRETÁRIO(A)',
         assinatura2: 'DIRETOR(A)'
+    },
+    emblema: {
+        tipo: 'brasao-brasil',
+        largura: 22,
+        altura: 26,
+        qualidade: 100
     }
 };
 
@@ -59,6 +67,12 @@ function obterConfigHist() {
             resolucao: el('histCfgResolucao').value.trim(),
             assinatura1: el('histCfgAssinatura1').value.trim() || HIST_CONFIG_DEFAULTS.frente.assinatura1,
             assinatura2: el('histCfgAssinatura2').value.trim() || HIST_CONFIG_DEFAULTS.frente.assinatura2
+        },
+        emblema: {
+            tipo: el('histCfgEmblema')?.value || 'brasao-brasil',
+            largura: parseInt(el('histCfgEmblemaLargura')?.value) || 22,
+            altura: parseInt(el('histCfgEmblemaAltura')?.value) || 26,
+            qualidade: parseInt(el('histCfgEmblemaQualidade')?.value) || 100
         }
     };
 }
@@ -76,6 +90,19 @@ function _aplicarConfigHistNosInputs(cfg) {
     el('histCfgResolucao').value = cfg?.frente?.resolucao || '';
     el('histCfgAssinatura1').value = cfg?.frente?.assinatura1 || '';
     el('histCfgAssinatura2').value = cfg?.frente?.assinatura2 || '';
+    // Emblema
+    const emb = cfg?.emblema || HIST_CONFIG_DEFAULTS.emblema;
+    if (el('histCfgEmblema')) el('histCfgEmblema').value = emb.tipo || 'brasao-brasil';
+    if (el('histCfgEmblemaLargura')) el('histCfgEmblemaLargura').value = emb.largura || 22;
+    if (el('histCfgEmblemaAltura')) el('histCfgEmblemaAltura').value = emb.altura || 26;
+    if (el('histCfgEmblemaQualidade')) el('histCfgEmblemaQualidade').value = emb.qualidade || 100;
+    const uploadGroup = el('histEmblemaUploadGroup');
+    if (uploadGroup) uploadGroup.style.display = emb.tipo === 'custom' ? 'block' : 'none';
+    // Restaurar preview do emblema customizado se existir
+    if (emb.tipo === 'custom' && HIST_UPLOADS.emblemaCustom) {
+        const prev = el('previewEmblemaHist');
+        if (prev) prev.innerHTML = `<img src="${HIST_UPLOADS.emblemaCustom}" style="max-height: 60px; border-radius: 8px; margin-top: 6px;">`;
+    }
 }
 
 function carregarConfigHist() {
@@ -113,8 +140,28 @@ function salvarConfigHist() {
 function resetarConfigHist() {
     if (!confirm('Restaurar todos os campos para os valores padrão?')) return;
     localStorage.removeItem('histConfig');
+    localStorage.removeItem('histUploads');
+    HIST_UPLOADS = {};
+    const prev = document.getElementById('previewEmblemaHist');
+    if (prev) prev.innerHTML = '';
     _aplicarConfigHistNosInputs(HIST_CONFIG_DEFAULTS);
     mostrarNotificacao('Configurações restauradas para o padrão.', 'info');
+}
+
+function handleUploadEmblemaHist(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        HIST_UPLOADS.emblemaCustom = e.target.result;
+        localStorage.setItem('histUploads', JSON.stringify(HIST_UPLOADS));
+        const prev = document.getElementById('previewEmblemaHist');
+        if (prev) prev.innerHTML = `<img src="${e.target.result}" style="max-height: 60px; border-radius: 8px; margin-top: 6px;">`;
+        const sel = document.getElementById('histCfgEmblema');
+        if (sel) sel.value = 'custom';
+        mostrarNotificacao('Emblema personalizado carregado!', 'success');
+    };
+    reader.readAsDataURL(file);
 }
 
 // ==================== GRADES (Templates de Disciplinas) ====================
@@ -1573,16 +1620,32 @@ function _histFrente(pdf, hist, cfg) {
     _hLine(pdf, ML, y + 1.3, PW - MR, y + 1.3, 0.2, [0, 40, 120]);
     y += 2.5;
 
-    // brasão
-    const bW = 22, bH = 26;
-    try {
-        const src = typeof BRASAO_BRASIL !== 'undefined' ? BRASAO_BRASIL : null;
-        if (src) pdf.addImage(src, 'PNG', ML, y, bW, bH);
-    } catch (_) {}
+    // brasão / emblema
+    const emb = cfg?.emblema || {};
+    const tipoEmb = emb.tipo || 'brasao-brasil';
+    const bW = Number(emb.largura) || 22;
+    const bH = Number(emb.altura) || 26;
+    const embQual = Math.min(100, Math.max(1, Number(emb.qualidade) || 100));
+    const embCompression = embQual >= 85 ? 'NONE' : embQual >= 65 ? 'FAST' : embQual >= 40 ? 'MEDIUM' : 'SLOW';
+    if (tipoEmb !== 'nenhum') {
+        try {
+            let src = null;
+            let fmt = 'PNG';
+            if (tipoEmb === 'custom' && typeof HIST_UPLOADS !== 'undefined' && HIST_UPLOADS.emblemaCustom) {
+                src = HIST_UPLOADS.emblemaCustom;
+                fmt = src.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+            } else if (tipoEmb === 'brasao-brasil' && typeof BRASAO_BRASIL !== 'undefined') {
+                src = BRASAO_BRASIL;
+                fmt = 'PNG';
+            }
+            if (src) pdf.addImage(src, fmt, ML, y, bW, bH, undefined, embCompression);
+        } catch (_) {}
+    }
 
     // texto do cabeçalho
-    const txX = ML + bW + 3;
-    const txW = UW - bW - 3;
+    const txX = tipoEmb !== 'nenhum' ? ML + bW + 3 : ML;
+
+    const txW = tipoEmb !== 'nenhum' ? UW - bW - 3 : UW;
     let ty = y + 2.5;
     const l1 = cfg?.cabecalho?.linha1 || 'REPÚBLICA FEDERATIVA DO BRASIL';
     const l2 = cfg?.cabecalho?.linha2 || 'ESTADO DO PIAUÍ';

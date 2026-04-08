@@ -1352,6 +1352,38 @@
                         <input type="text" id="histCfgAssinatura2" class="form-control" placeholder="DIRETOR(A)">
                     </div>
                 </div>
+
+                <!-- Emblema / Brasão -->
+                <div style="border-top: 1px solid #e5e7eb; margin-top: 16px; padding-top: 16px;">
+                    <h3 style="font-size: 14px; font-weight: 700; color: #1e3a8a; margin-bottom: 12px;">🏛️ Emblema / Brasão</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; align-items: end;">
+                        <div>
+                            <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 4px;">Tipo de Emblema</label>
+                            <select id="histCfgEmblema" class="form-control" onchange="document.getElementById('histEmblemaUploadGroup').style.display=this.value==='custom'?'block':'none'">
+                                <option value="brasao-brasil">Brasão da República</option>
+                                <option value="custom">Emblema Personalizado</option>
+                                <option value="nenhum">Sem Emblema</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 4px;">Largura (mm)</label>
+                            <input type="number" id="histCfgEmblemaLargura" class="form-control" value="22" min="10" max="80">
+                        </div>
+                        <div>
+                            <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 4px;">Altura (mm)</label>
+                            <input type="number" id="histCfgEmblemaAltura" class="form-control" value="26" min="10" max="80">
+                        </div>
+                        <div>
+                            <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 4px;">Qualidade (%)</label>
+                            <input type="number" id="histCfgEmblemaQualidade" class="form-control" value="100" min="1" max="100" title="100 = máxima qualidade (sem compressão)">
+                        </div>
+                    </div>
+                    <div id="histEmblemaUploadGroup" style="margin-top: 12px; display: none;">
+                        <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 4px;">Upload de Emblema Personalizado (PNG, JPG, WebP)</label>
+                        <input type="file" id="uploadEmblemaHist" accept="image/png,image/jpeg,image/webp" class="form-control" onchange="handleUploadEmblemaHist(event)">
+                        <div id="previewEmblemaHist" style="margin-top: 10px;"></div>
+                    </div>
+                </div>
             </div>
 
             <!-- Seção 1: Grades de Disciplinas -->
