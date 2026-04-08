@@ -218,10 +218,8 @@ exports.criarCheckoutCartao = async (req, res) => {
                 currency_id: 'BRL',
                 unit_price: plano.preco
             }],
-            payer: {
-                email: payerEmail(usuario.email),
-                name: usuario.nome || ''
-            },
+            // Não enviar payer.email — se for o mesmo email do vendedor, MP bloqueia o botão Pagar.
+            // O comprador fará login com a própria conta MP no checkout.
             payment_methods: {
                 // Excluir boleto e ATM — manter apenas cartão
                 excluded_payment_types: [
