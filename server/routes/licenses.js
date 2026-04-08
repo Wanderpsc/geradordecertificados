@@ -5,7 +5,8 @@ const {
     ativarLicenca,
     verificarStatus,
     listarLicencas,
-    renovarLicenca
+    renovarLicenca,
+    cancelarMinhaAssinatura
 } = require('../controllers/licenseController');
 const { proteger, apenasAdmin } = require('../middlewares/auth');
 
@@ -14,5 +15,6 @@ router.post('/activate', proteger, ativarLicenca);
 router.get('/status', proteger, verificarStatus);
 router.get('/', proteger, apenasAdmin, listarLicencas);
 router.put('/:id/renew', proteger, apenasAdmin, renovarLicenca);
+router.delete('/minha', proteger, cancelarMinhaAssinatura);
 
 module.exports = router;

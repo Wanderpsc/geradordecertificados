@@ -4224,6 +4224,8 @@ function mostrarNotificacao(mensagem, tipo = 'info') {
 
 // ==================== MINHA ASSINATURA ====================
 let cronometroInterval = null;
+let _licencaAtualDados = null;   // licença do usuário logado (populada pelo /auth/me)
+let _widgetRenovacaoMostrado = false;
 
 async function carregarDadosAssinatura() {
     const token = localStorage.getItem('token');
@@ -4238,6 +4240,7 @@ async function carregarDadosAssinatura() {
         const data = await response.json();
         const usuario = data.usuario;
         const licenca = usuario.licenca || {};
+        _licencaAtualDados = licenca;   // guardar para o widget de renovação
         
         // Atualizar informações do plano
         const planoNomes = {
@@ -4289,6 +4292,8 @@ function iniciarCronometro(dataExpiracao) {
         minute: '2-digit'
     });
     
+    let _lembreteCronDisparado = false;
+
     function atualizarCronometro() {
         const agora = new Date().getTime();
         const expiracao = dataExpiracao.getTime();
@@ -4318,6 +4323,12 @@ function iniciarCronometro(dataExpiracao) {
         // Mostrar alerta se faltarem menos de 3 dias
         if (dias < 3) {
             document.getElementById('alerta-vencimento').style.display = 'block';
+            // Disparar widget de renovação apenas uma vez por sessão de cronômetro
+            if (!_lembreteCronDisparado) {
+                _lembreteCronDisparado = true;
+                // Aguardar 1,5s para não sobrepor o carregamento da página
+                setTimeout(() => verificarLembreteRenovacao(dias), 1500);
+            }
         }
     }
     
@@ -4360,6 +4371,163 @@ function selecionarPlano(tipo) {
 
 function verHistoricoPagamentos() {
     alert('📊 Em breve! Histórico de pagamentos em desenvolvimento.');
+}
+
+// ==================== WIDGET DE RENOVAÇÃO DE LICENÇA ====================
+
+/**
+ * Verifica se deve exibir o lembrete de renovação.
+ * Chamado quando dias < 3 para não trial.
+ */
+function verificarLembreteRenovacao(dias) {
+    if (_widgetRenovacaoMostrado) return;
+    if (_licencaAtualDados && _licencaAtualDados.tipo === 'trial') return; // não incomodar trial
+    const snoozeAte = parseInt(localStorage.getItem('renovacaoSnoozeAte') || '0');
+    if (Date.now() < snoozeAte) return;   // ainda dentro do período de soneca
+    _widgetRenovacaoMostrado = true;
+    mostrarWidgetRenovacao(dias);
+}
+
+function mostrarWidgetRenovacao(dias) {
+    if (document.getElementById('widgetRenovacao')) return; // já existe
+    const txtDias = dias === 0
+        ? '⏰ Licença vence HOJE!'
+        : `⏰ Licença expira em ${dias} dia${dias === 1 ? '' : 's'}`;
+
+    const widget = document.createElement('div');
+    widget.id = 'widgetRenovacao';
+    widget.innerHTML = `
+        <div class="wr-header">
+            <span>${txtDias}</span>
+            <button onclick="fecharWidgetRenovacao()" title="Fechar">✕</button>
+        </div>
+        <div class="wr-body">
+            <p class="wr-hint">Renove agora para não perder o acesso ao sistema.</p>
+            <div id="wrQrArea" class="wr-qr">
+                <div class="wr-spinner"></div>
+                <p class="wr-loading-txt">Gerando QR Code PIX...</p>
+            </div>
+            <div id="wrPixCodeArea"></div>
+            <div class="wr-preco" id="wrPreco"></div>
+            <div class="wr-btns">
+                <button class="wr-btn-pagar" onclick="window.open('/comprar.html','_blank')">🛒 Ver Planos</button>
+                <button class="wr-btn-snooze" onclick="snoozeRenovacao()">⏳ Lembrar em 12h</button>
+            </div>
+        </div>`;
+    document.body.appendChild(widget);
+    carregarQRRenovacaoWidget();
+}
+
+async function carregarQRRenovacaoWidget() {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    const qrArea = document.getElementById('wrQrArea');
+    const pixCodeArea = document.getElementById('wrPixCodeArea');
+    const precoEl = document.getElementById('wrPreco');
+    if (!qrArea) return;
+
+    try {
+        const resp = await fetch(`${API_URL}/pagamentos/pix-renovacao`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+        });
+        const data = await resp.json();
+        if (!data.success) throw new Error(data.message);
+
+        if (precoEl && data.plano) {
+            precoEl.textContent = `${data.plano.nome} — R$ ${Number(data.plano.preco).toFixed(2)}`;
+        }
+
+        qrArea.innerHTML = data.qrCodeBase64
+            ? `<img src="data:image/png;base64,${data.qrCodeBase64}" alt="QR Code PIX renovação">`
+            : `<p class="wr-no-qr">Use o código abaixo para pagar via PIX.</p>`;
+
+        if (data.qrCode && pixCodeArea) {
+            pixCodeArea.innerHTML = `
+                <div class="wr-pix-code" id="wrPixTxt">${data.qrCode}</div>
+                <button class="wr-btn-copiar" onclick="copiarPixRenovacao()">📋 Copiar código PIX</button>`;
+        }
+
+        // Polling de confirmação — encerra o widget ao pagar
+        if (data.mpPaymentId) {
+            const pollTimer = setInterval(async () => {
+                try {
+                    const r = await fetch(`${API_URL}/pagamentos/status/${data.mpPaymentId}`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    const d = await r.json();
+                    if (d.aprovado) {
+                        clearInterval(pollTimer);
+                        fecharWidgetRenovacao();
+                        mostrarNotificacao('✅ Pagamento confirmado! Licença renovada com sucesso.', 'success');
+                        setTimeout(() => location.reload(), 2500);
+                    }
+                } catch (_) {}
+            }, 5000);
+        }
+    } catch (err) {
+        if (qrArea) {
+            qrArea.innerHTML = `<p class="wr-no-qr" style="color:#ef4444;">
+                Erro ao gerar QR Code.<br>
+                <a href="/comprar.html" target="_blank" style="color:#3b82f6;">Acesse os planos aqui</a>.
+            </p>`;
+        }
+    }
+}
+
+function copiarPixRenovacao() {
+    const code = document.getElementById('wrPixTxt')?.textContent;
+    if (!code) return;
+    navigator.clipboard.writeText(code)
+        .then(() => mostrarNotificacao('📋 Código PIX copiado!', 'success'));
+}
+
+function fecharWidgetRenovacao() {
+    const w = document.getElementById('widgetRenovacao');
+    if (w) w.remove();
+}
+
+/**
+ * Adia o lembrete por 12 horas.
+ */
+function snoozeRenovacao() {
+    const ate = Date.now() + 12 * 60 * 60 * 1000;
+    localStorage.setItem('renovacaoSnoozeAte', String(ate));
+    fecharWidgetRenovacao();
+    mostrarNotificacao('⏳ Lembrete de renovação adiado por 12 horas.', 'info');
+}
+
+// ==================== CANCELAR ASSINATURA ====================
+
+async function cancelarAssinaturaTotal() {
+    const ok1 = confirm(
+        '⚠️ ATENÇÃO: Deseja realmente CANCELAR sua assinatura?\n\n' +
+        'Isso encerrará o acesso ao sistema imediatamente.\n\n' +
+        'Clique em OK para continuar.'
+    );
+    if (!ok1) return;
+
+    const ok2 = confirm(
+        '❗ CONFIRMAÇÃO FINAL:\n\n' +
+        'Sua licença será cancelada agora.\n' +
+        'Esta ação NÃO pode ser desfeita.\n\n' +
+        'Clique em OK para confirmar o cancelamento.'
+    );
+    if (!ok2) return;
+
+    const token = localStorage.getItem('token');
+    try {
+        const resp = await fetch(`${API_URL}/licenses/minha`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await resp.json();
+        if (!data.success) throw new Error(data.message);
+        mostrarNotificacao('Assinatura cancelada. Sua sessão será encerrada em instantes.', 'info');
+        setTimeout(() => logout(), 2500);
+    } catch (err) {
+        mostrarNotificacao('Erro ao cancelar: ' + err.message, 'error');
+    }
 }
 
 // ==================== LOGOUT ====================

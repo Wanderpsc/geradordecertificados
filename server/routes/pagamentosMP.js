@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const {
     criarPix,
+    criarPixRenovacao,
     criarCheckoutCartao,
     webhook,
     verificarStatusPix
@@ -13,6 +14,7 @@ router.post('/webhook', webhook);
 
 // Rotas autenticadas
 router.post('/pix', proteger, criarPix);
+router.post('/pix-renovacao', proteger, criarPixRenovacao);
 router.post('/cartao', proteger, criarCheckoutCartao);
 router.get('/status/:mpPaymentId', proteger, verificarStatusPix);
 

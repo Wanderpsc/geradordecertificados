@@ -8,6 +8,133 @@
     <meta name="copyright" content="© 2026 Wander Pires Silva Coelho. Todos os direitos reservados.">
     <link rel="stylesheet" href="styles.css">
     <script src="protection.js"></script>
+    <style>
+        /* ── Widget flutuante de renovação de licença ── */
+        #widgetRenovacao {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 288px;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0,0,0,.18), 0 0 0 2px #f59e0b;
+            z-index: 9990;
+            overflow: hidden;
+            animation: wrSlideIn .35s ease;
+        }
+        @keyframes wrSlideIn {
+            from { transform: translateY(24px); opacity: 0; }
+            to   { transform: translateY(0);    opacity: 1; }
+        }
+        #widgetRenovacao .wr-header {
+            background: linear-gradient(135deg,#f59e0b,#d97706);
+            color: #fff;
+            padding: 10px 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-weight: 700;
+            font-size: 12px;
+            letter-spacing: .3px;
+        }
+        #widgetRenovacao .wr-header button {
+            background: none; border: none; color: #fff;
+            cursor: pointer; font-size: 15px; line-height: 1; padding: 0 2px;
+        }
+        #widgetRenovacao .wr-body { padding: 12px 14px 14px; }
+        #widgetRenovacao .wr-hint {
+            font-size: 11px; color: #6b7280; text-align: center; margin: 0 0 10px;
+        }
+        #widgetRenovacao .wr-qr {
+            text-align: center; margin-bottom: 8px; min-height: 40px;
+        }
+        #widgetRenovacao .wr-qr img {
+            width: 130px; height: 130px; border-radius: 8px;
+            border: 1px solid #e5e7eb;
+        }
+        #widgetRenovacao .wr-loading-txt {
+            font-size: 11px; color: #9ca3af; margin: 4px 0 0;
+        }
+        #widgetRenovacao .wr-no-qr {
+            font-size: 11px; color: #6b7280; text-align: center;
+        }
+        #widgetRenovacao .wr-pix-code {
+            background: #f8fafc;
+            border: 1px dashed #cbd5e1;
+            border-radius: 6px;
+            padding: 6px 8px;
+            font-size: 9px;
+            word-break: break-all;
+            color: #374151;
+            margin-bottom: 6px;
+            max-height: 38px;
+            overflow: hidden;
+        }
+        #widgetRenovacao .wr-btn-copiar {
+            width: 100%; background: #f1f5f9; border: 1px solid #e2e8f0;
+            border-radius: 6px; padding: 5px; font-size: 10px;
+            cursor: pointer; margin-bottom: 8px;
+        }
+        #widgetRenovacao .wr-preco {
+            text-align: center; font-size: 11px; font-weight: 700;
+            color: #374151; margin-bottom: 8px;
+        }
+        #widgetRenovacao .wr-btns { display: flex; gap: 6px; }
+        #widgetRenovacao .wr-btn-pagar {
+            flex: 1; background: #16a34a; color: #fff; border: none;
+            border-radius: 8px; padding: 9px 6px; font-size: 11px;
+            font-weight: 700; cursor: pointer; transition: opacity .15s;
+        }
+        #widgetRenovacao .wr-btn-pagar:hover { opacity: .88; }
+        #widgetRenovacao .wr-btn-snooze {
+            flex: 1; background: #f1f5f9; color: #374151;
+            border: 1px solid #e2e8f0; border-radius: 8px;
+            padding: 9px 6px; font-size: 11px; font-weight: 600;
+            cursor: pointer; transition: background .15s;
+        }
+        #widgetRenovacao .wr-btn-snooze:hover { background: #e5e7eb; }
+        #widgetRenovacao .wr-spinner {
+            width: 22px; height: 22px; margin: 8px auto 2px;
+            border: 3px solid #e5e7eb; border-top-color: #f59e0b;
+            border-radius: 50%;
+            animation: wrSpin .7s linear infinite;
+        }
+        @keyframes wrSpin { to { transform: rotate(360deg); } }
+
+        /* ── Zona de Perigo (cancelar assinatura) ── */
+        .zona-perigo {
+            margin-top: 56px;
+            border-top: 2px dashed #fca5a5;
+            padding-top: 28px;
+        }
+        .zona-perigo-inner {
+            background: #fff5f5;
+            border: 1.5px solid #fca5a5;
+            border-radius: 12px;
+            padding: 20px 24px;
+        }
+        .zona-perigo h4 {
+            color: #991b1b; font-size: 14px; font-weight: 700; margin: 0 0 6px;
+        }
+        .zona-perigo p {
+            color: #7f1d1d; font-size: 12px; margin: 0 0 16px; line-height: 1.5;
+        }
+        .btn-cancelar-assinatura {
+            background: none;
+            border: 1.5px solid #dc2626;
+            color: #dc2626;
+            padding: 8px 20px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background .15s, color .15s;
+        }
+        .btn-cancelar-assinatura:hover {
+            background: #dc2626;
+            color: #fff;
+        }
+    </style>
     
     <!-- Verificação de autenticação - DEVE EXECUTAR ANTES DE CARREGAR A PÁGINA -->
     <script>
@@ -1238,6 +1365,21 @@
                         🛒 Ver Planos e Preços
                     </a>
                     <p style="margin-top: 14px; font-size: 12px; color: #9ca3af;">Pagamento seguro via Mercado Pago · PIX · Cartão parcelado</p>
+                </div>
+
+                <!-- ───── Zona de Perigo ───── -->
+                <div class="zona-perigo">
+                    <div class="zona-perigo-inner">
+                        <h4>⛔ Zona de Perigo</h4>
+                        <p>
+                            O cancelamento encerra sua assinatura <strong>imediatamente</strong> e você
+                            perde o acesso ao sistema. Esta ação <strong>não pode ser desfeita</strong>.
+                            Seus dados de alunos e modelos permanecem no banco por 90 dias após o cancelamento.
+                        </p>
+                        <button class="btn-cancelar-assinatura" onclick="cancelarAssinaturaTotal()">
+                            Cancelar minha assinatura
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

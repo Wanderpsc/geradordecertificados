@@ -225,3 +225,35 @@ exports.renovarLicenca = async (req, res) => {
         });
     }
 };
+
+// @desc    Cancelar a própria assinatura (usuário logado)
+// @route   DELETE /api/licenses/minha
+// @access  Private
+exports.cancelarMinhaAssinatura = async (req, res) => {
+    try {
+        const usuario = req.usuario;
+        const licenca = usuario.licenca;
+
+        if (!licenca) {
+            return res.status(404).json({ success: false, message: 'Nenhuma licença encontrada.' });
+        }
+
+        if (licenca.status === 'cancelada') {
+            return res.status(400).json({ success: false, message: 'Licença já cancelada.' });
+        }
+
+        await Licenca.findByIdAndUpdate(licenca._id, {
+            status: 'cancelada',
+            dataExpiracao: new Date(),
+            observacoes: `Cancelada pelo próprio usuário em ${new Date().toLocaleString('pt-BR')}`
+        });
+
+        res.json({ success: true, message: 'Assinatura cancelada com sucesso.' });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Erro ao cancelar assinatura.',
+            error: error.message
+        });
+    }
+};

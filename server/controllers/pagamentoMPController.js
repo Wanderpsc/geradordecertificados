@@ -78,6 +78,91 @@ exports.criarPix = async (req, res) => {
     }
 };
 
+// ─────────────────────── PIX DE RENOVAÇÃO AUTOMÁTICA ─────────────────────────
+
+// @desc  Criar PIX de renovação usando o plano atual do usuário (sem precisar de planoId)
+// @route POST /api/pagamentos/pix-renovacao
+// @access Private
+exports.criarPixRenovacao = async (req, res) => {
+    try {
+        const usuario = req.usuario; // já populado com licença pelo middleware
+        const licenca = usuario.licenca;
+
+        if (!licenca) {
+            return res.status(400).json({ success: false, message: 'Nenhuma licença encontrada.' });
+        }
+
+        if (licenca.status === 'cancelada') {
+            return res.status(400).json({ success: false, message: 'Licença já cancelada.' });
+        }
+
+        // Encontrar o plano de venda mais barato que corresponde ao tipo de licença do usuário
+        const plano = await PlanoVenda.findOne({
+            tipoLicenca: licenca.tipo,
+            ativo: true,
+            tipo: { $ne: 'creditos' }
+        }).sort({ preco: 1 });
+
+        if (!plano) {
+            return res.status(404).json({
+                success: false,
+                message: 'Nenhum plano de renovação encontrado para esta licença.'
+            });
+        }
+
+        const client = getMPClient();
+        const paymentApi = new Payment(client);
+
+        const paymentData = {
+            transaction_amount: plano.preco,
+            description: `Renovação — ${plano.nome} — Gerador de Certificados`,
+            payment_method_id: 'pix',
+            payer: {
+                email: usuario.email,
+                first_name: (usuario.nome || '').split(' ')[0],
+                last_name: (usuario.nome || '').split(' ').slice(1).join(' ') || 'N/A'
+            },
+            metadata: {
+                plano_id: plano._id.toString(),
+                usuario_id: usuario._id.toString(),
+                plano_nome: plano.nome,
+                renovacao: 'true'
+            }
+        };
+
+        const mpResponse = await paymentApi.create({ body: paymentData });
+
+        await Pagamento.create({
+            usuario: usuario._id,
+            valor: plano.preco,
+            valorFinal: plano.preco,
+            desconto: 0,
+            metodoPagamento: 'pix',
+            status: 'pendente',
+            gatewayPagamento: 'mercadopago',
+            codigoTransacao: String(mpResponse.id),
+            tipoProduto: plano.tipoLicenca,
+            periodoCobertura: {
+                inicio: new Date(),
+                fim: new Date(Date.now() + plano.validadeDias * 86400000)
+            }
+        });
+
+        const qr = mpResponse.point_of_interaction?.transaction_data;
+
+        res.json({
+            success: true,
+            mpPaymentId: mpResponse.id,
+            qrCode: qr?.qr_code || null,
+            qrCodeBase64: qr?.qr_code_base64 || null,
+            plano: { nome: plano.nome, preco: plano.preco }
+        });
+    } catch (err) {
+        console.error('Erro ao criar PIX de renovação:', err.message);
+        res.status(500).json({ success: false, message: 'Erro ao gerar PIX de renovação.', error: err.message });
+    }
+};
+
 // ─────────────────────── CARTÃO PARCELADO ────────────────────────────────────
 
 // @desc  Criar preferência de pagamento com cartão (Checkout MP)
