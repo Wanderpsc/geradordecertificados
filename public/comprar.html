@@ -111,6 +111,15 @@ footer{text-align:center;padding:32px;color:#94a3b8;font-size:13px}
 <!-- Banner de resultado de pagamento -->
 <div id="statusBanner" class="status-banner" style="display:none;margin-top:16px"></div>
 
+<!-- Botão verificação manual (visível quando logado, para quem já pagou mas licença não atualizou) -->
+<div id="verificarWrap" class="verificar-wrapper" style="display:none;text-align:center;margin:10px auto 0">
+  <button onclick="verificarPagamentoManual(this)"
+    style="background:#1e40af;color:#fff;border:none;padding:10px 28px;border-radius:8px;font-weight:700;cursor:pointer;font-size:14px">
+    🔄 Verificar meu pagamento
+  </button>
+  <p style="font-size:12px;color:#64748b;margin-top:6px">Já pagou mas a licença não atualizou? Clique aqui.</p>
+</div>
+
 <!-- Tabs -->
 <div class="tabs-wrap">
   <div class="tabs">
@@ -167,9 +176,35 @@ function trocarTab(tab, btn) {
     const banner = document.getElementById('statusBanner');
     if (!status) return;
     banner.style.display = 'block';
+    history.replaceState({}, '', '/comprar.html');
+
     if (status === 'aprovado') {
         banner.className = 'status-banner aprovado';
-        banner.textContent = '✅ Pagamento aprovado! Sua licença foi ativada. Acesse o sistema para começar.';
+        banner.innerHTML = '⏳ Pagamento aprovado! Ativando sua licença...';
+        // Chamar provisioning automático
+        const token = localStorage.getItem('token');
+        if (token) {
+            fetch(`${API_URL}/pagamentos/verificar-pendentes`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.aprovado) {
+                    banner.innerHTML = '✅ Licença ativada com sucesso! Redirecionando para o sistema...';
+                    setTimeout(() => window.location.href = '/index.html', 2500);
+                } else {
+                    banner.innerHTML = `✅ Pagamento confirmado!
+                        <br><small style="font-weight:400">Sua licença será ativada em instantes.
+                        <a href="/index.html" style="color:#166534;font-weight:700">Acessar o sistema →</a></small>`;
+                }
+            })
+            .catch(() => {
+                banner.innerHTML = '✅ Pagamento confirmado! <a href="/index.html" style="color:#166534;font-weight:700">Acessar o sistema →</a>';
+            });
+        } else {
+            banner.innerHTML = '✅ Pagamento confirmado! <a href="/index.html" style="color:#166534;font-weight:700">Faça login para acessar →</a>';
+        }
     } else if (status === 'pendente') {
         banner.className = 'status-banner pendente';
         banner.textContent = '⏳ Pagamento pendente. Aguarde a confirmação ou verifique seu e-mail.';
@@ -177,8 +212,39 @@ function trocarTab(tab, btn) {
         banner.className = 'status-banner falha';
         banner.textContent = '❌ Pagamento não concluído. Tente novamente ou escolha outra forma.';
     }
-    history.replaceState({}, '', '/comprar.html');
 })();
+
+// ─── Verificar pagamento manualmente ───
+async function verificarPagamentoManual(btn) {
+    const token = localStorage.getItem('token');
+    if (!token) { alert('Faça login primeiro para verificar o pagamento.'); return; }
+    const txtOrig = btn.textContent;
+    btn.textContent = '⏳ Verificando...';
+    btn.disabled = true;
+    try {
+        const r = await fetch(`${API_URL}/pagamentos/verificar-pendentes`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+        });
+        const data = await r.json();
+        if (data.aprovado) {
+            const banner = document.getElementById('statusBanner');
+            banner.style.display = 'block';
+            banner.className = 'status-banner aprovado';
+            banner.innerHTML = '✅ Licença ativada com sucesso! Redirecionando...';
+            btn.closest('.verificar-wrapper')?.remove();
+            setTimeout(() => window.location.href = '/index.html', 2000);
+        } else {
+            btn.textContent = txtOrig;
+            btn.disabled = false;
+            alert('Pagamento ainda não confirmado pelo Mercado Pago. Aguarde alguns minutos e tente novamente.');
+        }
+    } catch(e) {
+        btn.textContent = txtOrig;
+        btn.disabled = false;
+        alert('Erro ao verificar: ' + e.message);
+    }
+}
 
 // ─── Carregar planos e créditos ───
 async function carregarTudo() {
@@ -568,6 +634,9 @@ document.getElementById('backdrop').addEventListener('click', e => {
             } else {
                 badge.className = 'lic-no';
                 badge.textContent = '⚠️ Sem licença ativa';
+                // Mostrar botão de verificação para quem pode ter pago mas não tem licença ativa
+                const vw = document.getElementById('verificarWrap');
+                if (vw) vw.style.display = 'block';
                 carregarTudo();
             }
         })

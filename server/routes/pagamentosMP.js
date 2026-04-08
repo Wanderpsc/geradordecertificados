@@ -5,7 +5,8 @@ const {
     criarPixRenovacao,
     criarCheckoutCartao,
     webhook,
-    verificarStatusPix
+    verificarStatusPix,
+    verificarEProvisionar
 } = require('../controllers/pagamentoMPController');
 const { proteger } = require('../middlewares/auth');
 
@@ -17,5 +18,6 @@ router.post('/pix', proteger, criarPix);
 router.post('/pix-renovacao', proteger, criarPixRenovacao);
 router.post('/cartao', proteger, criarCheckoutCartao);
 router.get('/status/:mpPaymentId', proteger, verificarStatusPix);
+router.post('/verificar-pendentes', proteger, verificarEProvisionar);
 
 module.exports = router;

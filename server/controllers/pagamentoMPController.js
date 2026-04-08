@@ -359,3 +359,55 @@ exports.verificarStatusPix = async (req, res) => {
         res.status(500).json({ success: false, message: 'Erro ao verificar status.', error: err.message });
     }
 };
+
+// @desc  Verificar e provisionar pagamentos aprovados mais recentes do usuário (pós back_url do cartão)
+// @route POST /api/pagamentos/verificar-pendentes
+// @access Private
+exports.verificarEProvisionar = async (req, res) => {
+    try {
+        const usuarioId = req.usuario._id.toString();
+
+        // Buscar os últimos pagamentos pendentes do usuário
+        const pgtosPendentes = await Pagamento.find({
+            usuario: usuarioId,
+            status: 'pendente',
+            gatewayPagamento: 'mercadopago'
+        }).sort({ createdAt: -1 }).limit(5);
+
+        if (!pgtosPendentes.length) {
+            return res.json({ success: true, aprovado: false, message: 'Nenhum pagamento pendente encontrado.' });
+        }
+
+        const client = getMPClient();
+        const paymentApi = new Payment(client);
+
+        let provisionado = false;
+
+        for (const pgto of pgtosPendentes) {
+            try {
+                const mpPayment = await paymentApi.get({ id: pgto.codigoTransacao });
+                if (mpPayment.status !== 'approved') continue;
+
+                const planoId = mpPayment.metadata?.plano_id;
+                if (!planoId) continue;
+
+                // Atualizar pagamento e provisionar licença
+                await Pagamento.findByIdAndUpdate(pgto._id, {
+                    status: 'aprovado',
+                    dataPagamento: new Date(),
+                    metodoPagamento: mpPayment.payment_method_id === 'pix' ? 'pix' : 'cartao_credito'
+                });
+                await provisionarLicencaParaPlano(planoId, usuarioId,
+                    mpPayment.payment_method_id === 'pix' ? 'pix' : 'cartao_credito');
+
+                provisionado = true;
+                console.log(`✅ Pagamento ${pgto.codigoTransacao} provisionado via verificar-pendentes para ${usuarioId}`);
+                break; // provisiona apenas o primeiro aprovado encontrado
+            } catch (_) {}
+        }
+
+        res.json({ success: true, aprovado: provisionado });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Erro ao verificar pagamentos.', error: err.message });
+    }
+};
