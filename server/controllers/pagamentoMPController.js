@@ -14,6 +14,19 @@ function mpErrMsg(err) {
     try { return JSON.stringify(err); } catch (_) { return String(err); }
 }
 
+// Detectar modo sandbox/teste pelo prefixo do token
+function isTestMode() {
+    const token = process.env.MP_ACCESS_TOKEN || '';
+    return token.startsWith('TEST-');
+}
+
+// Email do pagador: em modo teste usa email fixo de teste do MP
+function payerEmail(realEmail) {
+    // Em modo teste o payer DEVE ser um test-user; usamos o email de teste padrão.
+    // Substitua por um test-user criado na sua conta MP se quiser testar pagamentos aprovados.
+    return isTestMode() ? (process.env.MP_TEST_PAYER_EMAIL || 'test_user_123456789@testuser.com') : realEmail;
+}
+
 // Inicializar cliente MP com access token do .env
 function getMPClient() {
     const token = process.env.MP_ACCESS_TOKEN;
@@ -42,7 +55,7 @@ exports.criarPix = async (req, res) => {
             description: `${plano.nome} — Gerador de Certificados`,
             payment_method_id: 'pix',
             payer: {
-                email: usuario.email,
+                email: payerEmail(usuario.email),
                 first_name: (usuario.nome || '').split(' ')[0],
                 last_name: (usuario.nome || '').split(' ').slice(1).join(' ') || 'N/A'
             },
@@ -130,7 +143,7 @@ exports.criarPixRenovacao = async (req, res) => {
             description: `Renovação — ${plano.nome} — Gerador de Certificados`,
             payment_method_id: 'pix',
             payer: {
-                email: usuario.email,
+                email: payerEmail(usuario.email),
                 first_name: (usuario.nome || '').split(' ')[0],
                 last_name: (usuario.nome || '').split(' ').slice(1).join(' ') || 'N/A'
             },
@@ -206,10 +219,16 @@ exports.criarCheckoutCartao = async (req, res) => {
                 unit_price: plano.preco
             }],
             payer: {
-                email: usuario.email,
+                email: payerEmail(usuario.email),
                 name: usuario.nome || ''
             },
             payment_methods: {
+                // Excluir boleto e ATM — manter apenas cartão
+                excluded_payment_types: [
+                    { id: 'ticket' },   // boleto bancário
+                    { id: 'atm' },      // caixas eletrônicos
+                    { id: 'bank_transfer' } // transferência bancária (mantém apenas cartão)
+                ],
                 installments: numParcelas,
                 default_installments: numParcelas
             },
@@ -246,10 +265,15 @@ exports.criarCheckoutCartao = async (req, res) => {
             }
         });
 
+        // Em modo teste usar sandbox_init_point; em produção usar init_point
+        const checkoutUrl = isTestMode()
+            ? mpResponse.sandbox_init_point
+            : mpResponse.init_point;
+
         res.json({
             success: true,
-            checkoutUrl: mpResponse.init_point,
-            checkoutUrlSandbox: mpResponse.sandbox_init_point,
+            checkoutUrl,
+            testMode: isTestMode(),
             preferenceId: mpResponse.id,
             plano: { nome: plano.nome, preco: plano.preco, maxParcelas: plano.maxParcelas }
         });
