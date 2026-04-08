@@ -25,7 +25,12 @@ function showError(message) {
     const errorDiv = document.getElementById('errorMessage');
     errorDiv.textContent = message;
     errorDiv.style.display = 'block';
-    setTimeout(() => errorDiv.style.display = 'none', 5000);
+    setTimeout(() => errorDiv.style.display = 'none', 8000);
+}
+
+function showWakeBanner(visible) {
+    const b = document.getElementById('wakeBanner');
+    if (b) b.style.display = visible ? 'block' : 'none';
 }
 
 function showSuccess(message) {
@@ -82,13 +87,22 @@ document.getElementById('formLogin').addEventListener('submit', async (e) => {
             showError(data.message || 'Erro ao fazer login');
         }
     } catch (error) {
-        showError('Erro ao conectar com o servidor. Verifique se o servidor está rodando.');
+        // Mostrar banner de "servidor acordando" e tentar novamente em 5s
+        showWakeBanner(true);
+        document.getElementById('errorMessage').style.display = 'none';
+        const btn = form.querySelector('button[type=submit]');
+        if (btn) btn.disabled = true;
+        setTimeout(async () => {
+            showWakeBanner(false);
+            if (btn) btn.disabled = false;
+            form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+        }, 7000);
     } finally {
         form.classList.remove('loading');
     }
 });
 
-// Registro
+// Registro handler
 document.getElementById('formRegister').addEventListener('submit', async (e) => {
     e.preventDefault();
     
@@ -147,11 +161,31 @@ document.getElementById('formRegister').addEventListener('submit', async (e) => 
             showError(data.message || 'Erro ao criar conta');
         }
     } catch (error) {
-        showError('Erro ao conectar com o servidor. Verifique se o servidor está rodando.');
+        showWakeBanner(true);
+        document.getElementById('errorMessage').style.display = 'none';
+        const btn = form.querySelector('button[type=submit]');
+        if (btn) btn.disabled = true;
+        setTimeout(() => {
+            showWakeBanner(false);
+            if (btn) btn.disabled = false;
+            form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+        }, 7000);
     } finally {
         form.classList.remove('loading');
     }
 });
+
+// ── Ping prévio ao servidor (acordar Render free tier) ─────────────────────
+(function pingServidor() {
+    // Se estiver rodando local, não precisa de ping
+    if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') return;
+    fetch(`${API_URL}/auth/ping`, { method: 'GET', signal: AbortSignal.timeout(3000) })
+        .catch(() => {
+            // Servidor dormindo — mostrar banner por 5s, ele vai acordar sozinho
+            showWakeBanner(true);
+            setTimeout(() => showWakeBanner(false), 15000);
+        });
+})()
 
 // Verificar se já está logado (somente se tiver token válido)
 const token = localStorage.getItem('token');
