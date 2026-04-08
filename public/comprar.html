@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Planos e Preços — Gerador de Certificados</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4ff;color:#1e293b;min-height:100vh}
+/* ─── Cabeçalho ─── */
+.topo{background:linear-gradient(135deg,#1e40af 0%,#1e3a8a 100%);color:#fff;padding:48px 24px 56px;text-align:center;position:relative;overflow:hidden}
+.topo::before{content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")}
+.topo h1{font-size:2.4rem;font-weight:800;margin-bottom:10px;position:relative}
+.topo p{font-size:1.1rem;opacity:.85;max-width:560px;margin:0 auto;position:relative}
+/* ─── Badge de status (retorno do MP) ─── */
+.status-banner{padding:14px 20px;margin:0 auto 24px;max-width:760px;border-radius:12px;font-size:15px;font-weight:600;text-align:center;display:none}
+.status-banner.aprovado{background:#dcfce7;color:#166534;border:1px solid #86efac}
+.status-banner.pendente{background:#fef9c3;color:#713f12;border:1px solid #fde047}
+.status-banner.falha{background:#fee2e2;color:#7f1d1d;border:1px solid #fca5a5}
+/* ─── Grade de planos ─── */
+.grade{display:flex;flex-wrap:wrap;gap:24px;justify-content:center;padding:40px 24px;max-width:1100px;margin:0 auto}
+.card{background:#fff;border-radius:18px;padding:32px 28px;flex:1 1 280px;max-width:340px;box-shadow:0 4px 24px rgba(30,64,175,.1);border:2px solid #e0e7ff;display:flex;flex-direction:column;position:relative;transition:transform .2s,box-shadow .2s}
+.card:hover{transform:translateY(-4px);box-shadow:0 12px 40px rgba(30,64,175,.18)}
+.card.destaque{border-color:var(--cor,#1e40af)}
+.card .badge-destaque{position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:var(--cor,#1e40af);color:#fff;font-size:12px;font-weight:700;padding:4px 16px;border-radius:20px;white-space:nowrap}
+.card .ico{font-size:2.6rem;margin-bottom:12px}
+.card h2{font-size:1.3rem;font-weight:800;color:#1e3a8a;margin-bottom:4px}
+.card .sub{font-size:13px;color:#64748b;margin-bottom:14px}
+.card .preco{font-size:2rem;font-weight:800;color:var(--cor,#1e40af);margin-bottom:2px}
+.card .preco-parc{font-size:12px;color:#64748b;margin-bottom:18px}
+.card ul{list-style:none;margin-bottom:20px;flex:1}
+.card ul li{font-size:13.5px;padding:5px 0;border-bottom:1px solid #f1f5f9;display:flex;gap:8px;align-items:flex-start}
+.card ul li::before{content:'✓';color:#16a34a;font-weight:700;flex-shrink:0}
+.card ul li.neg::before{content:'✗';color:#dc2626}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.tag{font-size:11px;padding:3px 10px;border-radius:20px;background:#eff6ff;color:#1e40af;font-weight:600}
+/* ─── Botões do card ─── */
+.btn-pix{width:100%;padding:13px;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;margin-bottom:8px;transition:opacity .2s}
+.btn-card{width:100%;padding:13px;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;background:linear-gradient(135deg,var(--cor,#1e40af),#1e3a8a);color:#fff;transition:opacity .2s}
+.btn-pix:hover,.btn-card:hover{opacity:.88}
+/* ─── Modal de Checkout ─── */
+.backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:8888;display:none;align-items:center;justify-content:center;padding:16px}
+.backdrop.open{display:flex}
+.modal{background:#fff;border-radius:18px;padding:32px;max-width:480px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3);position:relative;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:1.3rem;font-weight:800;color:#1e3a8a;margin-bottom:4px}
+.modal .resumo{background:#eff6ff;border-radius:10px;padding:14px;margin:14px 0;font-size:13.5px}
+.modal .fechar{position:absolute;top:16px;right:20px;background:none;border:none;font-size:24px;cursor:pointer;color:#64748b}
+/* PIX */
+.qr-wrap{text-align:center;margin:16px 0}
+.qr-wrap img{max-width:200px;border:2px solid #e0e7ff;border-radius:12px;padding:8px}
+.pix-code{background:#f8fafc;border:1px dashed #cbd5e1;border-radius:8px;padding:10px 12px;font-size:11px;word-break:break-all;margin:10px 0}
+.btn-copiar{width:100%;padding:10px;background:#1e40af;color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;margin-top:6px;font-size:14px}
+.aguardando{text-align:center;color:#64748b;font-size:13px;margin-top:10px}
+/* Parcelas select */
+.parc-select{width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;margin:10px 0}
+/* ─── Login gate ─── */
+.gate{text-align:center;padding:20px;background:#fef9c3;border-radius:12px;margin-bottom:16px;font-size:14px}
+.gate a{color:#1e40af;font-weight:700}
+/* ─── Rodapé ─── */
+footer{text-align:center;padding:32px;color:#94a3b8;font-size:13px}
+.spinner{width:22px;height:22px;border:3px solid #e0e7ff;border-top-color:#1e40af;border-radius:50%;animation:spin .7s linear infinite;margin:20px auto}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<div class="topo">
+  <div style="position:relative">
+    <div style="font-size:1rem;opacity:.7;margin-bottom:8px">🎓 Gerador de Certificados e Históricos Escolares</div>
+    <h1>Escolha o Plano Ideal</h1>
+    <p>Comece sem templates e crie do zero — ou adquira modelos prontos adaptáveis à sua escola.</p>
+  </div>
+</div>
+
+<!-- Banner de resultado de pagamento -->
+<div id="statusBanner" class="status-banner" style="display:none;margin-top:24px"></div>
+
+<!-- Grade de planos -->
+<div class="grade" id="gradePlanos">
+  <div class="spinner"></div>
+</div>
+
+<!-- Modal de Checkout -->
+<div class="backdrop" id="backdrop">
+  <div class="modal" id="modalCheckout">
+    <button class="fechar" onclick="fecharCheckout()">×</button>
+    <div id="checkoutConteudo"></div>
+  </div>
+</div>
+
+<footer>
+  © 2026 Wander Pires Silva Coelho — Todos os direitos reservados.<br>
+  Dúvidas? <a href="mailto:wanderpsc@gmail.com" style="color:#1e40af">wanderpsc@gmail.com</a>
+</footer>
+
+<script>
+const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:5000/api'
+    : 'https://gerador-certificados.onrender.com/api';
+
+let _planoAtual = null;
+let _pixPollingTimer = null;
+let _mpPaymentId = null;
+
+// ─── Verificar retorno do MP (back_urls) ───
+(function verificarRetornoMP() {
+    const params = new URLSearchParams(location.search);
+    const status = params.get('status');
+    const banner = document.getElementById('statusBanner');
+    if (!status) return;
+    banner.style.display = 'block';
+    if (status === 'aprovado') {
+        banner.className = 'status-banner aprovado';
+        banner.textContent = '✅ Pagamento aprovado! Sua licença foi ativada. Acesse o sistema para começar.';
+    } else if (status === 'pendente') {
+        banner.className = 'status-banner pendente';
+        banner.textContent = '⏳ Pagamento pendente. Aguarde a confirmação ou verifique seu e-mail.';
+    } else {
+        banner.className = 'status-banner falha';
+        banner.textContent = '❌ Pagamento não concluído. Tente novamente ou escolha outra forma.';
+    }
+    history.replaceState({}, '', '/comprar.html');
+})();
+
+// ─── Carregar planos ───
+async function carregarPlanos() {
+    try {
+        const resp = await fetch(`${API_URL}/planos`);
+        const data = await resp.json();
+        if (!data.success) throw new Error(data.message);
+        renderizarPlanos(data.planos);
+    } catch (err) {
+        document.getElementById('gradePlanos').innerHTML =
+            `<p style="color:#dc2626;text-align:center">Erro ao carregar planos: ${err.message}</p>`;
+    }
+}
+
+function renderizarPlanos(planos) {
+    const grade = document.getElementById('gradePlanos');
+    if (!planos.length) {
+        grade.innerHTML = '<p style="color:#64748b;text-align:center">Nenhum plano disponível no momento. Volte em breve!</p>';
+        return;
+    }
+    grade.innerHTML = planos.map(p => {
+        const parcela = (p.preco / p.maxParcelas).toFixed(2);
+        const listaRecursos = montarListaRecursos(p);
+        const tagsHTML = (p.tags || []).map(t => `<span class="tag">${t}</span>`).join('');
+        return `
+        <div class="card${p.destaque ? ' destaque' : ''}" style="--cor:${p.corDestaque || '#1e40af'}">
+          ${p.destaque ? `<div class="badge-destaque">⭐ Mais Popular</div>` : ''}
+          <div class="ico">${p.icone || '🎓'}</div>
+          <h2>${p.nome}</h2>
+          <div class="sub">${p.subtitulo || ''}</div>
+          ${tagsHTML ? `<div class="tags">${tagsHTML}</div>` : ''}
+          <div class="preco">R$ ${Number(p.preco).toFixed(2)}</div>
+          <div class="preco-parc">${p.maxParcelas > 1 ? `ou ${p.maxParcelas}x de R$ ${parcela} no cartão` : 'à vista'}</div>
+          <ul>${listaRecursos}</ul>
+          <button class="btn-pix" onclick="iniciarPagamento('${p._id}','pix')">
+            🔐 Pagar com PIX
+          </button>
+          <button class="btn-card" onclick="iniciarPagamento('${p._id}','cartao')">
+            💳 Pagar com Cartão
+          </button>
+        </div>`;
+    }).join('');
+}
+
+function montarListaRecursos(p) {
+    const rec = p.recursos || {};
+    const items = [];
+    if (rec.certificados) items.push('Geração de certificados em PDF');
+    if (rec.historicos) items.push('Históricos escolares (Fund. e Médio)');
+    if (rec.multiplosTemplates) items.push('Múltiplos templates simultâneos');
+    else items.push(`<span class="neg">Múltiplos templates</span>`);
+    if (!rec.marcaDagua) items.push('Sem marca d\'água');
+    else items.push(`<span class="neg">Com marca d'água</span>`);
+    if (rec.subUsuarios > 0) items.push(`Até ${rec.subUsuarios} sub-usuário(s)`);
+    if (rec.limiteCertificados === -1) items.push('Certificados ilimitados');
+    else if (rec.limiteCertificados > 0) items.push(`Até ${rec.limiteCertificados} certificados`);
+    const numTempl = (p.templatesCertificado?.length || 0) + (p.templatesHistorico?.length || 0);
+    if (p.tipo === 'com-templates' && numTempl > 0) {
+        items.push(`${numTempl} template(s) pronto(s) incluído(s)`);
+    } else if (p.tipo === 'limpo') {
+        items.push('Editor completo — crie seus próprios templates');
+    }
+    const dias = p.validadeDias;
+    if (dias >= 36500) items.push('Licença vitalícia');
+    else if (dias >= 365) items.push(`Licença por ${Math.round(dias / 365)} ano(s)`);
+    else items.push(`Licença por ${dias} dias`);
+    return items.map(i => `<li>${i}</li>`).join('');
+}
+
+// ─── Fluxo de pagamento ───
+async function iniciarPagamento(planoId, metodo) {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        abrirModalLogin();
+        return;
+    }
+    try {
+        const resp = await fetch(`${API_URL}/planos/${planoId}`);
+        const data = await resp.json();
+        if (!data.success) throw new Error(data.message);
+        _planoAtual = data.plano;
+        if (metodo === 'pix') abrirModalPix(planoId);
+        else abrirModalCartao(planoId);
+    } catch (err) {
+        alert('Erro: ' + err.message);
+    }
+}
+
+function abrirModalLogin() {
+    document.getElementById('checkoutConteudo').innerHTML = `
+        <div class="gate">
+            <p>Para comprar, você precisa estar <strong>logado</strong> no sistema.</p>
+            <br>
+            <a href="/login.html" class="btn-card" style="display:inline-block;padding:10px 24px;border-radius:8px;color:#fff;text-decoration:none;font-weight:700">Fazer Login / Criar Conta</a>
+        </div>`;
+    document.getElementById('backdrop').classList.add('open');
+}
+
+async function abrirModalPix(planoId) {
+    const token = localStorage.getItem('token');
+    const p = _planoAtual;
+    document.getElementById('checkoutConteudo').innerHTML = `
+        <h3>🔐 Pagar com PIX</h3>
+        <div class="resumo">
+            <strong>${p.icone} ${p.nome}</strong><br>
+            Valor: <strong>R$ ${Number(p.preco).toFixed(2)}</strong>
+        </div>
+        <div class="spinner"></div>
+        <p style="text-align:center;color:#64748b;font-size:13px">Gerando QR Code...</p>`;
+    document.getElementById('backdrop').classList.add('open');
+
+    try {
+        const resp = await fetch(`${API_URL}/pagamentos/pix`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ planoId })
+        });
+        const data = await resp.json();
+        if (!data.success) throw new Error(data.message || data.error);
+
+        _mpPaymentId = data.mpPaymentId;
+
+        document.getElementById('checkoutConteudo').innerHTML = `
+            <h3>🔐 Pagar com PIX</h3>
+            <div class="resumo">
+                <strong>${p.icone} ${p.nome}</strong><br>
+                Valor: <strong>R$ ${Number(p.preco).toFixed(2)}</strong>
+            </div>
+            <p style="font-size:13px;color:#374151;margin-bottom:8px">Escaneie o QR Code ou copie o código PIX abaixo:</p>
+            <div class="qr-wrap">
+                ${data.qrCodeBase64 ? `<img src="data:image/png;base64,${data.qrCodeBase64}" alt="QR Code PIX">` : '<p style="color:#64748b;font-size:13px">QR Code não disponível — use o código copia e cola abaixo.</p>'}
+            </div>
+            <div class="pix-code" id="pixCodeText">${data.qrCode || '(Código não disponível)'}</div>
+            <button class="btn-copiar" onclick="copiarPix()">📋 Copiar Código PIX</button>
+            <div class="aguardando" id="aguardandoPix">
+                <div class="spinner" style="width:16px;height:16px;margin:8px auto;border-width:2px"></div>
+                Aguardando confirmação do pagamento...
+            </div>`;
+
+        iniciarPollingPix(_mpPaymentId);
+    } catch (err) {
+        document.getElementById('checkoutConteudo').innerHTML += `<p style="color:#dc2626;text-align:center;margin-top:10px">❌ ${err.message}</p>`;
+    }
+}
+
+function copiarPix() {
+    const codigo = document.getElementById('pixCodeText')?.textContent;
+    if (!codigo) return;
+    navigator.clipboard.writeText(codigo).then(() => {
+        alert('✅ Código PIX copiado!');
+    });
+}
+
+function iniciarPollingPix(mpPaymentId) {
+    if (_pixPollingTimer) clearInterval(_pixPollingTimer);
+    const token = localStorage.getItem('token');
+    _pixPollingTimer = setInterval(async () => {
+        try {
+            const resp = await fetch(`${API_URL}/pagamentos/status/${mpPaymentId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await resp.json();
+            if (data.aprovado) {
+                clearInterval(_pixPollingTimer);
+                fecharCheckout();
+                const banner = document.getElementById('statusBanner');
+                banner.className = 'status-banner aprovado';
+                banner.textContent = '✅ Pagamento PIX confirmado! Sua licença foi ativada. Acesse o sistema.';
+                banner.style.display = 'block';
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        } catch (_) {}
+    }, 5000); // verificar a cada 5 segundos
+}
+
+async function abrirModalCartao(planoId) {
+    const token = localStorage.getItem('token');
+    const p = _planoAtual;
+    const maxParc = p.maxParcelas || 1;
+    const parcOpts = Array.from({ length: maxParc }, (_, i) => {
+        const n = i + 1;
+        const val = (p.preco / n).toFixed(2);
+        return `<option value="${n}">${n}x de R$ ${val}${n === 1 ? ' (sem juros - à vista)' : ''}</option>`;
+    }).join('');
+
+    document.getElementById('checkoutConteudo').innerHTML = `
+        <h3>💳 Pagar com Cartão</h3>
+        <div class="resumo">
+            <strong>${p.icone} ${p.nome}</strong><br>
+            Valor: <strong>R$ ${Number(p.preco).toFixed(2)}</strong>
+        </div>
+        <label style="font-size:13px;font-weight:600;color:#374151">Número de parcelas:</label>
+        <select class="parc-select" id="selectParcelas">${parcOpts}</select>
+        <p style="font-size:12px;color:#64748b;margin-bottom:14px">Você será redirecionado para o checkout seguro do Mercado Pago.</p>
+        <button class="btn-card" onclick="confirmarCartao('${planoId}')">Continuar para pagamento →</button>`;
+    document.getElementById('backdrop').classList.add('open');
+}
+
+async function confirmarCartao(planoId) {
+    const token = localStorage.getItem('token');
+    const parcelas = parseInt(document.getElementById('selectParcelas').value) || 1;
+    try {
+        const resp = await fetch(`${API_URL}/pagamentos/cartao`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ planoId, parcelas })
+        });
+        const data = await resp.json();
+        if (!data.success) throw new Error(data.message || data.error);
+        window.location.href = data.checkoutUrl;
+    } catch (err) {
+        alert('Erro ao iniciar checkout: ' + err.message);
+    }
+}
+
+function fecharCheckout() {
+    document.getElementById('backdrop').classList.remove('open');
+    if (_pixPollingTimer) { clearInterval(_pixPollingTimer); _pixPollingTimer = null; }
+    _planoAtual = null;
+    _mpPaymentId = null;
+}
+
+// Fechar ao clicar no backdrop
+document.getElementById('backdrop').addEventListener('click', e => {
+    if (e.target === document.getElementById('backdrop')) fecharCheckout();
+});
+
+carregarPlanos();
+</script>
+</body>
+</html>

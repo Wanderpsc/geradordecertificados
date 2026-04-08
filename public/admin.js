@@ -100,6 +100,7 @@ function navegarPara(page) {
         case 'notas-fiscais': carregarNotasFiscais(); break;
         case 'financeiro': carregarFinanceiro(); break;
         case 'logs': carregarLogs(); break;
+        case 'planos': carregarPlanos(); break;
     }
 }
 
@@ -1545,6 +1546,228 @@ function getBadgeNivel(nivel) {
         'success': 'badge-success'
     };
     return badges[nivel] || 'badge-info';
+}
+
+// ══════════════════════════════════════════════════════
+//  PLANOS DE VENDA
+// ══════════════════════════════════════════════════════
+
+let _planoEditandoId = null;
+
+async function carregarPlanos() {
+    const token = localStorage.getItem('token');
+    const tbody = document.getElementById('lista-planos');
+    tbody.innerHTML = '<tr><td colspan="9" class="loading"><div class="spinner"></div> Carregando...</td></tr>';
+    try {
+        const resp = await fetch(`${API_URL}/planos/admin/todos`, { headers: { 'Authorization': `Bearer ${token}` } });
+        const data = await resp.json();
+        if (!data.success) throw new Error(data.message);
+        const planos = data.planos;
+        if (!planos.length) {
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:20px;color:#6b7280;">Nenhum plano cadastrado. Crie o primeiro!</td></tr>';
+            return;
+        }
+        tbody.innerHTML = planos.map(p => `
+            <tr>
+                <td>${p.ordem}</td>
+                <td><strong>${p.icone || ''} ${p.nome}</strong><br><small style="color:#6b7280">${p.subtitulo || ''}</small></td>
+                <td><span class="badge ${p.tipo === 'limpo' ? 'badge-info' : 'badge-success'}">${p.tipo === 'limpo' ? 'Limpo' : 'Com Templates'}</span></td>
+                <td><strong>R$ ${Number(p.preco).toFixed(2)}</strong></td>
+                <td>${p.maxParcelas}x de R$ ${Number(p.preco / p.maxParcelas).toFixed(2)}</td>
+                <td>${(p.templatesCertificado?.length || 0)} certif. + ${(p.templatesHistorico?.length || 0)} hist.</td>
+                <td>${p.validadeDias} dias</td>
+                <td><span class="badge ${p.ativo ? 'badge-success' : 'badge-danger'}">${p.ativo ? 'Ativo' : 'Inativo'}</span>${p.destaque ? ' <span class="badge badge-warning">⭐ Destaque</span>' : ''}</td>
+                <td>
+                    <button class="btn btn-sm" onclick="editarPlano('${p._id}')">✏️ Editar</button>
+                    <button class="btn btn-sm" style="background:#dc2626;color:#fff" onclick="excluirPlano('${p._id}','${p.nome}')">🗑️</button>
+                </td>
+            </tr>`).join('');
+    } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="9" style="color:#dc2626;padding:20px;">${err.message}</td></tr>`;
+    }
+}
+
+function abrirModalPlano(plano = null) {
+    _planoEditandoId = plano?._id || null;
+    const titulo = plano ? 'Editar Plano' : 'Novo Plano de Venda';
+    const p = plano || {};
+    const rec = p.recursos || {};
+
+    const html = `
+    <div id="modalPlano" style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;" onclick="if(event.target===this)fecharModalPlano()">
+      <div style="background:#fff;border-radius:16px;padding:28px 32px;max-width:680px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+          <h2 style="margin:0;color:#1e3a8a">${titulo}</h2>
+          <button onclick="fecharModalPlano()" style="background:none;border:none;font-size:22px;cursor:pointer">×</button>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+          <div>
+            <label style="font-size:13px;font-weight:600;color:#374151">Ícone</label>
+            <input id="pIcone" class="form-control" value="${p.icone || '🎓'}" style="font-size:20px;text-align:center">
+          </div>
+          <div>
+            <label style="font-size:13px;font-weight:600;color:#374151">Ordem de exibição</label>
+            <input id="pOrdem" type="number" class="form-control" value="${p.ordem ?? 0}">
+          </div>
+          <div style="grid-column:1/-1">
+            <label style="font-size:13px;font-weight:600;color:#374151">Nome do Plano *</label>
+            <input id="pNome" class="form-control" placeholder="Ex: Plano Básico" value="${p.nome || ''}">
+          </div>
+          <div style="grid-column:1/-1">
+            <label style="font-size:13px;font-weight:600;color:#374151">Subtítulo</label>
+            <input id="pSubtitulo" class="form-control" placeholder="Ex: Ideal para começar" value="${p.subtitulo || ''}">
+          </div>
+          <div style="grid-column:1/-1">
+            <label style="font-size:13px;font-weight:600;color:#374151">Descrição (aparece na vitrine)</label>
+            <textarea id="pDescricao" class="form-control" rows="2" placeholder="O que está incluído neste plano...">${p.descricao || ''}</textarea>
+          </div>
+          <div>
+            <label style="font-size:13px;font-weight:600;color:#374151">Tipo *</label>
+            <select id="pTipo" class="form-control">
+              <option value="limpo" ${p.tipo === 'limpo' ? 'selected' : ''}>Limpo (sem templates)</option>
+              <option value="com-templates" ${p.tipo === 'com-templates' ? 'selected' : ''}>Com Templates prontos</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:13px;font-weight:600;color:#374151">Tipo de Licença</label>
+            <select id="pTipoLic" class="form-control">
+              <option value="mensal" ${p.tipoLicenca === 'mensal' ? 'selected' : ''}>Mensal</option>
+              <option value="anual" ${p.tipoLicenca === 'anual' ? 'selected' : ''}>Anual</option>
+              <option value="vitalicia" ${p.tipoLicenca === 'vitalicia' ? 'selected' : ''}>Vitalícia</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:13px;font-weight:600;color:#374151">Preço à vista (R$) *</label>
+            <input id="pPreco" type="number" step="0.01" class="form-control" placeholder="0.00" value="${p.preco ?? ''}">
+          </div>
+          <div>
+            <label style="font-size:13px;font-weight:600;color:#374151">Máximo de parcelas</label>
+            <select id="pParcelas" class="form-control">
+              ${[1,2,3,4,5,6,10,12].map(n => `<option value="${n}" ${p.maxParcelas === n ? 'selected' : ''}>${n}x</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <label style="font-size:13px;font-weight:600;color:#374151">Validade (dias)</label>
+            <input id="pValidade" type="number" class="form-control" value="${p.validadeDias ?? 365}">
+          </div>
+          <div>
+            <label style="font-size:13px;font-weight:600;color:#374151">Cor do card na vitrine</label>
+            <input id="pCor" type="color" class="form-control" style="height:40px" value="${p.corDestaque || '#1e40af'}">
+          </div>
+        </div>
+
+        <div style="margin-top:18px;padding:14px;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0">
+          <strong style="font-size:13px;color:#374151">Recursos incluídos</strong>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">
+            <label style="display:flex;gap:8px;align-items:center;font-size:13px"><input type="checkbox" id="rCertif" ${rec.certificados !== false ? 'checked' : ''}> Certificados</label>
+            <label style="display:flex;gap:8px;align-items:center;font-size:13px"><input type="checkbox" id="rHistorico" ${rec.historicos ? 'checked' : ''}> Históricos Escolares</label>
+            <label style="display:flex;gap:8px;align-items:center;font-size:13px"><input type="checkbox" id="rMultiTempl" ${rec.multiplosTemplates ? 'checked' : ''}> Múltiplos Templates</label>
+            <label style="display:flex;gap:8px;align-items:center;font-size:13px"><input type="checkbox" id="rMarcaDagua" ${rec.marcaDagua ? 'checked' : ''}> Marca d'água</label>
+            <div style="display:flex;gap:8px;align-items:center;font-size:13px">
+              Sub-usuários: <input type="number" id="rSubUsers" class="form-control" style="width:70px" value="${rec.subUsuarios ?? 0}" min="0">
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;font-size:13px">
+              Limite certif.: <input type="number" id="rLimite" class="form-control" style="width:90px" value="${rec.limiteCertificados ?? -1}" min="-1" title="-1 = ilimitado">
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:14px;display:flex;gap:8px;align-items:center">
+          <label style="display:flex;gap:8px;align-items:center;font-size:13px"><input type="checkbox" id="pAtivo" ${p.ativo !== false ? 'checked' : ''}> Ativo (visível na vitrine)</label>
+          <label style="display:flex;gap:8px;align-items:center;font-size:13px"><input type="checkbox" id="pDestaque" ${p.destaque ? 'checked' : ''}> ⭐ Destaque (badge "Mais Popular")</label>
+        </div>
+
+        <div style="margin-top:18px;display:flex;gap:10px;justify-content:flex-end">
+          <button onclick="fecharModalPlano()" class="btn" style="background:#f1f5f9;color:#374151">Cancelar</button>
+          <button onclick="salvarPlano()" class="btn btn-primary">💾 Salvar Plano</button>
+        </div>
+      </div>
+    </div>`;
+    document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function fecharModalPlano() {
+    document.getElementById('modalPlano')?.remove();
+    _planoEditandoId = null;
+}
+
+async function editarPlano(id) {
+    const token = localStorage.getItem('token');
+    try {
+        const resp = await fetch(`${API_URL}/planos/admin/todos`, { headers: { 'Authorization': `Bearer ${token}` } });
+        const data = await resp.json();
+        const plano = data.planos.find(p => p._id === id);
+        if (plano) abrirModalPlano(plano);
+    } catch (err) {
+        alert('Erro ao carregar plano: ' + err.message);
+    }
+}
+
+async function salvarPlano() {
+    const token = localStorage.getItem('token');
+    const body = {
+        nome: document.getElementById('pNome').value.trim(),
+        subtitulo: document.getElementById('pSubtitulo').value.trim(),
+        descricao: document.getElementById('pDescricao').value.trim(),
+        icone: document.getElementById('pIcone').value.trim(),
+        tipo: document.getElementById('pTipo').value,
+        tipoLicenca: document.getElementById('pTipoLic').value,
+        preco: parseFloat(document.getElementById('pPreco').value) || 0,
+        maxParcelas: parseInt(document.getElementById('pParcelas').value) || 1,
+        validadeDias: parseInt(document.getElementById('pValidade').value) || 365,
+        corDestaque: document.getElementById('pCor').value,
+        ordem: parseInt(document.getElementById('pOrdem').value) || 0,
+        ativo: document.getElementById('pAtivo').checked,
+        destaque: document.getElementById('pDestaque').checked,
+        recursos: {
+            certificados: document.getElementById('rCertif').checked,
+            historicos: document.getElementById('rHistorico').checked,
+            multiplosTemplates: document.getElementById('rMultiTempl').checked,
+            marcaDagua: document.getElementById('rMarcaDagua').checked,
+            subUsuarios: parseInt(document.getElementById('rSubUsers').value) || 0,
+            limiteCertificados: parseInt(document.getElementById('rLimite').value) ?? -1,
+            exportacaoPDF: true,
+            templatesCustomizados: true
+        }
+    };
+
+    if (!body.nome) return alert('Informe o nome do plano.');
+    if (body.preco <= 0) return alert('Informe um preço válido.');
+
+    const url = _planoEditandoId ? `${API_URL}/planos/admin/${_planoEditandoId}` : `${API_URL}/planos/admin`;
+    const method = _planoEditandoId ? 'PUT' : 'POST';
+
+    try {
+        const resp = await fetch(url, {
+            method,
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+        if (!data.success) throw new Error(data.message || data.error);
+        fecharModalPlano();
+        carregarPlanos();
+        alert(data.message || 'Plano salvo!');
+    } catch (err) {
+        alert('Erro ao salvar plano: ' + err.message);
+    }
+}
+
+async function excluirPlano(id, nome) {
+    if (!confirm(`Excluir o plano "${nome}"? Esta ação não pode ser desfeita.`)) return;
+    const token = localStorage.getItem('token');
+    try {
+        const resp = await fetch(`${API_URL}/planos/admin/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await resp.json();
+        if (!data.success) throw new Error(data.message);
+        carregarPlanos();
+        alert('Plano excluído.');
+    } catch (err) {
+        alert('Erro ao excluir: ' + err.message);
+    }
 }
 
 // Inicializar

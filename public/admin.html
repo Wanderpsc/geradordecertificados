@@ -387,6 +387,10 @@
                         <span class="icon">📈</span>
                         Financeiro
                     </a></li>
+                    <li><a href="#" data-page="planos">
+                        <span class="icon">🛒</span>
+                        Planos de Venda
+                    </a></li>
                     <li><a href="#" data-page="logs">
                         <span class="icon">📝</span>
                         Logs de Auditoria
@@ -677,6 +681,49 @@
                             </tbody>
                         </table>
                     </div>
+                </div>
+            </div>
+
+            <!-- Planos de Venda Page -->
+            <div id="page-planos" class="page hidden">
+                <div class="header">
+                    <h1>Planos de Venda</h1>
+                    <p>Defina os planos disponíveis para escolas comprarem o sistema</p>
+                </div>
+
+                <div class="section">
+                    <div class="section-header">
+                        <h2>Planos Cadastrados</h2>
+                        <button class="btn btn-primary" onclick="abrirModalPlano()">+ Novo Plano</button>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Ordem</th>
+                                    <th>Nome</th>
+                                    <th>Tipo</th>
+                                    <th>Preço (R$)</th>
+                                    <th>Parcelas</th>
+                                    <th>Templates</th>
+                                    <th>Validade</th>
+                                    <th>Status</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lista-planos">
+                                <tr><td colspan="9" class="loading"><div class="spinner"></div>Carregando...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Link para a vitrine pública -->
+                <div class="section" style="background:#eff6ff;border:1px solid #bfdbfe;">
+                    <div class="section-header"><h2>🛍️ Vitrine Pública</h2></div>
+                    <p style="margin:0 0 12px">A vitrine pública onde os compradores veem os planos e realizam o pagamento:</p>
+                    <a href="/comprar.html" target="_blank" class="btn btn-primary">Abrir Vitrine →</a>
+                    <p style="margin-top:10px;font-size:12px;color:#6b7280;">URL: <code>/comprar.html</code></p>
                 </div>
             </div>
 

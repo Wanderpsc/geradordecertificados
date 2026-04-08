@@ -19,6 +19,8 @@ const adminRoutes = require('./routes/admin');
 const modeloRoutes = require('./routes/modelos');
 const subUsuarioRoutes = require('./routes/subUsuarios');
 const historicoRoutes = require('./routes/historicos');
+const planoRoutes = require('./routes/planos');
+const pagamentosMPRoutes = require('./routes/pagamentosMP');
 
 const app = express();
 
@@ -198,6 +200,8 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/modelos', modeloRoutes);
 app.use('/api/subusuarios', subUsuarioRoutes);
 app.use('/api/historicos', historicoRoutes);
+app.use('/api/planos', planoRoutes);
+app.use('/api/pagamentos', pagamentosMPRoutes);
 
 // Rota raiz - redirecionar para login
 app.get('/', (req, res) => {
