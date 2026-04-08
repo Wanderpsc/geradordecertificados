@@ -5,6 +5,18 @@
  * Protegido por Lei 9.610/98, Lei 9.609/98 e Art. 184 CP.
  * Reprodução, cópia ou engenharia reversa proibidas.
  */
+
+// Capturar TODOS os erros não tratados antes de qualquer require
+process.on('uncaughtException', (err) => {
+    console.error('💥 UNCAUGHT EXCEPTION:', err.message);
+    console.error(err.stack);
+    process.exit(1);
+});
+process.on('unhandledRejection', (reason) => {
+    console.error('💥 UNHANDLED REJECTION:', reason);
+});
+
+console.log('🔄 Iniciando servidor...');
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
