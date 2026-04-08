@@ -8,7 +8,7 @@ const {
     deletarAluno,
     buscarAlunos
 } = require('../controllers/alunoController');
-const { proteger, verificarLicenca, apenasCliente } = require('../middlewares/auth');
+const { proteger, verificarLicenca, apenasCliente, checarPermissao } = require('../middlewares/auth');
 
 // Todas as rotas requerem autenticação e licença válida
 // ADMINISTRADORES NÃO PODEM ACESSAR (apenas clientes)
@@ -18,13 +18,13 @@ router.use(verificarLicenca);
 
 router.route('/')
     .get(listarAlunos)
-    .post(criarAluno);
+    .post(checarPermissao('cadastrarAlunos'), criarAluno);
 
 router.get('/search', buscarAlunos);
 
 router.route('/:id')
     .get(buscarAluno)
-    .put(atualizarAluno)
-    .delete(deletarAluno);
+    .put(checarPermissao('editarAlunos'), atualizarAluno)
+    .delete(checarPermissao('excluirAlunos'), deletarAluno);
 
 module.exports = router;

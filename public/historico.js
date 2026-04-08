@@ -17,6 +17,7 @@ const HIST_STATE = {
 function inicializarHistorico() {
     carregarListaGrades();
     popularSelectAlunos();
+    carregarListaHistoricos();
 }
 
 // ==================== GRADES (Templates de Disciplinas) ====================
@@ -366,15 +367,137 @@ async function excluirGrade(id, nome) {
 // ==================== LANÇAR NOTAS ====================
 
 function popularSelectAlunos() {
-    const sel = document.getElementById('histAluno');
-    if (!sel) return;
-    sel.innerHTML = '<option value="">Selecione um aluno...</option>';
-    if (APP_STATE.alunos && APP_STATE.alunos.length) {
-        APP_STATE.alunos.forEach(a => {
-            const info = [a.serie, a.turma].filter(Boolean).join(' - ');
-            sel.innerHTML += `<option value="${a.id}">${a.nome}${info ? ' (' + info + ')' : ''}</option>`;
-        });
+    popularFiltrosHistorico();
+    filtrarListaAlunosHistorico();
+}
+
+function popularFiltrosHistorico() {
+    const selSerie = document.getElementById('histFiltroSerie');
+    const selTurma = document.getElementById('histFiltroTurma');
+    if (!selSerie || !selTurma) return;
+
+    const series = [...new Set((APP_STATE.alunos || []).map(a => a.serie).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    const serieAtual = selSerie.value;
+    selSerie.innerHTML = '<option value="">Todas as séries</option>' + series.map(s => `<option value="${s}" ${s === serieAtual ? 'selected' : ''}>${s}</option>`).join('');
+
+    atualizarFiltroTurmaHistorico(serieAtual);
+}
+
+function atualizarFiltroTurmaHistorico(serieSelecionada) {
+    const selTurma = document.getElementById('histFiltroTurma');
+    if (!selTurma) return;
+    const base = serieSelecionada ? (APP_STATE.alunos || []).filter(a => a.serie === serieSelecionada) : (APP_STATE.alunos || []);
+    const turmas = [...new Set(base.map(a => a.turma).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    const turmaAtual = selTurma.value;
+    selTurma.innerHTML = '<option value="">Todas as turmas</option>' + turmas.map(t => `<option value="${t}" ${t === turmaAtual ? 'selected' : ''}>${t}</option>`).join('');
+    if (turmaAtual && !turmas.includes(turmaAtual)) selTurma.value = '';
+}
+
+function aoMudarSerieHistorico() {
+    const serie = document.getElementById('histFiltroSerie')?.value || '';
+    atualizarFiltroTurmaHistorico(serie);
+    filtrarListaAlunosHistorico();
+}
+
+function aoMudarTurmaHistorico() {
+    filtrarListaAlunosHistorico();
+}
+
+function filtrarListaAlunosHistorico() {
+    const container = document.getElementById('listaAlunosHistorico');
+    if (!container) return;
+
+    const filtroSerie = document.getElementById('histFiltroSerie')?.value || '';
+    const filtroTurma = document.getElementById('histFiltroTurma')?.value || '';
+    const busca = (document.getElementById('histBuscarAluno')?.value || '').toLowerCase().trim();
+    const alunoAbertoId = document.getElementById('histAluno')?.value || '';
+
+    let alunos = (APP_STATE.alunos || []).slice().sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+    if (filtroSerie) alunos = alunos.filter(a => (a.serie || '') === filtroSerie);
+    if (filtroTurma) alunos = alunos.filter(a => (a.turma || '') === filtroTurma);
+    if (busca) alunos = alunos.filter(a => a.nome.toLowerCase().includes(busca));
+
+    atualizarContadorHistorico(alunos.length);
+
+    if (!alunos.length) {
+        container.innerHTML = `<div style="text-align:center;color:#9ca3af;padding:20px;font-size:13px;">Nenhum aluno encontrado.</div>`;
+        return;
     }
+
+    let html = '';
+    // Agrupar por Série — Turma se sem filtro de turma e sem busca
+    const agrupar = !filtroTurma && !busca;
+    if (agrupar) {
+        const grupos = {};
+        alunos.forEach(a => {
+            const chave = [a.serie, a.turma].filter(Boolean).join(' — ') || 'Sem turma';
+            if (!grupos[chave]) grupos[chave] = [];
+            grupos[chave].push(a);
+        });
+        Object.keys(grupos).sort((a, b) => a.localeCompare(b, 'pt-BR')).forEach(chave => {
+            html += `<div style="background:linear-gradient(90deg,#eff6ff,#dbeafe);padding:6px 12px;font-weight:700;font-size:12px;color:#1e3a8a;border-bottom:1px solid #bfdbfe;">📚 ${escapeHtml(chave)} <span style="font-weight:400;color:#6b7280;">(${grupos[chave].length})</span></div>`;
+            grupos[chave].forEach(a => { html += renderItemAlunoHistorico(a, alunoAbertoId); });
+        });
+    } else {
+        alunos.forEach(a => { html += renderItemAlunoHistorico(a, alunoAbertoId); });
+    }
+
+    container.innerHTML = html;
+}
+
+function renderItemAlunoHistorico(aluno, alunoAbertoId) {
+    const aberto = aluno.id === alunoAbertoId;
+    const bg = aberto ? '#dbeafe' : '#ffffff';
+    const bgHover = aberto ? '#dbeafe' : '#eff6ff';
+    const info = [aluno.serie, aluno.turma ? 'Turma ' + aluno.turma : ''].filter(Boolean).join(' — ');
+    const nomeEsc = escapeHtml(aluno.nome).replace(/'/g, '&#39;');
+    const serieEsc = escapeHtml(aluno.serie || '').replace(/'/g, '&#39;');
+    const turmaEsc = escapeHtml(aluno.turma || '').replace(/'/g, '&#39;');
+    return `<div style="display:flex;align-items:center;border-bottom:1px solid #f1f5f9;background:${bg};cursor:pointer;"
+         onclick="abrirNotasAlunoHistorico('${aluno.id}','${nomeEsc}','${serieEsc}','${turmaEsc}')"
+         onmouseover="this.style.background='${bgHover}'" onmouseout="this.style.background='${bg}'">
+        <div style="flex:1;min-width:0;padding:9px 14px;">
+            <div style="font-weight:600;font-size:13px;color:#1e293b;">${escapeHtml(aluno.nome)}
+                ${aberto ? '<span style="color:#1e3a8a;font-size:11px;margin-left:6px;">✏️ editando</span>' : ''}
+            </div>
+            ${info ? `<div style="font-size:11px;color:#6b7280;margin-top:1px;">${info}</div>` : ''}
+        </div>
+        <span style="color:#9ca3af;font-size:11px;padding-right:12px;">→</span>
+    </div>`;
+}
+
+function atualizarContadorHistorico(n) {
+    const el = document.getElementById('contadorAlunosHistorico');
+    if (el) {
+        el.textContent = n != null ? (n > 0 ? `${n} aluno${n !== 1 ? 's' : ''} encontrado${n !== 1 ? 's' : ''}` : '') : '';
+    }
+}
+
+function abrirNotasAlunoHistorico(id, nome, serie, turma) {
+    const hiddenInput = document.getElementById('histAluno');
+    if (!hiddenInput) return;
+    hiddenInput.value = id;
+
+    const infoBar = document.getElementById('alunoHistoricoSelecionado');
+    const nomeEl = document.getElementById('alunoHistoricoNome');
+    if (infoBar && nomeEl) {
+        const info = [serie, turma].filter(Boolean).join(' — Turma ');
+        nomeEl.textContent = nome + (info ? ' · ' + info : '');
+        infoBar.style.display = 'flex';
+    }
+
+    filtrarListaAlunosHistorico();
+    carregarHistoricoAluno();
+}
+
+function limparSelecaoAlunoHistorico() {
+    const hiddenInput = document.getElementById('histAluno');
+    if (hiddenInput) hiddenInput.value = '';
+    const infoBar = document.getElementById('alunoHistoricoSelecionado');
+    if (infoBar) infoBar.style.display = 'none';
+    const formNotas = document.getElementById('formNotas');
+    if (formNotas) formNotas.style.display = 'none';
+    filtrarListaAlunosHistorico();
 }
 
 async function carregarGradesParaNotas() {
@@ -382,6 +505,9 @@ async function carregarGradesParaNotas() {
     const sel = document.getElementById('histGrade');
     sel.innerHTML = '<option value="">Carregando...</option>';
     document.getElementById('formNotas').style.display = 'none';
+
+    // Recarregar a lista de históricos conforme o filtro de tipo
+    carregarListaHistoricos();
 
     if (!tipo) {
         sel.innerHTML = '<option value="">Selecione a modalidade primeiro...</option>';
@@ -675,6 +801,7 @@ async function salvarNotasHistorico() {
         if (data.success) {
             mostrarNotificacao(`Notas ${data.atualizado ? 'atualizadas' : 'salvas'} com sucesso!`, 'success');
             HIST_STATE.historicoAtual = { _id: data.historico._id, notas, seriesInfo, observacoes, registro, dataEmissao, fichaIndividual };
+            carregarListaHistoricos();
         } else {
             mostrarNotificacao(data.message || 'Erro ao salvar.', 'error');
         }
@@ -1037,7 +1164,680 @@ async function criarGradesTurmas2025() {
     mostrarNotificacao(`${criadas} de ${grades.length} grades criadas com sucesso! Verifique e ajuste as disciplinas se necessário.`, criadas === grades.length ? 'success' : 'warning');
 }
 
-// ==================== GERAÇÃO DE PDF (placeholder) ====================
-function gerarHistoricoPDF() {
-    mostrarNotificacao('Geração de PDF do Histórico será implementada na próxima fase.', 'info');
+// ==================== LISTA DE HISTÓRICOS SALVOS ====================
+
+async function carregarListaHistoricos() {
+    const container = document.getElementById('listaHistoricos');
+    const token = localStorage.getItem('token');
+    if (!token || !container) return;
+
+    container.innerHTML = '<div style="text-align:center;padding:20px;color:#9ca3af;">Carregando...</div>';
+
+    try {
+        const tipo = document.getElementById('histTipo')?.value || '';
+        const url = `${API_URL}/historicos` + (tipo ? `?tipo=${tipo}` : '');
+        const resp = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+        const data = await resp.json();
+
+        if (!data.success || !data.historicos.length) {
+            container.innerHTML = '<div style="text-align:center;padding:30px;color:#9ca3af;">Nenhum histórico salvo ainda.</div>';
+            document.getElementById('btnGerarHistPDF').disabled = true;
+            return;
+        }
+
+        let html = `<table style="width:100%;border-collapse:collapse;font-size:13px;">
+            <thead>
+                <tr style="background:#1e3a8a;color:white;">
+                    <th style="padding:8px;border:1px solid #93c5fd;width:36px;text-align:center;">
+                        <input type="checkbox" id="checkTodosHistoricos" onchange="toggleTodosHistoricos(this.checked)">
+                    </th>
+                    <th style="padding:8px 10px;border:1px solid #93c5fd;text-align:left;">Aluno</th>
+                    <th style="padding:8px 10px;border:1px solid #93c5fd;text-align:center;">Modalidade</th>
+                    <th style="padding:8px 10px;border:1px solid #93c5fd;text-align:left;">Grade</th>
+                    <th style="padding:8px 10px;border:1px solid #93c5fd;text-align:center;">Atualizado</th>
+                    <th style="padding:8px 10px;border:1px solid #93c5fd;text-align:center;">Ações</th>
+                </tr>
+            </thead>
+            <tbody>`;
+
+        data.historicos.forEach(h => {
+            const sel = HIST_STATE.historicosSelecionados.has(h._id);
+            const dt = new Date(h.atualizadoEm || h.criadoEm).toLocaleDateString('pt-BR');
+            html += `<tr style="border-bottom:1px solid #e5e7eb;">
+                <td style="padding:6px;border:1px solid #e5e7eb;text-align:center;">
+                    <input type="checkbox" class="check-hist" value="${h._id}" ${sel ? 'checked' : ''}
+                        onchange="toggleHistoricoSel('${h._id}', this.checked)">
+                </td>
+                <td style="padding:6px 10px;border:1px solid #e5e7eb;">${escapeHtml(h.aluno?.nome || '—')}</td>
+                <td style="padding:6px 10px;border:1px solid #e5e7eb;text-align:center;">
+                    <span style="background:${h.tipo==='medio'?'#dbeafe':'#d1fae5'};color:${h.tipo==='medio'?'#1e40af':'#065f46'};
+                        padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;">
+                        ${h.tipo==='medio'?'MÉDIO':'FUNDAMENTAL'}
+                    </span>
+                </td>
+                <td style="padding:6px 10px;border:1px solid #e5e7eb;font-size:12px;">${escapeHtml(h.grade?.nome||'—')}</td>
+                <td style="padding:6px 10px;border:1px solid #e5e7eb;text-align:center;font-size:12px;">${dt}</td>
+                <td style="padding:4px;border:1px solid #e5e7eb;text-align:center;">
+                    <button class="btn btn-danger btn-sm" onclick="excluirHistorico('${h._id}')"
+                        style="font-size:11px;padding:3px 8px;">🗑️</button>
+                </td>
+            </tr>`;
+        });
+
+        html += `</tbody></table>`;
+        container.innerHTML = html;
+        _atualizarBtnHistPDF();
+    } catch (e) {
+        container.innerHTML = '<div style="text-align:center;padding:20px;color:#ef4444;">Erro ao carregar históricos.</div>';
+    }
 }
+
+function toggleHistoricoSel(id, checked) {
+    checked ? HIST_STATE.historicosSelecionados.add(id) : HIST_STATE.historicosSelecionados.delete(id);
+    const cbs = [...document.querySelectorAll('.check-hist')];
+    const chkAll = document.getElementById('checkTodosHistoricos');
+    if (chkAll) chkAll.checked = cbs.length > 0 && cbs.every(cb => cb.checked);
+    _atualizarBtnHistPDF();
+}
+
+function toggleTodosHistoricos(checked) {
+    document.querySelectorAll('.check-hist').forEach(cb => {
+        cb.checked = checked;
+        checked ? HIST_STATE.historicosSelecionados.add(cb.value) : HIST_STATE.historicosSelecionados.delete(cb.value);
+    });
+    _atualizarBtnHistPDF();
+}
+
+function _atualizarBtnHistPDF() {
+    const btn = document.getElementById('btnGerarHistPDF');
+    if (btn) btn.disabled = HIST_STATE.historicosSelecionados.size === 0;
+}
+
+async function excluirHistorico(id) {
+    if (!confirm('Excluir este histórico? Esta ação não pode ser desfeita.')) return;
+    const token = localStorage.getItem('token');
+    try {
+        const resp = await fetch(`${API_URL}/historicos/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await resp.json();
+        if (data.success) {
+            HIST_STATE.historicosSelecionados.delete(id);
+            mostrarNotificacao('Histórico excluído.', 'success');
+            carregarListaHistoricos();
+        } else {
+            mostrarNotificacao(data.message || 'Erro ao excluir.', 'error');
+        }
+    } catch (e) {
+        mostrarNotificacao('Erro de conexão.', 'error');
+    }
+}
+
+// ==================== GERAÇÃO DE PDF ====================
+
+async function gerarHistoricoPDF() {
+    const ids = [...HIST_STATE.historicosSelecionados];
+    if (!ids.length) { mostrarNotificacao('Selecione pelo menos um histórico.', 'error'); return; }
+    if (!window.jspdf?.jsPDF) { mostrarNotificacao('Biblioteca jsPDF não carregada. Recarregue a página.', 'error'); return; }
+
+    mostrarNotificacao(`Gerando ${ids.length} histórico(s)...`, 'info');
+    const { jsPDF } = window.jspdf;
+    const cfg = typeof obterConfigCert === 'function' ? obterConfigCert() : null;
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    let primeiroDoc = true;
+    const token = localStorage.getItem('token');
+
+    for (const histId of ids) {
+        try {
+            const resp = await fetch(`${API_URL}/historicos/${histId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await resp.json();
+            if (!data.success) continue;
+
+            const hist = data.historico;
+            if (!primeiroDoc) pdf.addPage();
+            primeiroDoc = false;
+
+            _histFrente(pdf, hist, cfg);
+            pdf.addPage();
+            _histVerso(pdf, hist, cfg);
+        } catch (e) {
+            console.error('Erro ao gerar histórico:', histId, e);
+        }
+    }
+
+    const pdfBlob = pdf.output('blob');
+    window.open(URL.createObjectURL(pdfBlob), '_blank');
+    setTimeout(() => {
+        pdf.save(ids.length === 1 ? 'Historico_Escolar.pdf' : `Historicos_${ids.length}.pdf`);
+    }, 400);
+    mostrarNotificacao(`${ids.length} histórico(s) gerado(s)!`, 'success');
+}
+
+// ---------- helpers baixo nível ----------
+
+function _hRect(pdf, x, y, w, h, fill, stroke) {
+    if (fill) { pdf.setFillColor(fill[0], fill[1], fill[2]); pdf.rect(x, y, w, h, 'F'); }
+    if (stroke) {
+        pdf.setDrawColor(stroke[0], stroke[1], stroke[2]);
+        pdf.rect(x, y, w, h, 'S');
+    }
+}
+
+function _hLine(pdf, x1, y1, x2, y2, lw, color) {
+    pdf.setLineWidth(lw || 0.2);
+    if (color) pdf.setDrawColor(color[0], color[1], color[2]);
+    pdf.line(x1, y1, x2, y2);
+}
+
+function _hText(pdf, text, x, y, opts) {
+    const o = opts || {};
+    pdf.setFont(o.font || 'helvetica', o.bold ? 'bold' : 'normal');
+    pdf.setFontSize(o.size || 7);
+    pdf.setTextColor(...(o.color || [0, 0, 0]));
+    pdf.text(String(text ?? ''), x, y, { align: o.align || 'left', angle: o.angle || 0, maxWidth: o.maxWidth });
+}
+
+// ---------- Página da frente ----------
+
+function _histFrente(pdf, hist, cfg) {
+    const aluno = hist.aluno || {};
+    const grade = hist.grade || {};
+    const notas = hist.notas || {};
+    const seriesInfo = hist.seriesInfo || [];
+    const isFund = hist.tipo === 'fundamental';
+    const series = grade.nomesSeries || [];
+    const numSeries = series.length;
+
+    const PW = 210, PH = 297, ML = 7, MR = 7, MT = 7;
+    const UW = PW - ML - MR; // 196mm
+    let y = MT;
+
+    // --- cabeçalho dupla linha ---
+    _hLine(pdf, ML, y, PW - MR, y, 0.6, [0, 40, 120]);
+    _hLine(pdf, ML, y + 1.3, PW - MR, y + 1.3, 0.2, [0, 40, 120]);
+    y += 2.5;
+
+    // brasão
+    const bW = 22, bH = 26;
+    try {
+        const src = typeof BRASAO_BRASIL !== 'undefined' ? BRASAO_BRASIL : null;
+        if (src) pdf.addImage(src, 'PNG', ML, y, bW, bH);
+    } catch (_) {}
+
+    // texto do cabeçalho
+    const txX = ML + bW + 3;
+    const txW = UW - bW - 3;
+    let ty = y + 2.5;
+    const l1 = cfg?.cabecalho?.linha1 || 'REPÚBLICA FEDERATIVA DO BRASIL';
+    const l2 = cfg?.cabecalho?.linha2 || 'ESTADO DO PIAUÍ';
+    const l3 = cfg?.cabecalho?.linha3 || 'SECRETARIA DE ESTADO DA EDUCAÇÃO';
+    const inst = cfg?.cabecalho?.nomeInstituicao || 'UNIDADE ESCOLAR';
+    const end_ = cfg?.cabecalho?.endereco || '';
+    const cnpj = cfg?.cabecalho?.cnpj || '';
+    const inep = cfg?.cabecalho?.inep || '';
+    const resol = cfg?.frente?.resolucao || '';
+
+    _hText(pdf, l1, txX + txW / 2, ty, { bold: true, size: 6.5, align: 'center' }); ty += 3.5;
+    _hText(pdf, l2, txX + txW / 2, ty, { bold: true, size: 8, align: 'center' }); ty += 3.8;
+    _hText(pdf, l3, txX + txW / 2, ty, { size: 6, align: 'center' }); ty += 3.2;
+    _hText(pdf, inst.toUpperCase(), txX + txW / 2, ty, { bold: true, size: 8.5, align: 'center', color: [0, 0, 140] }); ty += 3.8;
+    if (end_) { _hText(pdf, end_, txX + txW / 2, ty, { size: 5.5, align: 'center' }); ty += 3; }
+    const infoLine = [cnpj ? `CNPJ: ${cnpj}` : '', inep ? `INEP: ${inep}` : '', resol].filter(Boolean).join('   ');
+    if (infoLine) { _hText(pdf, infoLine, txX + txW / 2, ty, { size: 5.5, align: 'center', color: [80, 80, 80] }); ty += 2.5; }
+
+    y = Math.max(y + bH, ty) + 1.5;
+
+    // dupla linha separadora
+    _hLine(pdf, ML, y, PW - MR, y, 0.2, [0, 40, 120]);
+    _hLine(pdf, ML, y + 1, PW - MR, y + 1, 0.6, [0, 40, 120]);
+    y += 2.5;
+
+    // --- título ---
+    const titulo = isFund ? 'HISTÓRICO ESCOLAR  –  ENSINO FUNDAMENTAL' : 'HISTÓRICO ESCOLAR  –  ENSINO MÉDIO';
+    pdf.setFillColor(0, 40, 120);
+    pdf.rect(ML, y, UW, 7, 'F');
+    _hText(pdf, titulo, PW / 2, y + 5, { bold: true, size: 9, align: 'center', color: [255, 255, 255] });
+    y += 8.5;
+
+    // --- dados do aluno ---
+    const boxH = 14;
+    _hRect(pdf, ML, y, UW, boxH, null, [0, 40, 120]);
+    pdf.setLineWidth(0.2);
+    pdf.setDrawColor(0, 40, 120);
+    pdf.line(ML, y + 7, ML + UW, y + 7);
+
+    const nascStr = aluno.dataNascimento
+        ? `${aluno.dataNascimento.dia}/${String(Object.keys({janeiro:1,fevereiro:2,março:3,abril:4,maio:5,junho:6,julho:7,agosto:8,setembro:9,outubro:10,novembro:11,dezembro:12}).indexOf(aluno.dataNascimento.mes)+1).padStart(2,'0')}/${aluno.dataNascimento.ano}`
+        : '';
+
+    // linha 1 do aluno
+    const fy1 = y + 4.5;
+    _hText(pdf, 'ESTUDANTE:', ML + 1, fy1, { bold: true, size: 6 });
+    _hText(pdf, aluno.nome || '', ML + 22, fy1, { size: 6 });
+
+    const cpfX = ML + 78; const nascX = ML + 108; const munX = ML + 148;
+    pdf.setDrawColor(0, 40, 120); pdf.setLineWidth(0.2);
+    pdf.line(cpfX, y, cpfX, y + 7);
+    pdf.line(nascX, y, nascX, y + 7);
+    pdf.line(munX, y, munX, y + 7);
+
+    _hText(pdf, 'CPF:', cpfX + 1, fy1, { bold: true, size: 6 });
+    _hText(pdf, aluno.cpf || '', cpfX + 10, fy1, { size: 6 });
+    _hText(pdf, 'DATA NASC.:', nascX + 1, fy1, { bold: true, size: 6 });
+    _hText(pdf, nascStr, nascX + 22, fy1, { size: 6 });
+    _hText(pdf, 'MUN. NASC.:', munX + 1, fy1, { bold: true, size: 6 });
+    _hText(pdf, aluno.naturalidade?.cidade || '', munX + 22, fy1, { size: 6, maxWidth: 22 });
+
+    // linha 2 do aluno
+    const fy2 = y + 11.5;
+    const rgX = ML; const sspX = ML + 38; const estX = ML + 62; const maeX = ML + 86; const paiX = ML + 143;
+    pdf.line(sspX, y + 7, sspX, y + boxH);
+    pdf.line(estX, y + 7, estX, y + boxH);
+    pdf.line(maeX, y + 7, maeX, y + boxH);
+    pdf.line(paiX, y + 7, paiX, y + boxH);
+
+    _hText(pdf, 'RG:', rgX + 1, fy2, { bold: true, size: 6 });
+    _hText(pdf, aluno.rg || '', rgX + 8, fy2, { size: 6 });
+    _hText(pdf, 'SSP:', sspX + 1, fy2, { bold: true, size: 6 });
+    _hText(pdf, aluno.orgaoEmissor || '', sspX + 10, fy2, { size: 6 });
+    _hText(pdf, 'ESTADO:', estX + 1, fy2, { bold: true, size: 6 });
+    _hText(pdf, aluno.naturalidade?.estado || '', estX + 14, fy2, { size: 6 });
+    _hText(pdf, 'MÃE:', maeX + 1, fy2, { bold: true, size: 6 });
+    _hText(pdf, aluno.filiacao?.mae || '', maeX + 10, fy2, { size: 6, maxWidth: 50 });
+    _hText(pdf, 'PAI:', paiX + 1, fy2, { bold: true, size: 6 });
+    _hText(pdf, aluno.filiacao?.pai || '', paiX + 9, fy2, { size: 6, maxWidth: 44 });
+
+    y += boxH + 2;
+
+    // --- tabela principal ---
+    const discs = grade.disciplinas || [];
+    const catMap = {};
+    discs.forEach(d => { if (!catMap[d.categoria]) catMap[d.categoria] = []; catMap[d.categoria].push(d); });
+
+    const catLabels = {
+        formacao_geral: 'FORMAÇÃO GERAL BÁSICA',
+        itinerarios: 'ITINERÁRIOS FORMATIVOS',
+        atividades_integradoras: 'ATIVIDADES INTEGRADORAS',
+        linguagens: 'LINGUAGENS, CÓDIGOS E SUAS TECNOLOGIAS',
+        ciencias_humanas: 'CIÊNCIAS HUMANAS E SUAS TECNOLOGIAS',
+        ciencias_natureza: 'CIÊNCIAS DA NATUREZA E SUAS TECNOLOGIAS',
+        matematica: 'MATEMÁTICA E SUAS TECNOLOGIAS',
+        parte_flexivel: 'PARTE FLEXÍVEL (DIVERSIFICADA)',
+        ensino_religioso: 'ENSINO RELIGIOSO'
+    };
+
+    // Larguras das colunas
+    const cVert = 7;
+    const cDisc = isFund ? 50 : 65;
+    const cPoliv = isFund ? 12 : 0;
+    const remainW = UW - cVert - cDisc - cPoliv;
+    const pairW = remainW / numSeries;
+    const cNota = parseFloat((pairW * 0.58).toFixed(2));
+    const cCH = parseFloat((pairW - cNota).toFixed(2));
+
+    const hdrH = 6;     // header row height
+    const catH = 4.2;   // category row height
+    const rowH = 3.8;   // discipline row height
+    const tblStartY = y;
+    const tblX = ML;
+
+    // cabeçalho linha 1
+    pdf.setFillColor(0, 35, 105);
+    pdf.rect(tblX, y, UW, hdrH, 'F');
+    // coluna vertical
+    _hRect(pdf, tblX, y, cVert, hdrH * 2, [0, 35, 105], null);
+    pdf.setFont('helvetica', 'bold'); pdf.setFontSize(4.2); pdf.setTextColor(255, 255, 255);
+    pdf.text('ÁREAS DO CONHECIMENTO / COMPONENTES CURRICULARES / ATIVIDADES', tblX + 4.8, y + hdrH * 2 - 0.6, { angle: 90, align: 'right' });
+
+    // coluna disciplinas header (span 2)
+    pdf.setFont('helvetica', 'bold'); pdf.setFontSize(5.5); pdf.setTextColor(255, 255, 255);
+    pdf.text('COMPONENTES CURRICULARES', tblX + cVert + cDisc / 2, y + hdrH + 3.5, { align: 'center' });
+
+    if (isFund) {
+        pdf.setFontSize(4.5);
+        pdf.text('POLI-\nVALÊNCIA', tblX + cVert + cDisc + cPoliv / 2, y + hdrH / 2 + 1, { align: 'center' });
+    }
+
+    // headers das séries
+    let sx = tblX + cVert + cDisc + cPoliv;
+    for (let i = 0; i < numSeries; i++) {
+        const lbl = isFund ? `${i + 1}° ANO` : (series[i] || `${i + 1}ª`);
+        pdf.setFont('helvetica', 'bold'); pdf.setFontSize(isFund ? 5 : 6); pdf.setTextColor(255, 255, 255);
+        pdf.text(lbl, sx + pairW / 2, y + 4, { align: 'center' });
+        sx += pairW;
+    }
+    // linhas de grade do header vertical
+    pdf.setDrawColor(80, 120, 200); pdf.setLineWidth(0.15);
+    pdf.line(tblX + cVert, y, tblX + cVert, y + hdrH * 2);
+    if (isFund) pdf.line(tblX + cVert + cDisc, y, tblX + cVert + cDisc, y + hdrH * 2);
+    if (isFund) pdf.line(tblX + cVert + cDisc + cPoliv, y, tblX + cVert + cDisc + cPoliv, y + hdrH * 2);
+    else pdf.line(tblX + cVert + cDisc, y, tblX + cVert + cDisc, y + hdrH * 2);
+    sx = tblX + cVert + cDisc + cPoliv;
+    for (let i = 0; i < numSeries; i++) { pdf.line(sx + pairW, y, sx + pairW, y + hdrH * 2); sx += pairW; }
+    pdf.rect(tblX, y, UW, hdrH, 'S');
+    y += hdrH;
+
+    // cabeçalho linha 2 (Nota / CH)
+    pdf.setFillColor(15, 55, 150);
+    pdf.rect(tblX, y, UW, hdrH, 'F');
+    sx = tblX + cVert + cDisc + cPoliv;
+    for (let i = 0; i < numSeries; i++) {
+        pdf.setFont('helvetica', 'bold'); pdf.setFontSize(4.5); pdf.setTextColor(255, 255, 255);
+        pdf.text('NOTA', sx + cNota / 2, y + 4, { align: 'center' });
+        pdf.line(sx + cNota, y, sx + cNota, y + hdrH);
+        pdf.text('CH', sx + cNota + cCH / 2, y + 4, { align: 'center' });
+        pdf.line(sx + pairW, y, sx + pairW, y + hdrH);
+        sx += pairW;
+    }
+    pdf.setDrawColor(80, 120, 200);
+    pdf.setLineWidth(0.15);
+    pdf.rect(tblX, y, UW, hdrH, 'S');
+    y += hdrH;
+
+    // linhas de dados
+    const catKeys = Object.keys(catMap);
+    let rowIdx = 0;
+    for (const catId of catKeys) {
+        const catNome = catLabels[catId] || catId;
+        const catDiscs = catMap[catId];
+
+        // linha de categoria
+        pdf.setFillColor(254, 243, 199);
+        pdf.rect(tblX, y, UW, catH, 'F');
+        pdf.setDrawColor(200, 150, 50); pdf.setLineWidth(0.15);
+        pdf.rect(tblX, y, UW, catH, 'S');
+        pdf.setFont('helvetica', 'bold'); pdf.setFontSize(5.5); pdf.setTextColor(100, 55, 0);
+        pdf.text(catNome, tblX + cVert + 1.5, y + 3, { maxWidth: UW - cVert - 2 });
+        y += catH;
+
+        for (const disc of catDiscs) {
+            const notasDisc = notas[disc.nome] || {};
+            const bg = rowIdx % 2 === 0 ? [248, 252, 255] : [255, 255, 255];
+            pdf.setFillColor(...bg);
+            pdf.rect(tblX, y, UW, rowH, 'F');
+            pdf.setDrawColor(210, 225, 240); pdf.setLineWidth(0.1);
+            pdf.rect(tblX, y, UW, rowH, 'S');
+            pdf.line(tblX + cVert, y, tblX + cVert, y + rowH);
+
+            // nome disciplina
+            pdf.setFont('helvetica', 'normal'); pdf.setFontSize(5.5); pdf.setTextColor(15, 15, 15);
+            pdf.text(disc.nome, tblX + cVert + 1.2, y + rowH - 1, { maxWidth: cDisc - 2 });
+            pdf.setDrawColor(180, 200, 225);
+            pdf.line(tblX + cVert + cDisc, y, tblX + cVert + cDisc, y + rowH);
+
+            // polivalência
+            if (isFund) {
+                const pv = notasDisc['0']?.polivalencia ?? '';
+                pdf.setFontSize(5.5); pdf.setTextColor(10, 10, 10);
+                pdf.text(String(pv), tblX + cVert + cDisc + cPoliv / 2, y + rowH - 1, { align: 'center' });
+                pdf.line(tblX + cVert + cDisc + cPoliv, y, tblX + cVert + cDisc + cPoliv, y + rowH);
+            }
+
+            // notas por série
+            let nx = tblX + cVert + cDisc + cPoliv;
+            for (let si = 0; si < numSeries; si++) {
+                const nd = notasDisc[String(si + 1)] || {};
+                const nv = nd.nota !== undefined ? Number(nd.nota).toFixed(1) : '';
+                const cv = nd.ch !== undefined ? String(nd.ch) : '';
+                pdf.setFont('helvetica', 'normal'); pdf.setFontSize(5.5); pdf.setTextColor(0, 0, 0);
+                pdf.text(nv, nx + cNota / 2, y + rowH - 1, { align: 'center' });
+                pdf.line(nx + cNota, y, nx + cNota, y + rowH);
+                pdf.text(cv, nx + cNota + cCH / 2, y + rowH - 1, { align: 'center' });
+                pdf.line(nx + pairW, y, nx + pairW, y + rowH);
+                nx += pairW;
+            }
+            rowIdx++;
+            y += rowH;
+        }
+    }
+    // borda externa da tabela
+    pdf.setDrawColor(0, 40, 120); pdf.setLineWidth(0.4);
+    pdf.rect(tblX, tblStartY, UW, y - tblStartY, 'S');
+    y += 3;
+
+    // --- tabela de instituições ---
+    const seriesParaInfo = isFund
+        ? [{ nome: 'PRÉ', key: '0' }, ...series.map((_, i) => ({ nome: `${i + 1}°`, key: String(i + 1) }))]
+        : series.map((s, i) => ({ nome: s, key: String(i + 1) }));
+
+    const iColW = [20, 28, UW - 20 - 28 - 48, 48];
+    const iHdrH = 5.5;
+    const iRowH = 4.5;
+
+    pdf.setFillColor(0, 40, 120);
+    pdf.rect(ML, y, UW, iHdrH, 'F');
+    const iHdrs = ['ANOS', 'ANO/ CONCLUSÃO', 'INSTITUIÇÃO DE ENSINO', 'CIDADE/UF'];
+    let ix = ML;
+    iHdrs.forEach((h, ci) => {
+        pdf.setFont('helvetica', 'bold'); pdf.setFontSize(5.5); pdf.setTextColor(255, 255, 255);
+        pdf.text(h, ix + iColW[ci] / 2, y + iHdrH - 1.2, { align: 'center' });
+        if (ci < iHdrs.length - 1) { pdf.setDrawColor(80, 120, 200); pdf.setLineWidth(0.15); pdf.line(ix + iColW[ci], y, ix + iColW[ci], y + iHdrH); }
+        ix += iColW[ci];
+    });
+    pdf.setDrawColor(80, 120, 200); pdf.setLineWidth(0.15);
+    pdf.rect(ML, y, UW, iHdrH, 'S');
+    y += iHdrH;
+
+    const iStartY = y;
+    seriesParaInfo.forEach((sp, ri) => {
+        const info = seriesInfo.find(si => si.serie === sp.key) || {};
+        const bg2 = ri % 2 === 0 ? [245, 248, 255] : [255, 255, 255];
+        pdf.setFillColor(...bg2);
+        pdf.rect(ML, y, UW, iRowH, 'F');
+        const vals = [sp.nome, info.ano || '', info.estabelecimento || '', info.cidadeUf || ''];
+        ix = ML;
+        vals.forEach((v, ci) => {
+            pdf.setFont('helvetica', ci === 0 ? 'bold' : 'normal');
+            pdf.setFontSize(5.5); pdf.setTextColor(15, 15, 15);
+            pdf.text(String(v), ix + iColW[ci] / 2, y + iRowH - 1.2, { align: 'center', maxWidth: iColW[ci] - 1 });
+            pdf.setDrawColor(180, 200, 230); pdf.setLineWidth(0.1);
+            pdf.rect(ix, y, iColW[ci], iRowH, 'S');
+            ix += iColW[ci];
+        });
+        y += iRowH;
+    });
+    pdf.setDrawColor(0, 40, 120); pdf.setLineWidth(0.35);
+    pdf.rect(ML, iStartY - iHdrH, UW, y - iStartY + iHdrH, 'S');
+    y += 3;
+
+    // --- autenticação e observações ---
+    _hText(pdf, `AUTENTICAÇÃO  Nº DE REGISTRO: ${hist.registro || '______________________________'}`, ML, y, { bold: true, size: 7 });
+    y += 5;
+
+    if (hist.observacoes) {
+        pdf.setFont('helvetica', 'normal'); pdf.setFontSize(6.5); pdf.setTextColor(30, 30, 30);
+        const obsL = pdf.splitTextToSize(hist.observacoes, UW);
+        pdf.text(obsL.slice(0, 3), ML, y);
+        y += obsL.slice(0, 3).length * 3.5 + 2;
+    }
+
+    // data de emissão
+    _hText(pdf, hist.dataEmissao || '', PW / 2, y, { size: 7, align: 'center' });
+    y += 8;
+
+    // assinaturas
+    const sig1 = cfg?.frente?.assinatura1 || 'SECRETÁRIO(A)';
+    const sig2 = cfg?.frente?.assinatura2 || 'DIRETOR(A)';
+    const sigW2 = UW / 3;
+    [sig1, sig2].forEach((sig, i) => {
+        const cx = ML + i * sigW2 + sigW2 / 2;
+        pdf.setLineWidth(0.4); pdf.setDrawColor(0, 0, 0);
+        pdf.line(cx - 26, y, cx + 26, y);
+        _hText(pdf, sig, cx, y + 4, { size: 6.5, align: 'center', bold: true });
+    });
+
+    // linha dupla final
+    const fyBot = PH - 8;
+    _hLine(pdf, ML, fyBot, PW - MR, fyBot, 0.6, [0, 40, 120]);
+    _hLine(pdf, ML, fyBot + 1.2, PW - MR, fyBot + 1.2, 0.2, [0, 40, 120]);
+}
+
+// ---------- Página do verso ----------
+
+function _histVerso(pdf, hist, cfg) {
+    const aluno = hist.aluno || {};
+    const grade = hist.grade || {};
+    const fichaIndividual = hist.fichaIndividual || [];
+    const discs = grade.disciplinas || [];
+    const numAvals = 8;
+
+    const PW = 210, PH = 297, ML = 7, MR = 7, MT = 7;
+    const UW = PW - ML - MR;
+    let y = MT;
+
+    // linhas do topo
+    _hLine(pdf, ML, y, PW - MR, y, 0.6, [0, 40, 120]);
+    _hLine(pdf, ML, y + 1.3, PW - MR, y + 1.3, 0.2, [0, 40, 120]);
+    y += 3;
+
+    // título
+    pdf.setFillColor(0, 40, 120);
+    pdf.rect(ML, y, UW, 7, 'F');
+    _hText(pdf, 'FICHA INDIVIDUAL DO RENDIMENTO ESCOLAR E FREQUÊNCIA DO ALUNO', PW / 2, y + 5, { bold: true, size: 8, align: 'center', color: [255, 255, 255] });
+    y += 9;
+
+    // aluno + ano
+    const fichaEntry = fichaIndividual.length ? fichaIndividual[0] : {};
+    const fichaAno = fichaEntry.ano || '';
+    _hText(pdf, `ALUNO(A): ${aluno.nome || ''}`, ML, y + 3, { bold: true, size: 7 });
+    _hText(pdf, `ANO: ${fichaAno}`, PW - MR - 35, y + 3, { bold: true, size: 7 });
+    y += 7;
+
+    // atenção
+    _hText(pdf, 'ATENÇÃO:', ML, y, { bold: true, size: 6, color: [100, 50, 0] });
+    _hText(pdf, ' Preencher somente em caso do aluno solicitar transferência durante o período letivo.', ML + 14, y, { size: 6 });
+    y += 5;
+
+    // tabela de avaliações
+    const cDiscW = isFundamental(hist.tipo) ? 52 : 55;
+    const availAvalW = UW - cDiscW;
+    const avalW = availAvalW / numAvals;
+    const notaW = avalW * 0.54;
+    const faltaW = availAvalW / numAvals - notaW;
+    const hH = 5;
+    const rH = isFundamental(hist.tipo) ? 3.6 : 3.8;
+
+    // header linha 1
+    pdf.setFillColor(0, 40, 120);
+    pdf.rect(ML, y, UW, hH, 'F');
+    pdf.setFont('helvetica', 'bold'); pdf.setFontSize(5.5); pdf.setTextColor(255, 255, 255);
+    pdf.text('DISCIPLINAS', ML + cDiscW / 2, y + 3.5, { align: 'center' });
+    let ax = ML + cDiscW;
+    for (let a = 1; a <= numAvals; a++) {
+        pdf.text(`${a}ª AVAL`, ax + avalW / 2, y + 3.5, { align: 'center' });
+        pdf.setDrawColor(80, 120, 200); pdf.setLineWidth(0.15);
+        pdf.line(ax, y, ax, y + hH);
+        ax += avalW;
+    }
+    pdf.setDrawColor(80, 120, 200); pdf.setLineWidth(0.15);
+    pdf.rect(ML, y, UW, hH, 'S');
+    y += hH;
+
+    // header linha 2 (Notas / Faltas)
+    pdf.setFillColor(15, 55, 150);
+    pdf.rect(ML, y, UW, hH, 'F');
+    ax = ML + cDiscW;
+    pdf.setFont('helvetica', 'bold'); pdf.setFontSize(4.5); pdf.setTextColor(255, 255, 255);
+    for (let a = 1; a <= numAvals; a++) {
+        pdf.text('Notas', ax + notaW / 2, y + 3.3, { align: 'center' });
+        pdf.line(ax + notaW, y, ax + notaW, y + hH);
+        pdf.text('Faltas', ax + notaW + faltaW / 2, y + 3.3, { align: 'center' });
+        pdf.line(ax + avalW, y, ax + avalW, y + hH);
+        ax += avalW;
+    }
+    pdf.setDrawColor(80, 120, 200); pdf.setLineWidth(0.15);
+    pdf.rect(ML, y, UW, hH, 'S');
+    y += hH;
+
+    // linhas disciplinas
+    const registros = fichaEntry.registros || [];
+    const tblAvalStart = y;
+    discs.forEach((disc, idx) => {
+        const reg = registros.find(r => r.disciplina === disc.nome) || {};
+        const avs = reg.avaliacoes || [];
+        const bg = idx % 2 === 0 ? [248, 251, 255] : [255, 255, 255];
+        pdf.setFillColor(...bg);
+        pdf.rect(ML, y, UW, rH, 'F');
+        pdf.setDrawColor(205, 220, 235); pdf.setLineWidth(0.1);
+        pdf.rect(ML, y, UW, rH, 'S');
+        pdf.setFont('helvetica', 'normal'); pdf.setFontSize(5.2); pdf.setTextColor(10, 10, 10);
+        pdf.text(disc.nome, ML + 1, y + rH - 1, { maxWidth: cDiscW - 2 });
+        pdf.setDrawColor(160, 190, 220);
+        pdf.line(ML + cDiscW, y, ML + cDiscW, y + rH);
+
+        ax = ML + cDiscW;
+        for (let a = 1; a <= numAvals; a++) {
+            const av = avs.find(v => v.num === a) || {};
+            const nVal = av.nota !== undefined ? Number(av.nota).toFixed(1) : '';
+            const fVal = av.faltas !== undefined ? String(av.faltas) : '';
+            pdf.setTextColor(0, 0, 0);
+            pdf.text(nVal, ax + notaW / 2, y + rH - 1, { align: 'center' });
+            pdf.line(ax + notaW, y, ax + notaW, y + rH);
+            pdf.text(fVal, ax + notaW + faltaW / 2, y + rH - 1, { align: 'center' });
+            pdf.line(ax + avalW, y, ax + avalW, y + rH);
+            ax += avalW;
+        }
+        y += rH;
+    });
+    pdf.setDrawColor(0, 40, 120); pdf.setLineWidth(0.35);
+    pdf.rect(ML, tblAvalStart - 2 * hH, UW, y - tblAvalStart + 2 * hH, 'S');
+    y += 4;
+
+    // VERIFICAÇÃO
+    pdf.setFillColor(230, 237, 255);
+    pdf.rect(ML, y, UW, 11, 'F');
+    pdf.setDrawColor(0, 40, 120); pdf.setLineWidth(0.3);
+    pdf.rect(ML, y, UW, 11, 'S');
+    pdf.setFont('helvetica', 'bold'); pdf.setFontSize(6.5); pdf.setTextColor(0, 40, 120);
+    pdf.text('VERIFICAÇÃO DO RENDIMENTO E FREQUÊNCIA ESCOLAR', ML + 2, y + 4);
+    pdf.setFont('helvetica', 'normal'); pdf.setFontSize(6); pdf.setTextColor(20, 20, 20);
+    pdf.text('Nota mínima para aprovação: 60 (sessenta). Frequência mínima obrigatória: 75%.', ML + 2, y + 8.5);
+    y += 13;
+
+    // OBSERVAÇÃO
+    _hText(pdf, 'OBSERVAÇÃO:', ML, y, { bold: true, size: 7 });
+    y += 3;
+    const obsText = fichaEntry.observacao || '';
+    pdf.setFont('helvetica', 'normal'); pdf.setFontSize(6.5); pdf.setTextColor(10, 10, 10);
+    const obsLines = pdf.splitTextToSize(obsText || ' ', UW);
+    pdf.text(obsLines.slice(0, 2), ML, y);
+    pdf.setDrawColor(180, 180, 180); pdf.setLineWidth(0.2);
+    [0, 4].forEach(dy => pdf.line(ML, y + dy, ML + UW, y + dy));
+    y += 12;
+
+    // sem emendas
+    _hText(pdf, 'Neste documento não há emendas nem rasuras.', PW / 2, y, { size: 7, align: 'center', bold: true });
+    y += 8;
+
+    // data
+    _hText(pdf, hist.dataEmissao || '', PW / 2, y, { size: 7, align: 'center' });
+    y += 9;
+
+    // assinaturas
+    const sig1 = cfg?.frente?.assinatura1 || 'SECRETÁRIO(A)';
+    const sig2 = cfg?.frente?.assinatura2 || 'DIRETOR(A)';
+    const sigW2 = UW / 3;
+    [sig1, sig2].forEach((sig, i) => {
+        const cx = ML + i * sigW2 + sigW2 / 2;
+        pdf.setLineWidth(0.4); pdf.setDrawColor(0, 0, 0);
+        pdf.line(cx - 26, y, cx + 26, y);
+        _hText(pdf, sig, cx, y + 4, { size: 6.5, align: 'center', bold: true });
+    });
+    y += 8;
+
+    // RESERVADO PARA AUTENTICAÇÃO
+    pdf.setDrawColor(0, 40, 120); pdf.setLineWidth(0.4);
+    pdf.rect(ML, y, UW, 18, 'S');
+    pdf.setFont('helvetica', 'bold'); pdf.setFontSize(7); pdf.setTextColor(0, 40, 120);
+    pdf.text('RESERVADO PARA AUTENTICAÇÃO', ML + UW / 2, y + 5.5, { align: 'center' });
+
+    // linha dupla final
+    const fyBot = PH - 8;
+    _hLine(pdf, ML, fyBot, PW - MR, fyBot, 0.6, [0, 40, 120]);
+    _hLine(pdf, ML, fyBot + 1.2, PW - MR, fyBot + 1.2, 0.2, [0, 40, 120]);
+}
+
+function isFundamental(tipo) { return tipo === 'fundamental'; }

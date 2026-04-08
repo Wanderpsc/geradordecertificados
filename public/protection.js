@@ -97,21 +97,6 @@
         setTimeout(_trap, 2000);
     })();
 
-    // Detectar DevTools por tamanho da janela
-    const _threshold = 160;
-    let _devtoolsAberto = false;
-
-    setInterval(function() {
-        const w = window.outerWidth - window.innerWidth > _threshold;
-        const h = window.outerHeight - window.innerHeight > _threshold;
-        if ((w || h) && !_devtoolsAberto) {
-            _devtoolsAberto = true;
-            document.title = '⛔ ACESSO NÃO AUTORIZADO — Software Protegido';
-        } else if (!w && !h) {
-            _devtoolsAberto = false;
-        }
-    }, 1500);
-
     // Detectar DevTools via toString (técnica do getter)
     const _el = new Image();
     Object.defineProperty(_el, 'id', {

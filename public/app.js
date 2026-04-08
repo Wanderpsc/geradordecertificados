@@ -150,17 +150,46 @@ function getTurmaPadrao() {
 function aplicarPermissoesSubUsuario() {
     const usuarioStr = localStorage.getItem('usuario');
     if (!usuarioStr) return;
-    
-    try {
-        const usuario = JSON.parse(usuarioStr);
-        if (usuario.tipo === 'subUsuario') {
-            // Esconder aba "Gerenciar Usuários" para sub-usuários
-            const tabUsuarios = document.querySelector('[data-tab="usuarios"]');
-            if (tabUsuarios) tabUsuarios.style.display = 'none';
-        }
-    } catch (e) {
-        // Ignorar erro de parse
-    }
+
+    let usuario;
+    try { usuario = JSON.parse(usuarioStr); } catch (e) { return; }
+    if (usuario.tipo !== 'subUsuario') return;
+
+    const p = usuario.permissoes || {};
+
+    // ── Abas bloqueadas ─────────────────────────────────────────────────
+    // Sub-usuários nunca acessam "Gerenciar Usuários"
+    const esconderTabs = ['usuarios'];
+    esconderTabs.forEach(tab => {
+        const el = document.querySelector(`[data-tab="${tab}"]`);
+        if (el) el.style.display = 'none';
+    });
+
+    // Injetar CSS de restrição imediata (antes do DOM carregar botões)
+    const style = document.createElement('style');
+    style.id = 'sub-usuario-restrictions';
+    let css = '';
+    if (!p.cadastrarAlunos) css += `#btnSalvarAluno, #formAluno button[type="submit"] { display: none !important; }`;
+    if (!p.editarAlunos)    css += `.btn-editar-aluno, [onclick*="editarAluno"] { display: none !important; }`;
+    if (!p.excluirAlunos)   css += `.btn-excluir-aluno, [onclick*="excluirAluno"] { display: none !important; pointer-events: none; }`;
+    if (!p.editarModelos)   css += `#btnSalvarModelo, #btnNovoModelo, [onclick*="salvarModelo"], [onclick*="excluirModelo"], [onclick*="deletarModelo"], [onclick*="arquivarModelo"] { display: none !important; }`;
+    if (!p.gerarCertificados) css += `#btnGerarCert, #btnGerarLote, [onclick*="gerarCertificado"] { display: none !important; }`;
+    if (!p.verLogs)         css += `[data-tab="logs"], .logs-section { display: none !important; }`;
+    style.textContent = css;
+    document.head.appendChild(style);
+
+    // Guardar permissões acessíveis globalmente para verificações runtime
+    window._permissoesSubUsuario = p;
+}
+
+// Verificação runtime de permissão para sub-usuários (usar antes de ações críticas)
+function _temPermissao(campo) {
+    const usuarioStr = localStorage.getItem('usuario');
+    if (!usuarioStr) return true;
+    let usuario;
+    try { usuario = JSON.parse(usuarioStr); } catch (e) { return true; }
+    if (usuario.tipo !== 'subUsuario') return true;
+    return !!(usuario.permissoes || {})[campo];
 }
 
 // ==================== GERENCIAMENTO DE TABS ====================
@@ -193,6 +222,11 @@ function inicializarTabs() {
 }
 
 function navegarParaTab(targetTab, atualizarHash = true) {
+    // Bloquear aba de usuarios para sub-usuarios
+    if (targetTab === 'usuarios' && !_temPermissao('_acessoAdmin')) {
+        mostrarNotificacao('Acesso nao permitido.', 'error');
+        return;
+    }
     const tabButtons = document.querySelectorAll('.tab-btn');
     const tabContents = document.querySelectorAll('.tab-content');
     
@@ -386,6 +420,8 @@ async function carregarAlunos() {
             
             atualizarListaAlunos();
             atualizarSelectAlunos();
+            // Manter filtros do histórico sempre sincronizados com os alunos carregados
+            if (typeof popularSelectAlunos === 'function') popularSelectAlunos();
         }
     } catch (error) {
         console.error('Erro ao carregar alunos:', error);
@@ -393,6 +429,10 @@ async function carregarAlunos() {
 }
 
 function editarAluno(id) {
+    if (!_temPermissao('editarAlunos')) {
+        mostrarNotificacao('Sem permissao para editar alunos.', 'error');
+        return;
+    }
     const aluno = APP_STATE.alunos.find(a => a.id === id);
     if (!aluno) return;
 
@@ -425,6 +465,10 @@ function editarAluno(id) {
 }
 
 async function excluirAluno(id, mostrarMensagem = true) {
+    if (!_temPermissao('excluirAlunos')) {
+        mostrarNotificacao('Sem permissao para excluir alunos.', 'error');
+        return;
+    }
     const token = localStorage.getItem('token');
     const index = APP_STATE.alunos.findIndex(a => a.id === id);
     if (index !== -1) {
@@ -717,15 +761,19 @@ async function enviarCadastroLote() {
     mostrarNotificacao(`${sucesso} aluno(s) cadastrado(s) em lote!`, 'success');
 }
 
+// Estado de grupos collapsados na lista de alunos
+const _gruposCollapsados = new Set();
+const _gruposCollapsadosLote = new Set();
+
 function atualizarListaAlunos(filtro = '') {
     const container = document.getElementById('listaAlunos');
     const totalElement = document.getElementById('totalAlunos');
-    
+
     let alunosFiltrados = APP_STATE.alunos;
-    
+
     if (filtro) {
         const termo = filtro.toLowerCase();
-        alunosFiltrados = APP_STATE.alunos.filter(aluno => 
+        alunosFiltrados = APP_STATE.alunos.filter(aluno =>
             aluno.nome.toLowerCase().includes(termo) ||
             (aluno.cpf && aluno.cpf.includes(termo)) ||
             (aluno.serie && aluno.serie.toLowerCase().includes(termo)) ||
@@ -745,68 +793,127 @@ function atualizarListaAlunos(filtro = '') {
         return;
     }
 
-    container.innerHTML = alunosFiltrados.map(aluno => `
-        <div class="aluno-item">
-            <div class="aluno-header">
-                <div class="aluno-nome">${aluno.nome}</div>
-                <div class="aluno-actions">
-                    <button class="btn btn-primary btn-small" onclick="editarAluno('${aluno.id}')">✏️ Editar</button>
-                    <button class="btn btn-danger btn-small" onclick="excluirAluno('${aluno.id}')">🗑️ Excluir</button>
+    // Agrupar por Série + Turma, ordem alfabética
+    const grupos = {};
+    alunosFiltrados.forEach(aluno => {
+        const chave = ((aluno.serie || 'Sem Série') + ' — Turma ' + (aluno.turma || 'Sem Turma')).trim();
+        if (!grupos[chave]) grupos[chave] = [];
+        grupos[chave].push(aluno);
+    });
+
+    // Ordenar grupos e alunos dentro de cada grupo
+    const chavesOrdenadas = Object.keys(grupos).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    chavesOrdenadas.forEach(chave => {
+        grupos[chave].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+    });
+
+    let html = '';
+    chavesOrdenadas.forEach(chave => {
+        const lista = grupos[chave];
+        const collapsed = _gruposCollapsados.has(chave);
+        const chaveEsc = chave.replace(/'/g, "\\'");
+
+        html += `
+        <div class="grupo-serie" style="margin-bottom: 16px; border-radius: 12px; overflow: hidden; border: 2px solid #bfdbfe;">
+            <div onclick="toggleGrupoLista('${chaveEsc}')"
+                style="background: linear-gradient(135deg, #1e3a8a, #2563eb); color: white; padding: 12px 18px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; user-select: none;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 18px;">📚</span>
+                    <strong style="font-size: 15px;">${chave}</strong>
+                    <span style="background: rgba(255,255,255,0.2); border-radius: 12px; padding: 2px 10px; font-size: 13px;">${lista.length} aluno${lista.length !== 1 ? 's' : ''}</span>
                 </div>
+                <span style="font-size: 20px; transition: transform 0.2s;" id="iconeGrupo_${CSS.escape(chave)}">${collapsed ? '▶' : '▼'}</span>
             </div>
-            <div class="aluno-info">
-                <div class="aluno-info-item">
-                    <div class="aluno-info-label">RG</div>
-                    <div>${aluno.rg}${aluno.orgaoEmissor ? ' - ' + aluno.orgaoEmissor : ''}</div>
-                </div>
-                <div class="aluno-info-item">
-                    <div class="aluno-info-label">CPF</div>
-                    <div>${aluno.cpf}</div>
-                </div>
-                <div class="aluno-info-item">
-                    <div class="aluno-info-label">Data de Nascimento</div>
-                    <div>${aluno.diaNascimento} de ${aluno.mesNascimento} de ${aluno.anoNascimento}</div>
-                </div>
-                <div class="aluno-info-item">
-                    <div class="aluno-info-label">Naturalidade</div>
-                    <div>${aluno.cidadeNascimento} - ${aluno.estadoNascimento}</div>
-                </div>
-                <div class="aluno-info-item">
-                    <div class="aluno-info-label">Nacionalidade</div>
-                    <div>${aluno.nacionalidade || 'Brasileira'}</div>
-                </div>
-                <div class="aluno-info-item">
-                    <div class="aluno-info-label">Mãe</div>
-                    <div>${aluno.nomeMae || ''}</div>
-                </div>
-                <div class="aluno-info-item">
-                    <div class="aluno-info-label">Pai</div>
-                    <div>${aluno.nomePai || ''}</div>
-                </div>
-                <div class="aluno-info-item">
-                    <div class="aluno-info-label">Ano de Conclusão</div>
-                    <div>${aluno.anoConclusao}</div>
-                </div>
-                ${aluno.serie ? `<div class="aluno-info-item">
-                    <div class="aluno-info-label">Ano/Série</div>
-                    <div>${aluno.serie}</div>
-                </div>` : ''}
-                ${aluno.turma ? `<div class="aluno-info-item">
-                    <div class="aluno-info-label">Turma</div>
-                    <div>${aluno.turma}</div>
-                </div>` : ''}
-                <div class="aluno-info-item">
-                    <div class="aluno-info-label">Data de Confecção</div>
-                    <div>${aluno.cidadeConfeccao ? aluno.cidadeConfeccao + ', ' : ''}${aluno.dataConfeccao ? new Date(aluno.dataConfeccao + 'T00:00:00').toLocaleDateString('pt-BR') : ''}</div>
-                </div>
-                <div class="aluno-info-item">
-                    <div class="aluno-info-label">Resolução</div>
-                    <div>${aluno.resolucao}</div>
-                </div>
+            <div id="corpoGrupo_${CSS.escape(chave)}" style="display: ${collapsed ? 'none' : 'block'};">
+                ${lista.map(aluno => `
+                <div class="aluno-item" style="border-radius: 0; border-left: none; border-right: none; border-top: none;">
+                    <div class="aluno-header">
+                        <div class="aluno-nome">${aluno.nome}</div>
+                        <div class="aluno-actions">
+                            <button class="btn btn-primary btn-small" onclick="editarAluno('${aluno.id}')">✏️ Editar</button>
+                            <button class="btn btn-danger btn-small" onclick="excluirAluno('${aluno.id}')">🗑️ Excluir</button>
+                        </div>
+                    </div>
+                    <div class="aluno-info">
+                        <div class="aluno-info-item">
+                            <div class="aluno-info-label">RG</div>
+                            <div>${aluno.rg || ''}${aluno.orgaoEmissor ? ' - ' + aluno.orgaoEmissor : ''}</div>
+                        </div>
+                        <div class="aluno-info-item">
+                            <div class="aluno-info-label">CPF</div>
+                            <div>${aluno.cpf || ''}</div>
+                        </div>
+                        <div class="aluno-info-item">
+                            <div class="aluno-info-label">Data de Nascimento</div>
+                            <div>${aluno.diaNascimento} de ${aluno.mesNascimento} de ${aluno.anoNascimento}</div>
+                        </div>
+                        <div class="aluno-info-item">
+                            <div class="aluno-info-label">Naturalidade</div>
+                            <div>${aluno.cidadeNascimento} - ${aluno.estadoNascimento}</div>
+                        </div>
+                        <div class="aluno-info-item">
+                            <div class="aluno-info-label">Nacionalidade</div>
+                            <div>${aluno.nacionalidade || 'Brasileira'}</div>
+                        </div>
+                        <div class="aluno-info-item">
+                            <div class="aluno-info-label">Mãe</div>
+                            <div>${aluno.nomeMae || ''}</div>
+                        </div>
+                        <div class="aluno-info-item">
+                            <div class="aluno-info-label">Pai</div>
+                            <div>${aluno.nomePai || ''}</div>
+                        </div>
+                        <div class="aluno-info-item">
+                            <div class="aluno-info-label">Ano de Conclusão</div>
+                            <div>${aluno.anoConclusao || ''}</div>
+                        </div>
+                        <div class="aluno-info-item">
+                            <div class="aluno-info-label">Data de Confecção</div>
+                            <div>${aluno.cidadeConfeccao ? aluno.cidadeConfeccao + ', ' : ''}${aluno.dataConfeccao ? new Date(aluno.dataConfeccao + 'T00:00:00').toLocaleDateString('pt-BR') : ''}</div>
+                        </div>
+                        <div class="aluno-info-item">
+                            <div class="aluno-info-label">Resolução</div>
+                            <div>${aluno.resolucao || ''}</div>
+                        </div>
+                    </div>
+                    ${aluno.observacoes ? `<p style="margin-top: 10px; color: #64748b;"><strong>Obs:</strong> ${aluno.observacoes}</p>` : ''}
+                </div>`).join('')}
             </div>
-            ${aluno.observacoes ? `<p style="margin-top: 10px; color: #64748b;"><strong>Obs:</strong> ${aluno.observacoes}</p>` : ''}
-        </div>
-    `).join('');
+        </div>`;
+    });
+
+    container.innerHTML = html;
+}
+
+function toggleGrupoLista(chave) {
+    const corpo = document.getElementById('corpoGrupo_' + CSS.escape(chave));
+    const icone = document.getElementById('iconeGrupo_' + CSS.escape(chave));
+    if (!corpo) return;
+
+    if (_gruposCollapsados.has(chave)) {
+        _gruposCollapsados.delete(chave);
+        corpo.style.display = 'block';
+        if (icone) icone.textContent = '▼';
+    } else {
+        _gruposCollapsados.add(chave);
+        corpo.style.display = 'none';
+        if (icone) icone.textContent = '▶';
+    }
+}
+
+function recolherTodosGrupos() {
+    document.querySelectorAll('[id^="corpoGrupo_"]').forEach(el => {
+        const chave = el.id.replace('corpoGrupo_', '');
+        _gruposCollapsados.add(chave);
+        el.style.display = 'none';
+    });
+    document.querySelectorAll('[id^="iconeGrupo_"]').forEach(el => el.textContent = '▶');
+}
+
+function expandirTodosGrupos() {
+    _gruposCollapsados.clear();
+    document.querySelectorAll('[id^="corpoGrupo_"]').forEach(el => el.style.display = 'block');
+    document.querySelectorAll('[id^="iconeGrupo_"]').forEach(el => el.textContent = '▼');
 }
 
 // ==================== IMPRIMIR LISTA DE ALUNOS ====================
@@ -868,20 +975,99 @@ function imprimirListaAlunos() {
 }
 
 function atualizarSelectAlunos() {
-    const select = document.getElementById('selectAluno');
-    
-    if (APP_STATE.alunos.length === 0) {
-        select.innerHTML = '<option value="">-- Nenhum aluno cadastrado --</option>';
-    } else {
-        select.innerHTML = '<option value="">-- Selecione um aluno --</option>' +
-            APP_STATE.alunos.map(aluno => {
-                const info = [aluno.anoConclusao, aluno.serie, aluno.turma ? 'Turma ' + aluno.turma : ''].filter(Boolean).join(' | ');
-                return `<option value="${aluno.id}">${aluno.nome}${info ? ' (' + info + ')' : ''}</option>`;
-            }).join('');
-    }
+    // O campo selectAluno agora é um input hidden controlado pelo autocomplete
+    // Apenas limpar a seleção atual ao recarregar a lista
+    const input = document.getElementById('selectAluno');
+    if (input) input.value = '';
+    limparSelecaoAlunoIndividual?.();
 
     // Atualizar lista de alunos para geração em lote
     atualizarListaAlunosLote();
+}
+
+function filtrarSelectAlunoIndividual() {
+    const termo = (document.getElementById('buscarAlunoIndividual')?.value || '').toLowerCase().trim();
+    const lista = document.getElementById('listaAutoCompleteIndividual');
+    const avisoNaoEncontrado = document.getElementById('alunoNaoEncontrado');
+    const infoSelecionado = document.getElementById('alunoSelecionadoInfo');
+    if (!lista) return;
+
+    // Limpar seleção anterior ao digitar
+    document.getElementById('selectAluno').value = '';
+    if (infoSelecionado) infoSelecionado.style.display = 'none';
+
+    if (!termo) {
+        lista.style.display = 'none';
+        if (avisoNaoEncontrado) avisoNaoEncontrado.style.display = 'none';
+        return;
+    }
+
+    const alunosFiltrados = APP_STATE.alunos
+        .filter(a => a.nome.toLowerCase().includes(termo) || (a.cpf && a.cpf.includes(termo)))
+        .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+
+    if (avisoNaoEncontrado) {
+        avisoNaoEncontrado.style.display = alunosFiltrados.length === 0 ? 'block' : 'none';
+    }
+
+    if (alunosFiltrados.length === 0) {
+        lista.style.display = 'none';
+        return;
+    }
+
+    lista.innerHTML = alunosFiltrados.map(aluno => {
+        const info = [aluno.anoConclusao, aluno.serie, aluno.turma ? 'Turma ' + aluno.turma : ''].filter(Boolean).join(' | ');
+        return `<div onclick="selecionarAlunoIndividual('${aluno.id}', \`${aluno.nome.replace(/`/g, "'")}\`, \`${info.replace(/`/g, "'")}\`)"
+            style="padding: 10px 14px; cursor: pointer; border-bottom: 1px solid #e5e7eb; font-size: 13px;"
+            onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background='white'">
+            <strong style="color: #1e293b;">${aluno.nome}</strong>
+            ${info ? `<span style="color: #6b7280; margin-left: 8px; font-size: 12px;">${info}</span>` : ''}
+        </div>`;
+    }).join('');
+    lista.style.display = 'block';
+}
+
+function selecionarAlunoIndividual(id, nome, info) {
+    document.getElementById('selectAluno').value = id;
+    document.getElementById('buscarAlunoIndividual').value = nome;
+    document.getElementById('listaAutoCompleteIndividual').style.display = 'none';
+
+    const infoEl = document.getElementById('alunoSelecionadoInfo');
+    const nomeEl = document.getElementById('alunoSelecionadoNome');
+    if (infoEl && nomeEl) {
+        nomeEl.textContent = nome + (info ? ' (' + info + ')' : '');
+        infoEl.style.display = 'flex';
+    }
+
+    const aviso = document.getElementById('alunoNaoEncontrado');
+    if (aviso) aviso.style.display = 'none';
+}
+
+function limparSelecaoAlunoIndividual() {
+    document.getElementById('selectAluno').value = '';
+    document.getElementById('buscarAlunoIndividual').value = '';
+    document.getElementById('listaAutoCompleteIndividual').style.display = 'none';
+    const infoEl = document.getElementById('alunoSelecionadoInfo');
+    if (infoEl) infoEl.style.display = 'none';
+}
+
+// Fechar lista ao clicar fora
+document.addEventListener('click', function(e) {
+    const campo = document.getElementById('buscarAlunoIndividual');
+    const lista = document.getElementById('listaAutoCompleteIndividual');
+    if (lista && campo && !campo.contains(e.target) && !lista.contains(e.target)) {
+        lista.style.display = 'none';
+    }
+});
+
+function irParaCadastrarAluno() {
+    const termo = document.getElementById('buscarAlunoIndividual')?.value || '';
+    navegarParaTab('cadastro');
+    // Pré-preencher nome se o termo parecer um nome (não for só números)
+    if (termo && termo.replace(/\D/g, '').length !== termo.length) {
+        const campoNome = document.getElementById('nome');
+        if (campoNome) campoNome.value = termo;
+    }
 }
 
 function atualizarListaAlunosLote(filtro = '') {
@@ -898,17 +1084,20 @@ function atualizarListaAlunosLote(filtro = '') {
         );
     }
 
-    // Filtro por turma
+    // Filtro por série (primeiro)
+    const filtroSerie = document.getElementById('filtroSerieLote')?.value || '';
+    if (filtroSerie) {
+        alunosFiltrados = alunosFiltrados.filter(a => (a.serie || '') === filtroSerie);
+    }
+
+    // Filtro por turma (dependente da série)
     const filtroTurma = document.getElementById('filtroTurmaLote')?.value || '';
     if (filtroTurma) {
         alunosFiltrados = alunosFiltrados.filter(a => (a.turma || '') === filtroTurma);
     }
 
-    // Filtro por série
-    const filtroSerie = document.getElementById('filtroSerieLote')?.value || '';
-    if (filtroSerie) {
-        alunosFiltrados = alunosFiltrados.filter(a => (a.serie || '') === filtroSerie);
-    }
+    // Ordem alfabética
+    alunosFiltrados = alunosFiltrados.slice().sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
 
     if (alunosFiltrados.length === 0) {
         container.innerHTML = `<p style="text-align: center; padding: 20px; color: #9ca3af;">${filtro || filtroTurma || filtroSerie ? 'Nenhum aluno encontrado' : 'Nenhum aluno cadastrado'}</p>`;
@@ -916,28 +1105,32 @@ function atualizarListaAlunosLote(filtro = '') {
         return;
     }
 
-    // Agrupar por turma se houver turmas definidas e nenhum filtro específico de turma
-    const temTurmas = alunosFiltrados.some(a => a.turma);
-    
-    if (temTurmas && !filtroTurma) {
-        // Agrupar por série+turma
+    // Agrupar por série+turma (colapsável), igual à aba Lista
+    const temTurmas = alunosFiltrados.some(a => a.turma || a.serie);
+
+    if (temTurmas && !filtroTurma && !filtroSerie) {
         const grupos = {};
         alunosFiltrados.forEach(a => {
-            const chave = (a.serie || '') + (a.turma ? ' - Turma ' + a.turma : '') || 'Sem turma';
+            const chave = [a.serie, a.turma].filter(Boolean).join(' — ') || 'Sem turma';
             if (!grupos[chave]) grupos[chave] = [];
             grupos[chave].push(a);
         });
 
         let html = '';
-        const chavesOrdenadas = Object.keys(grupos).sort();
+        const chavesOrdenadas = Object.keys(grupos).sort((a, b) => a.localeCompare(b, 'pt-BR'));
         chavesOrdenadas.forEach(chave => {
-            html += `<div style="background: #eff6ff; padding: 8px 14px; font-weight: 700; font-size: 13px; color: #1e3a8a; border-bottom: 2px solid #bfdbfe; display: flex; justify-content: space-between; align-items: center;">
-                <span>📚 ${chave}</span>
+            const collapsed = _gruposCollapsadosLote.has(chave);
+            const arrow = collapsed ? '▶' : '▼';
+            const chaveId = CSS.escape('lote-' + chave);
+            html += `<div onclick="toggleGrupoLote('${chave.replace(/'/g, "\\'").replace(/"/g, '&quot;')}')" style="background: linear-gradient(90deg,#eff6ff,#dbeafe); padding: 10px 14px; font-weight: 700; font-size: 13px; color: #1e3a8a; border-bottom: 2px solid #bfdbfe; display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none;">
+                <span>${arrow} 📚 ${chave}</span>
                 <span style="font-weight: 400; font-size: 12px; color: #6b7280;">${grupos[chave].length} aluno(s)</span>
-            </div>`;
+            </div>
+            <div id="grupo-lote-${chaveId}" style="display:${collapsed ? 'none' : 'block'}">`;
             grupos[chave].forEach((aluno, idx) => {
                 html += renderItemAlunoLote(aluno, idx);
             });
+            html += `</div>`;
         });
         container.innerHTML = html;
     } else {
@@ -964,23 +1157,44 @@ function renderItemAlunoLote(aluno, idx) {
 }
 
 function atualizarFiltrosTurmaLote() {
-    const selectTurma = document.getElementById('filtroTurmaLote');
     const selectSerie = document.getElementById('filtroSerieLote');
-    if (!selectTurma || !selectSerie) return;
+    if (!selectSerie) return;
 
-    const turmas = [...new Set(APP_STATE.alunos.map(a => a.turma).filter(Boolean))].sort();
     const series = [...new Set(APP_STATE.alunos.map(a => a.serie).filter(Boolean))].sort();
-
-    const turmaAtual = selectTurma.value;
     const serieAtual = selectSerie.value;
 
-    selectTurma.innerHTML = '<option value="">Todas as turmas</option>' + turmas.map(t => `<option value="${t}" ${t === turmaAtual ? 'selected' : ''}>${t}</option>`).join('');
     selectSerie.innerHTML = '<option value="">Todas as séries</option>' + series.map(s => `<option value="${s}" ${s === serieAtual ? 'selected' : ''}>${s}</option>`).join('');
+
+    atualizarFiltroTurmaLote(serieAtual);
+}
+
+function atualizarFiltroTurmaLote(serieSelecionada) {
+    const selectTurma = document.getElementById('filtroTurmaLote');
+    if (!selectTurma) return;
+
+    const alunosDaSerie = serieSelecionada
+        ? APP_STATE.alunos.filter(a => a.serie === serieSelecionada)
+        : APP_STATE.alunos;
+
+    const turmas = [...new Set(alunosDaSerie.map(a => a.turma).filter(Boolean))].sort();
+    const turmaAtual = selectTurma.value;
+
+    selectTurma.innerHTML = '<option value="">Todas as turmas</option>' + turmas.map(t => `<option value="${t}" ${t === turmaAtual ? 'selected' : ''}>${t}</option>`).join('');
+
+    // Se a turma selecionada não existe na nova série, limpar
+    if (turmaAtual && !turmas.includes(turmaAtual)) {
+        selectTurma.value = '';
+    }
+}
+
+function aoMudarSerieLote() {
+    const serie = document.getElementById('filtroSerieLote')?.value || '';
+    atualizarFiltroTurmaLote(serie);
+    filtrarPorTurmaLote();
 }
 
 function filtrarPorTurmaLote() {
-    const filtro = document.getElementById('buscarAlunoLote')?.value || '';
-    atualizarListaAlunosLote(filtro);
+    atualizarListaAlunosLote();
 }
 
 // Inicializar set de seleção
@@ -1008,21 +1222,25 @@ function toggleAlunolote(id, checked) {
     }
 }
 
+function toggleGrupoLote(chave) {
+    if (_gruposCollapsadosLote.has(chave)) {
+        _gruposCollapsadosLote.delete(chave);
+    } else {
+        _gruposCollapsadosLote.add(chave);
+    }
+    atualizarListaAlunosLote();
+}
+
 function toggleSelecionarTodosLote() {
     const checkAll = document.getElementById('checkTodosLote');
-    const filtroTurma = document.getElementById('filtroTurmaLote')?.value || '';
     const filtroSerie = document.getElementById('filtroSerieLote')?.value || '';
-    const filtroTexto = document.getElementById('buscarAlunoLote')?.value?.toLowerCase() || '';
-
+    const filtroTurma = document.getElementById('filtroTurmaLote')?.value || '';
     let alunosFiltrados = APP_STATE.alunos;
-    if (filtroTexto) {
-        alunosFiltrados = alunosFiltrados.filter(a => a.nome.toLowerCase().includes(filtroTexto) || (a.cpf && a.cpf.includes(filtroTexto)));
+    if (filtroSerie) {
+        alunosFiltrados = alunosFiltrados.filter(a => (a.serie || '') === filtroSerie);
     }
     if (filtroTurma) {
         alunosFiltrados = alunosFiltrados.filter(a => (a.turma || '') === filtroTurma);
-    }
-    if (filtroSerie) {
-        alunosFiltrados = alunosFiltrados.filter(a => (a.serie || '') === filtroSerie);
     }
 
     if (checkAll.checked) {
@@ -1030,9 +1248,7 @@ function toggleSelecionarTodosLote() {
     } else {
         alunosFiltrados.forEach(a => APP_STATE.alunosSelecionadosLote.delete(a.id));
     }
-    // Recarregar com filtro atual
-    const filtro = document.getElementById('buscarAlunoLote')?.value || '';
-    atualizarListaAlunosLote(filtro);
+    atualizarListaAlunosLote();
 }
 
 function atualizarContadorLote() {
@@ -2708,11 +2924,6 @@ function inicializarTemplates() {
     document.getElementById('btnGerarIndividual').addEventListener('click', gerarCertificadoIndividual);
     document.getElementById('btnGerarLote').addEventListener('click', gerarCertificadosLote);
 
-    // Busca na lista de geração em lote
-    document.getElementById('buscarAlunoLote').addEventListener('input', (e) => {
-        atualizarListaAlunosLote(e.target.value);
-    });
-
     atualizarTemplateInfo();
 
     // Carregar config salva
@@ -2802,7 +3013,10 @@ async function carregarModelosNoSeletorGerar() {
         });
         const data = await resp.json();
         if (data.success && data.modelos.length) {
+            const nomesVistos = new Set();
             data.modelos.forEach(m => {
+                if (nomesVistos.has(m.nome)) return; // ignorar duplicatas por nome
+                nomesVistos.add(m.nome);
                 const opt = document.createElement('option');
                 opt.value = m._id;
                 opt.textContent = `📄 ${m.nome}`;
@@ -2854,11 +3068,11 @@ async function carregarModeloParaGeracao(modeloId) {
 }
 
 async function gerarCertificadoIndividual() {
-    const selectAluno = document.getElementById('selectAluno');
-    const alunoId = selectAluno.value; // MongoDB usa string _id, não número
+    const alunoId = document.getElementById('selectAluno')?.value;
     
     if (!alunoId) {
-        mostrarNotificacao('Selecione um aluno primeiro!', 'error');
+        mostrarNotificacao('Busque e selecione um aluno primeiro!', 'error');
+        document.getElementById('buscarAlunoIndividual')?.focus();
         return;
     }
 

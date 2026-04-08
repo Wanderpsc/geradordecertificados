@@ -131,3 +131,28 @@ exports.apenasCliente = (req, res, next) => {
     }
     next();
 };
+
+// Bloquear sub-usuários de gerenciar outros sub-usuários
+exports.apenasDonoEscola = (req, res, next) => {
+    if (req.isSubUsuario) {
+        return res.status(403).json({
+            success: false,
+            message: 'Acesso negado. Somente o titular da conta pode gerenciar usuários.'
+        });
+    }
+    next();
+};
+
+// Fábrica de middleware de permissão granular para sub-usuários
+// Ex: checarPermissao('cadastrarAlunos')
+exports.checarPermissao = (campo) => (req, res, next) => {
+    if (!req.isSubUsuario) return next(); // dono da escola passa sempre
+    const perm = req.subUsuario?.permissoes?.[campo];
+    if (!perm) {
+        return res.status(403).json({
+            success: false,
+            message: `Ação não permitida. Seu perfil não tem permissão para "${campo}".`
+        });
+    }
+    next();
+};

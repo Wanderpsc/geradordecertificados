@@ -252,6 +252,10 @@
                 <div class="search-box">
                     <input type="text" id="buscarAluno" placeholder="🔍 Buscar aluno por nome, curso ou CPF...">
                 </div>
+                <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                    <button onclick="expandirTodosGrupos()" style="background: #eff6ff; border: 1px solid #93c5fd; border-radius: 6px; padding: 5px 14px; font-size: 13px; cursor: pointer; color: #1e3a8a;">▼ Expandir todos</button>
+                    <button onclick="recolherTodosGrupos()" style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 6px; padding: 5px 14px; font-size: 13px; cursor: pointer; color: #475569;">▶ Recolher todos</button>
+                </div>
                 <div id="listaAlunos"></div>
             </div>
         </div>
@@ -974,33 +978,40 @@
                 <div class="generate-options">
                     <div class="option-card">
                         <h3>📄 Gerar Individual</h3>
-                        <p>Selecione um aluno da lista para gerar seu certificado</p>
-                        <select id="selectAluno" class="form-control">
-                            <option value="">-- Selecione um aluno --</option>
-                        </select>
-                        <button class="btn btn-primary" id="btnGerarIndividual">Gerar Certificado</button>
+                        <p>Busque o aluno por nome ou CPF para gerar seu certificado</p>
+                        <div style="position: relative;">
+                            <input type="text" id="buscarAlunoIndividual" placeholder="🔍 Digite o nome ou CPF do aluno..."
+                                style="width: 100%; padding: 10px; border: 2px solid #d1d5db; border-radius: 8px; font-size: 14px; box-sizing: border-box;"
+                                oninput="filtrarSelectAlunoIndividual()" autocomplete="off">
+                            <div id="listaAutoCompleteIndividual" style="display:none; position: absolute; top: 100%; left: 0; right: 0; background: white; border: 2px solid #93c5fd; border-radius: 0 0 8px 8px; max-height: 220px; overflow-y: auto; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.12);"></div>
+                        </div>
+                        <input type="hidden" id="selectAluno">
+                        <div id="alunoSelecionadoInfo" style="display:none; background: #eff6ff; border: 1px solid #93c5fd; border-radius: 8px; padding: 8px 14px; margin-top: 8px; font-size: 13px; color: #1e3a8a; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                            <span id="alunoSelecionadoNome">—</span>
+                            <button onclick="limparSelecaoAlunoIndividual()" style="background: none; border: none; color: #6b7280; cursor: pointer; font-size: 16px; padding: 0;" title="Limpar seleção">✕</button>
+                        </div>
+                        <div id="alunoNaoEncontrado" style="display:none; background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 10px 14px; margin-top: 8px; font-size: 13px; color: #92400e;">
+                            ⚠️ Aluno não encontrado. <button onclick="irParaCadastrarAluno()" style="background: #1e3a8a; color: white; border: none; border-radius: 6px; padding: 4px 12px; cursor: pointer; font-size: 13px; margin-left: 6px;">➕ Cadastrar agora</button>
+                        </div>
+                        <button class="btn btn-primary" id="btnGerarIndividual" style="margin-top: 10px;">Gerar Certificado</button>
                     </div>
 
                     <div class="option-card" style="flex: 2;">
                         <h3>📚 Gerar em Lote</h3>
-                        <p>Busque e selecione alunos para gerar certificados</p>
-                        <div style="margin-bottom: 10px;">
-                            <input type="text" id="buscarAlunoLote" placeholder="🔍 Buscar aluno por nome ou CPF..." 
-                                style="width: 100%; padding: 10px; border: 2px solid #d1d5db; border-radius: 8px; font-size: 14px; margin-bottom: 8px;">
-                        </div>
+                        <p>Filtre e selecione alunos para gerar certificados</p>
                         <div style="display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap;">
+                            <div style="flex: 1; min-width: 140px;">
+                                <label style="font-size: 12px; font-weight: 600; color: #374151; display: block; margin-bottom: 4px;">Filtrar por Série:</label>
+                                <select id="filtroSerieLote" onchange="aoMudarSerieLote()"
+                                    style="width: 100%; padding: 8px; border: 2px solid #d1d5db; border-radius: 8px; font-size: 13px;">
+                                    <option value="">Todas as séries</option>
+                                </select>
+                            </div>
                             <div style="flex: 1; min-width: 140px;">
                                 <label style="font-size: 12px; font-weight: 600; color: #374151; display: block; margin-bottom: 4px;">Filtrar por Turma:</label>
                                 <select id="filtroTurmaLote" onchange="filtrarPorTurmaLote()" 
                                     style="width: 100%; padding: 8px; border: 2px solid #d1d5db; border-radius: 8px; font-size: 13px;">
                                     <option value="">Todas as turmas</option>
-                                </select>
-                            </div>
-                            <div style="flex: 1; min-width: 140px;">
-                                <label style="font-size: 12px; font-weight: 600; color: #374151; display: block; margin-bottom: 4px;">Filtrar por Série:</label>
-                                <select id="filtroSerieLote" onchange="filtrarPorTurmaLote()"
-                                    style="width: 100%; padding: 8px; border: 2px solid #d1d5db; border-radius: 8px; font-size: 13px;">
-                                    <option value="">Todas as séries</option>
                                 </select>
                             </div>
                         </div>
@@ -1296,7 +1307,7 @@
             <div class="card" style="margin-top: 20px;">
                 <h2>📝 Lançar Notas do Histórico</h2>
                 <p style="color: #6b7280; font-size: 13px; margin-bottom: 15px;">Selecione um aluno e a grade para lançar as notas de cada disciplina por série/ano.</p>
-                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 15px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
                     <div>
                         <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 4px;">Modalidade</label>
                         <select id="histTipo" class="form-control" onchange="carregarGradesParaNotas()">
@@ -1311,13 +1322,39 @@
                             <option value="">Selecione a modalidade primeiro...</option>
                         </select>
                     </div>
-                    <div>
-                        <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 4px;">Aluno</label>
-                        <select id="histAluno" class="form-control" onchange="carregarHistoricoAluno()">
-                            <option value="">Selecione...</option>
-                        </select>
+                </div>
+
+                <!-- Seleção de Aluno com filtros -->
+                <div style="border: 1px solid #e5e7eb; border-radius: 10px; padding: 12px; background: #f8fafc; margin-bottom: 15px;">
+                    <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 8px; color: #1e3a8a;">👤 Aluno</label>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+                        <div>
+                            <select id="histFiltroSerie" class="form-control" style="font-size: 12px;" onchange="aoMudarSerieHistorico()">
+                                <option value="">Todas as séries</option>
+                            </select>
+                        </div>
+                        <div>
+                            <select id="histFiltroTurma" class="form-control" style="font-size: 12px;" onchange="aoMudarTurmaHistorico()">
+                                <option value="">Todas as turmas</option>
+                            </select>
+                        </div>
+                        <div>
+                            <input id="histBuscarAluno" type="text" class="form-control" style="font-size: 12px;" placeholder="🔍 Buscar por nome..." oninput="filtrarListaAlunosHistorico()">
+                        </div>
+                    </div>
+                    <div id="listaAlunosHistorico" style="border: 1px solid #e5e7eb; border-radius: 8px; max-height: 220px; overflow-y: auto; background: white;">
+                        <div style="text-align: center; color: #9ca3af; padding: 20px; font-size: 13px;">Nenhum aluno cadastrado.</div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px; min-height: 18px;">
+                        <span id="contadorAlunosHistorico" style="font-size: 12px; color: #1e3a8a; font-weight: 600;"></span>
+                    </div>
+                    <input type="hidden" id="histAluno">
+                    <div id="alunoHistoricoSelecionado" style="display: none; margin-top: 8px; padding: 8px 12px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; font-size: 13px; color: #1e3a8a; display: flex; justify-content: space-between; align-items: center;">
+                        <span id="alunoHistoricoNome" style="font-weight: 600;"></span>
+                        <button onclick="limparSelecaoAlunoHistorico()" style="background: none; border: none; color: #6b7280; cursor: pointer; font-size: 16px;" title="Limpar seleção">✕</button>
                     </div>
                 </div>
+
                 <div id="formNotas" style="display: none;">
                     <!-- Tabela de notas será gerada dinamicamente -->
                 </div>
