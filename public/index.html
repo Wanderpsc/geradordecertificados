@@ -1393,10 +1393,6 @@
             <div class="card">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px;">
                     <h2>⚙️ Configurações do Histórico Escolar</h2>
-                    <div style="display: flex; gap: 6px; align-items: center; flex-shrink: 0;">
-                        <button class="btn btn-secondary btn-sm" onclick="resetarConfigHist()" title="Desfazer todas as alterações e voltar ao padrão">↺ Restaurar Padrão</button>
-                        <button class="btn btn-primary" onclick="salvarConfigHist()" style="font-weight:700;">💾 Salvar Configurações</button>
-                    </div>
                 </div>
                 <p style="color: #6b7280; font-size: 13px; margin-bottom: 16px;">Estes campos aparecem no cabeçalho e rodapé do PDF do Histórico Escolar gerado.</p>
 
@@ -1558,14 +1554,19 @@
 
             <!-- Seção 3: Históricos Salvos -->
             <div class="card" style="margin-top: 20px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
                     <h2>📄 Históricos Salvos</h2>
-                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-                        <select id="histOrientacao" class="form-control" style="font-size:13px;padding:5px 10px;width:auto;">
-                            <option value="portrait">🖨️ Retrato (Portrait)</option>
-                            <option value="landscape">🖨️ Paisagem (Landscape)</option>
+                    <div style="display:flex;align-items:stretch;border:1.5px solid #cbd5e1;border-radius:10px;overflow:hidden;background:#f8fafc;">
+                        <select id="histOrientacao" style="border:none;background:transparent;padding:7px 12px;font-size:13px;cursor:pointer;outline:none;color:#374151;">
+                            <option value="portrait">↕️ Retrato</option>
+                            <option value="landscape">↔️ Paisagem</option>
                         </select>
-                        <button class="btn btn-primary" onclick="gerarHistoricoPDF()" id="btnGerarHistPDF" disabled>🖨️ Gerar PDF dos Selecionados</button>
+                        <div style="width:1px;background:#cbd5e1;flex-shrink:0;"></div>
+                        <button onclick="gerarHistoricoPDF()" id="btnGerarHistPDF" disabled
+                            style="border:none;background:linear-gradient(135deg,#1e40af,#3b82f6);color:#fff;padding:7px 16px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;transition:opacity .2s;"
+                            onmouseover="if(!this.disabled)this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+                            🖨️ Gerar PDF
+                        </button>
                     </div>
                 </div>
                 <div id="listaHistoricos" style="overflow-x: auto;">

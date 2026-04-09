@@ -861,11 +861,11 @@ function renderizarTabelaNotas(grade, notasExistentes) {
         <textarea id="histObservacoes" class="form-control" rows="2" style="font-size:12px;">${HIST_STATE.historicoAtual?.observacoes || ''}</textarea>
     </div>
 
-    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:15px;">
+    <div style="display:flex;gap:8px;justify-content:flex-end;align-items:center;margin-top:16px;padding-top:12px;border-top:1px solid #e5e7eb;">
         <button class="btn btn-secondary" onclick="abrirFichaIndividual()" style="font-size:13px;padding:8px 16px;">
             📝 Ficha Individual (Verso)
         </button>
-        <button class="btn btn-primary" onclick="salvarNotasHistorico()" style="font-size:14px;padding:10px 24px;">
+        <button class="btn btn-primary" onclick="salvarNotasHistorico()" style="font-size:14px;padding:10px 24px;font-weight:700;">
             💾 Salvar Notas
         </button>
     </div>`;
@@ -1377,13 +1377,15 @@ async function carregarListaHistoricos() {
                 </td>
                 <td style="padding:6px 10px;border:1px solid #e5e7eb;font-size:12px;">${escapeHtml(h.grade?.nome||'—')}</td>
                 <td style="padding:6px 10px;border:1px solid #e5e7eb;text-align:center;font-size:12px;">${dt}</td>
-                <td style="padding:4px;border:1px solid #e5e7eb;text-align:center;">
-                    <button class="btn btn-primary btn-sm" onclick="editarHistorico('${h._id}')"
-                        style="font-size:11px;padding:3px 8px;">✏️</button>
-                    <button class="btn btn-secondary btn-sm" onclick="previewHistorico('${h._id}')"
-                        style="font-size:11px;padding:3px 8px;" title="Pré-visualizar">👁️</button>
-                    <button class="btn btn-danger btn-sm" onclick="excluirHistorico('${h._id}')"
-                        style="font-size:11px;padding:3px 8px;">🗑️</button>
+                <td style="padding:4px 6px;border:1px solid #e5e7eb;">
+                    <div style="display:flex;gap:3px;justify-content:center;align-items:center;">
+                        <button class="btn btn-primary btn-sm" onclick="editarHistorico('${h._id}')"
+                            style="font-size:11px;padding:3px 9px;" title="Editar">✏️</button>
+                        <button class="btn btn-secondary btn-sm" onclick="previewHistorico('${h._id}')"
+                            style="font-size:11px;padding:3px 9px;" title="Pré-visualizar">👁️</button>
+                        <button class="btn btn-danger btn-sm" onclick="excluirHistorico('${h._id}')"
+                            style="font-size:11px;padding:3px 9px;" title="Excluir">🗑️</button>
+                    </div>
                 </td>
             </tr>`;
         });
