@@ -1284,23 +1284,25 @@ async function carregarNotasFiscais() {
             return;
         }
 
-        tbody.innerHTML = notas.map(nota => `
+        tbody.innerHTML = notas.map(nota => {
+            const cancelada = nota.status === 'cancelada';
+            return `
             <tr>
                 <td>${nota.numero}</td>
                 <td>${formatarData(nota.dataEmissao)}</td>
                 <td>${nota.tomador?.nome || '-'}</td>
-                <td>${formatarMoeda(nota.valorTotal)}</td>
-                <td><span class="badge ${nota.cancelada ? 'badge-danger' : 'badge-success'}">
-                    ${nota.cancelada ? 'Cancelada' : 'Emitida'}
+                <td>${formatarMoeda(nota.valorServico)}</td>
+                <td><span class="badge ${cancelada ? 'badge-danger' : 'badge-success'}">
+                    ${cancelada ? 'Cancelada' : 'Emitida'}
                 </span></td>
                 <td class="action-btns">
                     <button class="btn btn-primary btn-sm" onclick="verNotaFiscal('${nota._id}')">Ver</button>
-                    ${!nota.cancelada ? `
+                    ${!cancelada ? `
                         <button class="btn badge-danger btn-sm" onclick="cancelarNota('${nota._id}')">Cancelar</button>
                     ` : ''}
                 </td>
-            </tr>
-        `).join('');
+            </tr>`;
+        }).join('');
         
     } catch (error) {
         console.error('Erro ao carregar notas fiscais:', error);
@@ -1312,48 +1314,75 @@ async function carregarNotasFiscais() {
 // Ver nota fiscal
 async function verNotaFiscal(notaId) {
     const token = localStorage.getItem('token');
-    
     try {
         const response = await fetch(`${API_URL}/admin/notas-fiscais/${notaId}`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
+            headers: { 'Authorization': `Bearer ${token}` }
         });
-
-        if (!response.ok) {
-            throw new Error('Erro ao carregar nota fiscal');
-        }
-
+        if (!response.ok) throw new Error('Erro ao carregar nota fiscal');
         const nota = await response.json();
-        
-        alert(`
-NOTA FISCAL Nº ${nota.numero}
 
-Data de Emissão: ${formatarDataHora(nota.dataEmissão)}
+        const isCancelada = nota.status === 'cancelada';
+        const valorServico = nota.valorServico || 0;
+        const valorLiquido = nota.valorLiquido || 0;
+        const iss = nota.impostos?.iss || 0;
 
-PRESTADOR:
-${nota.prestador.nome}
-CNPJ: ${nota.prestador.cnpj}
+        const textoParaCopiar = `NFS-e Nº ${nota.numero}\nData: ${formatarData(nota.dataEmissao)}\n\nPRESTADOR: ${nota.prestador?.razaoSocial || DADOS_PRESTADOR.razaoSocial}\nCPF/CNPJ: ${nota.prestador?.cnpj || DADOS_PRESTADOR.cpf}\n\nTOMADOR: ${nota.tomador?.nome || ''}\nCPF/CNPJ: ${nota.tomador?.cpfCnpj || ''}\nE-mail: ${nota.tomador?.email || ''}\n\nDESCRIÇÃO: ${nota.descricaoServico || DADOS_PRESTADOR.descricaoServico}\nCód. Serviço: ${DADOS_PRESTADOR.codigoServico} (LC 116/2003)\n\nVALOR DO SERVIÇO: ${formatarMoeda(valorServico)}\nISS (${DADOS_PRESTADOR.aliquotaISS}%): ${formatarMoeda(iss)}\nVALOR LÍQUIDO: ${formatarMoeda(valorLiquido)}\n\nStatus: ${isCancelada ? 'CANCELADA' : 'EMITIDA'}${nota.observacoes ? '\n\nOBS: ' + nota.observacoes : ''}`;
 
-TOMADOR:
-${nota.tomador.nome}
-CPF/CNPJ: ${nota.tomador.cpfCnpj}
+        document.getElementById('modal-ver-nf')?.remove();
+        const modal = document.createElement('div');
+        modal.id = 'modal-ver-nf';
+        modal.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.7);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)';
+        modal.innerHTML = `
+            <div style="background:#fff;border-radius:18px;padding:32px;max-width:560px;width:100%;box-shadow:0 25px 60px rgba(0,0,0,0.35);max-height:90vh;overflow-y:auto;font-family:'Segoe UI',sans-serif">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+                    <div>
+                        <h2 style="color:#1d4ed8;font-size:1.3rem;font-weight:800;margin:0">NFS-e Nº ${nota.numero}</h2>
+                        <span style="font-size:12px;font-weight:700;padding:3px 10px;border-radius:20px;background:${isCancelada ? 'linear-gradient(135deg,#fee2e2,#fecaca)' : 'linear-gradient(135deg,#d1fae5,#a7f3d0)'};color:${isCancelada ? '#991b1b' : '#065f46'}">${isCancelada ? '● CANCELADA' : '● EMITIDA'}</span>
+                    </div>
+                    <button onclick="document.getElementById('modal-ver-nf').remove()" style="background:none;border:none;cursor:pointer;font-size:22px;color:#64748b;line-height:1">✕</button>
+                </div>
 
-VALORES:
-Serviços: ${formatarMoeda(nota.valorServicos)}
-Descontos: ${formatarMoeda(nota.descontos)}
-Total: ${formatarMoeda(nota.valorTotal)}
+                <div style="background:#f8faff;border-radius:12px;padding:16px;margin-bottom:16px;border:1px solid #e2ebf8">
+                    <p style="font-size:11px;font-weight:700;color:#7c8bac;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Prestador</p>
+                    <p style="font-size:14px;font-weight:600;color:#1e293b">${nota.prestador?.razaoSocial || DADOS_PRESTADOR.razaoSocial}</p>
+                    <p style="font-size:13px;color:#64748b">CPF/CNPJ: ${nota.prestador?.cnpj || DADOS_PRESTADOR.cpf}</p>
+                </div>
 
-IMPOSTOS:
-ISS: ${formatarMoeda(nota.impostos.iss)}
-PIS: ${formatarMoeda(nota.impostos.pis)}
-COFINS: ${formatarMoeda(nota.impostos.cofins)}
+                <div style="background:#f8faff;border-radius:12px;padding:16px;margin-bottom:16px;border:1px solid #e2ebf8">
+                    <p style="font-size:11px;font-weight:700;color:#7c8bac;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Tomador</p>
+                    <p style="font-size:14px;font-weight:600;color:#1e293b">${nota.tomador?.nome || '-'}</p>
+                    <p style="font-size:13px;color:#64748b">CPF/CNPJ: ${nota.tomador?.cpfCnpj || '-'}</p>
+                    <p style="font-size:13px;color:#64748b">E-mail: ${nota.tomador?.email || '-'}</p>
+                </div>
 
-Status: ${nota.cancelada ? 'CANCELADA' : 'EMITIDA'}
-        `);
-        
+                <div style="background:#f8faff;border-radius:12px;padding:16px;margin-bottom:16px;border:1px solid #e2ebf8">
+                    <p style="font-size:11px;font-weight:700;color:#7c8bac;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Serviço</p>
+                    <p style="font-size:13px;color:#1e293b">${nota.descricaoServico || DADOS_PRESTADOR.descricaoServico}</p>
+                    <p style="font-size:12px;color:#64748b;margin-top:4px">Código ${DADOS_PRESTADOR.codigoServico} — LC 116/2003 &nbsp;|&nbsp; Data: ${formatarData(nota.dataEmissao)}</p>
+                </div>
+
+                <div style="background:linear-gradient(135deg,#eff6ff,#f0f4ff);border-radius:12px;padding:16px;margin-bottom:20px;border:1px solid rgba(37,99,235,.18)">
+                    <p style="font-size:11px;font-weight:700;color:#7c8bac;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Valores</p>
+                    <div style="display:flex;flex-direction:column;gap:6px">
+                        <div style="display:flex;justify-content:space-between;font-size:14px"><span style="color:#64748b">Valor do Serviço</span><span style="font-weight:700;color:#1e293b">${formatarMoeda(valorServico)}</span></div>
+                        <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:#64748b">ISS (${DADOS_PRESTADOR.aliquotaISS}%)</span><span style="color:#f59e0b;font-weight:600">${formatarMoeda(iss)}</span></div>
+                        <hr style="border:none;border-top:1px solid #d1d9f0;margin:2px 0">
+                        <div style="display:flex;justify-content:space-between;font-size:15px"><span style="font-weight:700;color:#1e293b">Valor Líquido</span><span style="font-weight:800;color:#2563eb">${formatarMoeda(valorLiquido)}</span></div>
+                    </div>
+                </div>
+
+                <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:14px;margin-bottom:20px">
+                    <p style="font-size:12px;color:#92400e;font-weight:600;margin:0">⚠️ Este é um registro interno. Para ter validade fiscal, emita a NFS-e no portal gratuito da Receita Federal abaixo, usando os dados acima.</p>
+                </div>
+
+                <div style="display:flex;gap:10px;flex-wrap:wrap">
+                    <button onclick="navigator.clipboard.writeText(${JSON.stringify(textoParaCopiar).replace(/"/g, '&quot;')}).then(()=>this.textContent='✔ Copiado!').catch(()=>{})" style="flex:1;padding:11px;border:2px solid #2563eb;border-radius:10px;background:#eff6ff;color:#1d4ed8;font-weight:700;cursor:pointer;font-size:13px;transition:all .2s">📋 Copiar Dados</button>
+                    <button onclick="window.open('https://www.nfse.gov.br/EmissorNacional/','_blank')" style="flex:2;padding:11px;border:none;border-radius:10px;background:linear-gradient(165deg,#60a5fa,#2563eb,#1d4ed8);color:#fff;font-weight:700;cursor:pointer;font-size:13px;box-shadow:0 5px 14px rgba(37,99,235,.4)">🌐 Emitir no Portal NFS-e Nacional (Gratuito)</button>
+                </div>
+            </div>`;
+        document.body.appendChild(modal);
+        modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
     } catch (error) {
-        console.error('Erro ao carregar nota fiscal:', error);
         alert('Erro ao carregar nota fiscal');
     }
 }
@@ -1571,10 +1600,10 @@ async function carregarPlanos() {
             <tr>
                 <td>${p.ordem}</td>
                 <td><strong>${p.icone || ''} ${p.nome}</strong><br><small style="color:#6b7280">${p.subtitulo || ''}</small></td>
-                <td><span class="badge ${p.tipo === 'limpo' ? 'badge-info' : p.tipo === 'creditos' ? 'badge-warning' : 'badge-success'}">${p.tipo === 'limpo' ? 'Limpo' : p.tipo === 'creditos' ? '📦 Créditos' : 'Com Templates'}</span></td>
+                <td><span class="badge ${p.tipo === 'limpo' ? 'badge-info' : 'badge-success'}">${p.tipo === 'limpo' ? 'Limpo' : 'Com Templates'}</span></td>
                 <td><strong>R$ ${Number(p.preco).toFixed(2)}</strong></td>
                 <td>${p.maxParcelas}x de R$ ${Number(p.preco / p.maxParcelas).toFixed(2)}</td>
-                <td style="font-size:12px;line-height:1.6">${p.tipo === 'creditos' ? `+${p.quantidadeCreditos ?? 0} ${p.subtipoCredito === 'historicos' ? 'hist.' : p.subtipoCredito === 'ambos' ? 'cert.+hist.' : 'cert.'}` : (() => { const r = p.recursos || {}; const lc = r.limiteCertificados === -1 ? '∞' : (r.limiteCertificados ?? 0); const lh = r.limiteHistoricos === -1 ? '∞' : (r.limiteHistoricos ?? (r.historicos ? '∞' : '—')); return `Cert: ${lc}<br>Hist: ${lh}<br>Sub: ${r.subUsuarios ?? 0}`; })()}</td>
+                <td>${(p.templatesCertificado?.length || 0)} certif. + ${(p.templatesHistorico?.length || 0)} hist.</td>
                 <td>${p.validadeDias} dias</td>
                 <td><span class="badge ${p.ativo ? 'badge-success' : 'badge-danger'}">${p.ativo ? 'Ativo' : 'Inativo'}</span>${p.destaque ? ' <span class="badge badge-warning">⭐ Destaque</span>' : ''}</td>
                 <td>
@@ -1688,9 +1717,6 @@ function abrirModalPlano(plano = null) {
             <div style="display:flex;gap:8px;align-items:center;font-size:13px">
               Limite certif.: <input type="number" id="rLimite" class="form-control" style="width:90px" value="${rec.limiteCertificados ?? -1}" min="-1" title="-1 = ilimitado">
             </div>
-            <div style="display:flex;gap:8px;align-items:center;font-size:13px">
-              Limite hist.: <input type="number" id="rLimiteHist" class="form-control" style="width:90px" value="${rec.limiteHistoricos ?? -1}" min="-1" title="-1 = ilimitado">
-            </div>
           </div>
         </div>
 
@@ -1706,15 +1732,6 @@ function abrirModalPlano(plano = null) {
       </div>
     </div>`;
     document.body.insertAdjacentHTML('beforeend', html);
-}
-
-function toggleCamposCredito() {
-    const tipo = document.getElementById('pTipo')?.value;
-    const isCredito = tipo === 'creditos';
-    const ccred = document.getElementById('camposCredito');
-    const crec = document.getElementById('camposRecursos');
-    if (ccred) ccred.style.display = isCredito ? '' : 'none';
-    if (crec) crec.style.display = isCredito ? 'none' : '';
 }
 
 function fecharModalPlano() {
@@ -1736,14 +1753,12 @@ async function editarPlano(id) {
 
 async function salvarPlano() {
     const token = localStorage.getItem('token');
-    const tipo = document.getElementById('pTipo').value;
-    const isCredito = tipo === 'creditos';
     const body = {
         nome: document.getElementById('pNome').value.trim(),
         subtitulo: document.getElementById('pSubtitulo').value.trim(),
         descricao: document.getElementById('pDescricao').value.trim(),
         icone: document.getElementById('pIcone').value.trim(),
-        tipo,
+        tipo: document.getElementById('pTipo').value,
         tipoLicenca: document.getElementById('pTipoLic').value,
         preco: parseFloat(document.getElementById('pPreco').value) || 0,
         maxParcelas: parseInt(document.getElementById('pParcelas').value) || 1,
@@ -1753,23 +1768,16 @@ async function salvarPlano() {
         ativo: document.getElementById('pAtivo').checked,
         destaque: document.getElementById('pDestaque').checked,
         recursos: {
-            certificados: document.getElementById('rCertif')?.checked ?? true,
-            historicos: document.getElementById('rHistorico')?.checked ?? false,
-            multiplosTemplates: document.getElementById('rMultiTempl')?.checked ?? false,
-            marcaDagua: document.getElementById('rMarcaDagua')?.checked ?? false,
-            subUsuarios: parseInt(document.getElementById('rSubUsers')?.value) || 0,
-            limiteCertificados: parseInt(document.getElementById('rLimite')?.value) ?? -1,
-            limiteHistoricos: parseInt(document.getElementById('rLimiteHist')?.value) ?? -1,
+            certificados: document.getElementById('rCertif').checked,
+            historicos: document.getElementById('rHistorico').checked,
+            multiplosTemplates: document.getElementById('rMultiTempl').checked,
+            marcaDagua: document.getElementById('rMarcaDagua').checked,
+            subUsuarios: parseInt(document.getElementById('rSubUsers').value) || 0,
+            limiteCertificados: parseInt(document.getElementById('rLimite').value) ?? -1,
             exportacaoPDF: true,
             templatesCustomizados: true
         }
     };
-
-    if (isCredito) {
-        body.quantidadeCreditos = parseInt(document.getElementById('pQtdCreditos').value) || 0;
-        body.subtipoCredito = document.getElementById('pSubtipoCredito').value;
-        if (body.quantidadeCreditos <= 0) return alert('Informe a quantidade de créditos do pacote.');
-    }
 
     if (!body.nome) return alert('Informe o nome do plano.');
     if (body.preco <= 0) return alert('Informe um preço válido.');
