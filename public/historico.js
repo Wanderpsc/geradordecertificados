@@ -1584,7 +1584,7 @@ async function previewHistorico(id) {
         const cfg = obterConfigHist();
         const { jsPDF } = window.jspdf;
 const isMedioPreview = hist.tipo === 'medio';
-    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pdf = new jsPDF({ orientation: isMedioPreview ? 'landscape' : 'portrait', unit: 'mm', format: 'a4' });
 
         _histFrente(pdf, hist, cfg);
         pdf.addPage({ orientation: isMedioPreview ? 'landscape' : 'portrait' });
@@ -1664,9 +1664,9 @@ async function gerarHistoricoPDF() {
             const hist = data.historico;
             const isMedio = hist.tipo === 'medio';
             if (!primeiroDoc) {
-                pdf.addPage('portrait'); // frente sempre retrato
+                pdf.addPage({ orientation: isMedio ? 'landscape' : 'portrait' });
             } else {
-                pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+                pdf = new jsPDF({ orientation: isMedio ? 'landscape' : 'portrait', unit: 'mm', format: 'a4' });
             }
             primeiroDoc = false;
 
@@ -1721,8 +1721,11 @@ function _histFrente(pdf, hist, cfg) {
     const series = grade.nomesSeries || [];
     const numSeries = series.length;
 
-    const PW = 210, PH = 297, ML = 5, MR = 5, MT = 5;
-    const UW = PW - ML - MR; // 200mm
+    const isMedio = !isFund;
+    const PW = isMedio ? 297 : 210;
+    const PH = isMedio ? 210 : 297;
+    const ML = 5, MR = 5, MT = 5;
+    const UW = PW - ML - MR; // 287mm para médio, 200mm para fundamental
     let y = MT;
 
     // --- cabeçalho dupla linha ---
