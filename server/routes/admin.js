@@ -14,6 +14,7 @@ const {
     listarPagamentos,
     aprovarPagamento,
     recusarPagamento,
+    excluirPagamentosRecusados,
     emitirNotaFiscal,
     listarNotasFiscais,
     detalhesNotaFiscal,
@@ -51,6 +52,7 @@ router.patch('/licencas/:id/data', editarDataLicenca);
 router.post('/pagamentos', registrarPagamento);
 router.patch('/pagamentos/:id/aprovar', aprovarPagamento);
 router.patch('/pagamentos/:id/recusar', recusarPagamento);
+router.delete('/pagamentos/recusados', excluirPagamentosRecusados);
 
 // Notas Fiscais
 router.get('/notas-fiscais', listarNotasFiscais);

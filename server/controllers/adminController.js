@@ -738,6 +738,26 @@ exports.recusarPagamento = async (req, res) => {
     }
 };
 
+// @desc    Excluir todos os pagamentos com status recusado
+// @route   DELETE /api/admin/pagamentos/recusados
+// @access  Private/Admin
+exports.excluirPagamentosRecusados = async (req, res) => {
+    try {
+        const resultado = await Pagamento.deleteMany({ status: 'recusado' });
+        res.json({
+            success: true,
+            message: `${resultado.deletedCount} pagamento(s) recusado(s) excluído(s) com sucesso.`,
+            deletedCount: resultado.deletedCount
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Erro ao excluir pagamentos recusados',
+            error: error.message
+        });
+    }
+};
+
 // @desc    Detalhes de nota fiscal
 // @route   GET /api/admin/notas-fiscais/:id
 // @access  Private/Admin
