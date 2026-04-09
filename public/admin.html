@@ -395,6 +395,10 @@
                         <span class="icon">📝</span>
                         Logs de Auditoria
                     </a></li>
+                    <li><a href="#" data-page="sistema">
+                        <span class="icon">🗂️</span>
+                        Documentação
+                    </a></li>
                 </ul>
             </nav>
 
@@ -633,6 +637,29 @@
                     </div>
                 </div>
 
+                <div class="stats-grid" style="margin-top:0">
+                    <div class="stat-card blue">
+                        <div class="icon-badge">🧾</div>
+                        <div class="label">Receita Bruta (Total)</div>
+                        <div class="value" id="fin-receita-bruta">R$ 0</div>
+                        <div class="change">Soma dos pagamentos aprovados</div>
+                    </div>
+
+                    <div class="stat-card" style="background:linear-gradient(135deg,#fef3c7,#fde68a);border-left:4px solid #f59e0b">
+                        <div class="icon-badge">📉</div>
+                        <div class="label">Desconto ISS (5%)</div>
+                        <div class="value" id="fin-desconto-imposto" style="color:#b45309">- R$ 0</div>
+                        <div class="change">Simples Nacional — LC 116/2003</div>
+                    </div>
+
+                    <div class="stat-card green">
+                        <div class="icon-badge">✅</div>
+                        <div class="label">Receita Líquida</div>
+                        <div class="value" id="fin-receita-liquida">R$ 0</div>
+                        <div class="change">Bruto − ISS</div>
+                    </div>
+                </div>
+
                 <div class="section">
                     <div class="section-header">
                         <h2>Resumo por Tipo de Plano</h2>
@@ -643,7 +670,9 @@
                                 <tr>
                                     <th>Tipo de Plano</th>
                                     <th>Quantidade</th>
-                                    <th>Receita Total</th>
+                                    <th>Receita Bruta</th>
+                                    <th>ISS (5%)</th>
+                                    <th>Receita Líquida</th>
                                     <th>% do Total</th>
                                 </tr>
                             </thead>
@@ -660,6 +689,9 @@
                 <div class="section">
                     <div class="section-header">
                         <h2>Últimos Pagamentos</h2>
+                        <button class="btn btn-danger btn-sm" onclick="excluirPagamentosRecusados()" style="background:#dc2626;color:#fff;border:none;padding:8px 16px;border-radius:8px;cursor:pointer;font-weight:600">
+                            🗑️ Excluir Recusados
+                        </button>
                     </div>
                     <div class="table-container">
                         <table>
@@ -668,13 +700,15 @@
                                     <th>Data</th>
                                     <th>Cliente</th>
                                     <th>Plano</th>
-                                    <th>Valor</th>
+                                    <th>Valor Bruto</th>
+                                    <th>ISS (5%)</th>
+                                    <th>Valor Líquido</th>
                                     <th>Método</th>
                                     <th>Status</th>
                                 </tr>
                             </thead>
                             <tbody id="fin-ultimos-pagamentos">
-                                <tr><td colspan="6" class="loading">
+                                <tr><td colspan="8" class="loading">
                                     <div class="spinner"></div>
                                     Carregando...
                                 </td></tr>
@@ -759,6 +793,613 @@
                     </div>
                 </div>
             </div>
+
+            <!-- PÁGINA DOCUMENTAÇÃO DO SISTEMA (dentro de main) -->
+            <div id="page-sistema" class="page hidden" style="padding:10px 0;font-family:inherit">
+
+      <div style="margin-bottom:28px">
+        <h1 style="font-size:28px;color:#111827;margin-bottom:6px">🗂️ Documentação do Sistema</h1>
+        <p style="color:#6b7280">Códigos, parâmetros, rotas, modelos e diagramas completos do Gerador de Certificados</p>
+      </div>
+
+      <!-- Índice -->
+      <div style="background:#fff;border-radius:12px;padding:20px 28px;margin-bottom:28px;box-shadow:0 1px 3px rgba(0,0,0,.1)">
+        <h2 style="font-size:16px;color:#1e3a8a;margin-bottom:14px;border-bottom:1px solid #e5e7eb;padding-bottom:10px">📋 Índice</h2>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px">
+          <a href="#sec-stack" style="color:#1e40af;text-decoration:none;padding:6px 10px;background:#eff6ff;border-radius:6px;font-size:14px">🏗️ Stack Tecnológico</a>
+          <a href="#sec-estrutura" style="color:#1e40af;text-decoration:none;padding:6px 10px;background:#eff6ff;border-radius:6px;font-size:14px">📁 Estrutura de Arquivos</a>
+          <a href="#sec-env" style="color:#1e40af;text-decoration:none;padding:6px 10px;background:#eff6ff;border-radius:6px;font-size:14px">⚙️ Variáveis de Ambiente</a>
+          <a href="#sec-rotas" style="color:#1e40af;text-decoration:none;padding:6px 10px;background:#eff6ff;border-radius:6px;font-size:14px">🌐 Rotas da API</a>
+          <a href="#sec-modelos" style="color:#1e40af;text-decoration:none;padding:6px 10px;background:#eff6ff;border-radius:6px;font-size:14px">🗄️ Modelos do Banco</a>
+          <a href="#sec-auth" style="color:#1e40af;text-decoration:none;padding:6px 10px;background:#eff6ff;border-radius:6px;font-size:14px">🔐 Autenticação</a>
+          <a href="#sec-licencas" style="color:#1e40af;text-decoration:none;padding:6px 10px;background:#eff6ff;border-radius:6px;font-size:14px">🔑 Sistema de Licenças</a>
+          <a href="#sec-pagamentos" style="color:#1e40af;text-decoration:none;padding:6px 10px;background:#eff6ff;border-radius:6px;font-size:14px">💳 Fluxo de Pagamentos</a>
+          <a href="#sec-diagrama-dados" style="color:#1e40af;text-decoration:none;padding:6px 10px;background:#eff6ff;border-radius:6px;font-size:14px">📊 Diagrama de Dados</a>
+          <a href="#sec-diagrama-fluxo" style="color:#1e40af;text-decoration:none;padding:6px 10px;background:#eff6ff;border-radius:6px;font-size:14px">🔄 Diagrama de Fluxo</a>
+          <a href="#sec-deploy" style="color:#1e40af;text-decoration:none;padding:6px 10px;background:#eff6ff;border-radius:6px;font-size:14px">🚀 Deploy</a>
+          <a href="#sec-seguranca" style="color:#1e40af;text-decoration:none;padding:6px 10px;background:#eff6ff;border-radius:6px;font-size:14px">🛡️ Segurança</a>
+        </div>
+      </div>
+
+      <!-- Stack -->
+      <div id="sec-stack" style="background:#fff;border-radius:12px;padding:24px 28px;margin-bottom:24px;box-shadow:0 1px 3px rgba(0,0,0,.1)">
+        <h2 style="font-size:18px;color:#1e3a8a;margin-bottom:16px">🏗️ Stack Tecnológico</h2>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px">
+          <div style="background:#f0fdf4;border-radius:8px;padding:14px;border-left:4px solid #22c55e">
+            <div style="font-weight:700;color:#166534;margin-bottom:6px">Backend</div>
+            <div style="font-size:13px;color:#374151;line-height:1.8">
+              Node.js + Express 4<br>
+              MongoDB + Mongoose 8<br>
+              JWT (jsonwebtoken)<br>
+              bcryptjs (hash de senhas)<br>
+              node-mailer (emails)<br>
+              dotenv<br>
+              cors
+            </div>
+          </div>
+          <div style="background:#eff6ff;border-radius:8px;padding:14px;border-left:4px solid #3b82f6">
+            <div style="font-weight:700;color:#1e40af;margin-bottom:6px">Frontend</div>
+            <div style="font-size:13px;color:#374151;line-height:1.8">
+              HTML5 + CSS3 + JS puro<br>
+              Canvas API (geração de certificados)<br>
+              jsPDF (exportação PDF)<br>
+              Service Worker + PWA<br>
+              Surge.sh (hospedagem estática)
+            </div>
+          </div>
+          <div style="background:#fef3c7;border-radius:8px;padding:14px;border-left:4px solid #f59e0b">
+            <div style="font-weight:700;color:#92400e;margin-bottom:6px">Pagamentos</div>
+            <div style="font-size:13px;color:#374151;line-height:1.8">
+              Mercado Pago SDK v2<br>
+              PIX (pagamento instantâneo)<br>
+              Cartão de crédito (Checkout Pro)<br>
+              Webhook: <code style="background:#fff;padding:1px 4px;border-radius:3px">/api/pagamentos/webhook</code>
+            </div>
+          </div>
+          <div style="background:#f5f3ff;border-radius:8px;padding:14px;border-left:4px solid #8b5cf6">
+            <div style="font-weight:700;color:#5b21b6;margin-bottom:6px">Infraestrutura</div>
+            <div style="font-size:13px;color:#374151;line-height:1.8">
+              Render.com (backend + API)<br>
+              MongoDB Atlas (banco de dados)<br>
+              Surge.sh (frontend)<br>
+              GitHub (controle de versão)<br>
+              Docker (containerização)
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Estrutura de Arquivos -->
+      <div id="sec-estrutura" style="background:#fff;border-radius:12px;padding:24px 28px;margin-bottom:24px;box-shadow:0 1px 3px rgba(0,0,0,.1)">
+        <h2 style="font-size:18px;color:#1e3a8a;margin-bottom:16px">📁 Estrutura de Arquivos</h2>
+        <pre style="background:#1e293b;color:#e2e8f0;padding:20px;border-radius:10px;font-size:12.5px;line-height:1.7;overflow-x:auto">
+projeto/
+├── public/                         <span style="color:#94a3b8"># Frontend estático (Surge.sh)</span>
+│   ├── index.html                  <span style="color:#94a3b8"># App principal (gerador de certificados)</span>
+│   ├── admin.html                  <span style="color:#94a3b8"># Painel administrativo</span>
+│   ├── login.html                  <span style="color:#94a3b8"># Tela de login</span>
+│   ├── comprar.html                <span style="color:#94a3b8"># Tela de compra / planos</span>
+│   ├── termos.html                 <span style="color:#94a3b8"># Termos de uso</span>
+│   ├── app.js                      <span style="color:#94a3b8"># Lógica do gerador de certificados</span>
+│   ├── admin.js                    <span style="color:#94a3b8"># Lógica do painel admin</span>
+│   ├── auth.js                     <span style="color:#94a3b8"># Autenticação frontend</span>
+│   ├── historico.js                <span style="color:#94a3b8"># Gerador de históricos escolares</span>
+│   ├── styles.css                  <span style="color:#94a3b8"># Estilos globais</span>
+│   ├── service-worker.js           <span style="color:#94a3b8"># PWA / cache offline</span>
+│   └── manifest.json               <span style="color:#94a3b8"># PWA manifest</span>
+│
+└── server/                         <span style="color:#94a3b8"># Backend Node.js (Render.com)</span>
+    ├── server.js                   <span style="color:#94a3b8"># Entry point Express</span>
+    ├── config/
+    │   └── database.js             <span style="color:#94a3b8"># Conexão MongoDB Atlas</span>
+    ├── models/
+    │   ├── Usuario.js              <span style="color:#94a3b8"># Clientes e Admin</span>
+    │   ├── Licenca.js              <span style="color:#94a3b8"># Licenças de uso</span>
+    │   ├── Aluno.js                <span style="color:#94a3b8"># Cadastro de alunos</span>
+    │   ├── Certificado.js          <span style="color:#94a3b8"># Certificados gerados</span>
+    │   ├── Historico.js            <span style="color:#94a3b8"># Históricos escolares</span>
+    │   ├── GradeHistorico.js       <span style="color:#94a3b8"># Grade curricular</span>
+    │   ├── Modelo.js               <span style="color:#94a3b8"># Templates personalizados</span>
+    │   ├── Pagamento.js            <span style="color:#94a3b8"># Transações financeiras</span>
+    │   ├── PlanoVenda.js           <span style="color:#94a3b8"># Planos comerciais</span>
+    │   ├── NotaFiscal.js           <span style="color:#94a3b8"># Notas fiscais</span>
+    │   ├── SubUsuario.js           <span style="color:#94a3b8"># Usuários secundários da escola</span>
+    │   └── Log.js                  <span style="color:#94a3b8"># Auditoria de ações</span>
+    ├── controllers/
+    │   ├── adminController.js      <span style="color:#94a3b8"># Dashboard, clientes, pagamentos, NF</span>
+    │   ├── authController.js       <span style="color:#94a3b8"># Login, registro, JWT</span>
+    │   ├── alunoController.js      <span style="color:#94a3b8"># CRUD de alunos</span>
+    │   ├── licenseController.js    <span style="color:#94a3b8"># Ativação e verificação de licenças</span>
+    │   ├── modeloController.js     <span style="color:#94a3b8"># Templates customizados</span>
+    │   ├── historicoController.js  <span style="color:#94a3b8"># Históricos escolares</span>
+    │   ├── pagamentoMPController.js<span style="color:#94a3b8"># PIX, cartão, webhook Mercado Pago</span>
+    │   ├── planoController.js      <span style="color:#94a3b8"># Planos de venda</span>
+    │   └── subUsuarioController.js <span style="color:#94a3b8"># Usuários secundários</span>
+    ├── middlewares/
+    │   ├── auth.js                 <span style="color:#94a3b8"># proteger(), apenasAdmin(), verificarLicenca()</span>
+    │   └── logger.js               <span style="color:#94a3b8"># Log de requisições</span>
+    └── routes/
+        ├── auth.js                 <span style="color:#94a3b8"># /api/auth/*</span>
+        ├── admin.js                <span style="color:#94a3b8"># /api/admin/*</span>
+        ├── alunos.js               <span style="color:#94a3b8"># /api/alunos/*</span>
+        ├── licenses.js             <span style="color:#94a3b8"># /api/licenses/*</span>
+        ├── modelos.js              <span style="color:#94a3b8"># /api/modelos/*</span>
+        ├── historicos.js           <span style="color:#94a3b8"># /api/historicos/*</span>
+        ├── pagamentosMP.js         <span style="color:#94a3b8"># /api/pagamentos/*</span>
+        ├── planos.js               <span style="color:#94a3b8"># /api/planos/*</span>
+        └── subUsuarios.js          <span style="color:#94a3b8"># /api/sub-usuarios/*</span></pre>
+      </div>
+
+      <!-- Variáveis de Ambiente -->
+      <div id="sec-env" style="background:#fff;border-radius:12px;padding:24px 28px;margin-bottom:24px;box-shadow:0 1px 3px rgba(0,0,0,.1)">
+        <h2 style="font-size:18px;color:#1e3a8a;margin-bottom:16px">⚙️ Variáveis de Ambiente <span style="font-size:13px;color:#6b7280;font-weight:400">(Render.com → Environment)</span></h2>
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:13px">
+            <thead><tr style="background:#f1f5f9">
+              <th style="padding:10px 14px;text-align:left;color:#374151;font-weight:600;border-bottom:2px solid #e2e8f0">Variável</th>
+              <th style="padding:10px 14px;text-align:left;color:#374151;font-weight:600;border-bottom:2px solid #e2e8f0">Obrigatória</th>
+              <th style="padding:10px 14px;text-align:left;color:#374151;font-weight:600;border-bottom:2px solid #e2e8f0">Descrição</th>
+              <th style="padding:10px 14px;text-align:left;color:#374151;font-weight:600;border-bottom:2px solid #e2e8f0">Exemplo</th>
+            </tr></thead>
+            <tbody>
+              <tr style="border-bottom:1px solid #f1f5f9"><td style="padding:10px 14px"><code>MONGODB_URI</code></td><td style="padding:10px 14px"><span style="color:#dc2626">✓ Sim</span></td><td style="padding:10px 14px">String de conexão MongoDB Atlas</td><td style="padding:10px 14px;color:#6b7280">mongodb+srv://user:pass@cluster.mongodb.net/db</td></tr>
+              <tr style="border-bottom:1px solid #f1f5f9;background:#fafafa"><td style="padding:10px 14px"><code>JWT_SECRET</code></td><td style="padding:10px 14px"><span style="color:#dc2626">✓ Sim</span></td><td style="padding:10px 14px">Chave secreta para assinar JWTs</td><td style="padding:10px 14px;color:#6b7280">string aleatória ≥ 32 chars</td></tr>
+              <tr style="border-bottom:1px solid #f1f5f9"><td style="padding:10px 14px"><code>MP_ACCESS_TOKEN</code></td><td style="padding:10px 14px"><span style="color:#dc2626">✓ Sim</span></td><td style="padding:10px 14px">Token de produção ou TEST- do Mercado Pago</td><td style="padding:10px 14px;color:#6b7280">APP_USR-... ou TEST-...</td></tr>
+              <tr style="border-bottom:1px solid #f1f5f9;background:#fafafa"><td style="padding:10px 14px"><code>MP_TEST_PAYER_EMAIL</code></td><td style="padding:10px 14px"><span style="color:#6b7280">Opcional</span></td><td style="padding:10px 14px">Email do pagador de teste MP</td><td style="padding:10px 14px;color:#6b7280">test_user_xxx@testuser.com</td></tr>
+              <tr style="border-bottom:1px solid #f1f5f9"><td style="padding:10px 14px"><code>API_BASE_URL</code></td><td style="padding:10px 14px"><span style="color:#6b7280">Opcional</span></td><td style="padding:10px 14px">URL base da API (para webhook MP)</td><td style="padding:10px 14px;color:#6b7280">https://gerador-certificados.onrender.com</td></tr>
+              <tr style="border-bottom:1px solid #f1f5f9;background:#fafafa"><td style="padding:10px 14px"><code>ALLOWED_ORIGINS</code></td><td style="padding:10px 14px"><span style="color:#6b7280">Opcional</span></td><td style="padding:10px 14px">CORS: origens permitidas (vírgula)</td><td style="padding:10px 14px;color:#6b7280">https://gerador-certificados.surge.sh</td></tr>
+              <tr style="border-bottom:1px solid #f1f5f9"><td style="padding:10px 14px"><code>PORT</code></td><td style="padding:10px 14px"><span style="color:#6b7280">Opcional</span></td><td style="padding:10px 14px">Porta do servidor (padrão 5000)</td><td style="padding:10px 14px;color:#6b7280">5000</td></tr>
+              <tr style="border-bottom:1px solid #f1f5f9;background:#fafafa"><td style="padding:10px 14px"><code>EMAIL_USER</code></td><td style="padding:10px 14px"><span style="color:#6b7280">Opcional</span></td><td style="padding:10px 14px">Email remetente (Nodemailer)</td><td style="padding:10px 14px;color:#6b7280">wanderpsc@gmail.com</td></tr>
+              <tr><td style="padding:10px 14px"><code>EMAIL_PASS</code></td><td style="padding:10px 14px"><span style="color:#6b7280">Opcional</span></td><td style="padding:10px 14px">Senha de app do Gmail</td><td style="padding:10px 14px;color:#6b7280">xxxx xxxx xxxx xxxx</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Rotas da API -->
+      <div id="sec-rotas" style="background:#fff;border-radius:12px;padding:24px 28px;margin-bottom:24px;box-shadow:0 1px 3px rgba(0,0,0,.1)">
+        <h2 style="font-size:18px;color:#1e3a8a;margin-bottom:16px">🌐 Rotas da API</h2>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+
+          <!-- Auth -->
+          <div>
+            <h3 style="font-size:14px;font-weight:700;color:#374151;background:#f1f5f9;padding:8px 12px;border-radius:6px;margin-bottom:10px">/api/auth</h3>
+            <div style="font-size:12.5px;line-height:2">
+              <span style="background:#d1fae5;color:#065f46;padding:1px 6px;border-radius:4px;font-weight:700">POST</span> <code>/registro</code> — Criar conta<br>
+              <span style="background:#d1fae5;color:#065f46;padding:1px 6px;border-radius:4px;font-weight:700">POST</span> <code>/login</code> — Autenticar<br>
+              <span style="background:#dbeafe;color:#1e40af;padding:1px 6px;border-radius:4px;font-weight:700">GET</span>  <code>/me</code> — Dados do usuário atual<br>
+              <span style="background:#dbeafe;color:#1e40af;padding:1px 6px;border-radius:4px;font-weight:700">GET</span>  <code>/verificar</code> — Validar token
+            </div>
+          </div>
+
+          <!-- Admin -->
+          <div>
+            <h3 style="font-size:14px;font-weight:700;color:#374151;background:#f1f5f9;padding:8px 12px;border-radius:6px;margin-bottom:10px">/api/admin <span style="color:#dc2626;font-size:12px">[admin]</span></h3>
+            <div style="font-size:12.5px;line-height:2">
+              <span style="background:#dbeafe;color:#1e40af;padding:1px 6px;border-radius:4px;font-weight:700">GET</span>  <code>/dashboard</code><br>
+              <span style="background:#dbeafe;color:#1e40af;padding:1px 6px;border-radius:4px;font-weight:700">GET</span>  <code>/clientes</code> &nbsp;
+              <span style="background:#fee2e2;color:#991b1b;padding:1px 6px;border-radius:4px;font-weight:700">DEL</span>  <code>/clientes/:id</code><br>
+              <span style="background:#dbeafe;color:#1e40af;padding:1px 6px;border-radius:4px;font-weight:700">GET</span>  <code>/pagamentos</code> &nbsp;
+              <span style="background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:4px;font-weight:700">PATCH</span> <code>/pagamentos/:id/aprovar</code><br>
+              <span style="background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:4px;font-weight:700">PATCH</span> <code>/pagamentos/:id/recusar</code> &nbsp;
+              <span style="background:#fee2e2;color:#991b1b;padding:1px 6px;border-radius:4px;font-weight:700">DEL</span>  <code>/pagamentos/recusados</code><br>
+              <span style="background:#dbeafe;color:#1e40af;padding:1px 6px;border-radius:4px;font-weight:700">GET</span>  <code>/notas-fiscais</code> &nbsp;
+              <span style="background:#d1fae5;color:#065f46;padding:1px 6px;border-radius:4px;font-weight:700">POST</span> <code>/notas-fiscais</code><br>
+              <span style="background:#dbeafe;color:#1e40af;padding:1px 6px;border-radius:4px;font-weight:700">GET</span>  <code>/relatorio-financeiro</code> &nbsp;
+              <span style="background:#dbeafe;color:#1e40af;padding:1px 6px;border-radius:4px;font-weight:700">GET</span>  <code>/logs</code>
+            </div>
+          </div>
+
+          <!-- Alunos -->
+          <div>
+            <h3 style="font-size:14px;font-weight:700;color:#374151;background:#f1f5f9;padding:8px 12px;border-radius:6px;margin-bottom:10px">/api/alunos <span style="color:#f59e0b;font-size:12px">[auth]</span></h3>
+            <div style="font-size:12.5px;line-height:2">
+              <span style="background:#dbeafe;color:#1e40af;padding:1px 6px;border-radius:4px;font-weight:700">GET</span>  <code>/</code> — Listar alunos da escola<br>
+              <span style="background:#d1fae5;color:#065f46;padding:1px 6px;border-radius:4px;font-weight:700">POST</span> <code>/</code> — Criar aluno<br>
+              <span style="background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:4px;font-weight:700">PUT</span>  <code>/:id</code> — Editar aluno<br>
+              <span style="background:#fee2e2;color:#991b1b;padding:1px 6px;border-radius:4px;font-weight:700">DEL</span>  <code>/:id</code> — Excluir aluno
+            </div>
+          </div>
+
+          <!-- Pagamentos MP -->
+          <div>
+            <h3 style="font-size:14px;font-weight:700;color:#374151;background:#f1f5f9;padding:8px 12px;border-radius:6px;margin-bottom:10px">/api/pagamentos <span style="color:#f59e0b;font-size:12px">[auth]</span></h3>
+            <div style="font-size:12.5px;line-height:2">
+              <span style="background:#d1fae5;color:#065f46;padding:1px 6px;border-radius:4px;font-weight:700">POST</span> <code>/pix</code> — Criar cobrança PIX<br>
+              <span style="background:#d1fae5;color:#065f46;padding:1px 6px;border-radius:4px;font-weight:700">POST</span> <code>/pix-renovacao</code> — PIX de renovação<br>
+              <span style="background:#d1fae5;color:#065f46;padding:1px 6px;border-radius:4px;font-weight:700">POST</span> <code>/cartao</code> — Checkout Pro (cartão)<br>
+              <span style="background:#d1fae5;color:#065f46;padding:1px 6px;border-radius:4px;font-weight:700">POST</span> <code>/webhook</code> — Callback Mercado Pago<br>
+              <span style="background:#d1fae5;color:#065f46;padding:1px 6px;border-radius:4px;font-weight:700">POST</span> <code>/verificar-aprovacao</code> — Pós back_url cartão
+            </div>
+          </div>
+
+          <!-- Licenças -->
+          <div>
+            <h3 style="font-size:14px;font-weight:700;color:#374151;background:#f1f5f9;padding:8px 12px;border-radius:6px;margin-bottom:10px">/api/licenses <span style="color:#f59e0b;font-size:12px">[auth]</span></h3>
+            <div style="font-size:12.5px;line-height:2">
+              <span style="background:#dbeafe;color:#1e40af;padding:1px 6px;border-radius:4px;font-weight:700">GET</span>  <code>/status</code> — Status da licença atual<br>
+              <span style="background:#d1fae5;color:#065f46;padding:1px 6px;border-radius:4px;font-weight:700">POST</span> <code>/ativar</code> — Ativar chave de licença<br>
+              <span style="background:#dbeafe;color:#1e40af;padding:1px 6px;border-radius:4px;font-weight:700">GET</span>  <code>/historico</code> — Histórico de licenças
+            </div>
+          </div>
+
+          <!-- Modelos / SubUsuários / Planos -->
+          <div>
+            <h3 style="font-size:14px;font-weight:700;color:#374151;background:#f1f5f9;padding:8px 12px;border-radius:6px;margin-bottom:10px">Outros endpoints</h3>
+            <div style="font-size:12.5px;line-height:2">
+              <code>/api/modelos</code> — Templates (CRUD)<br>
+              <code>/api/historicos</code> — Históricos escolares (CRUD)<br>
+              <code>/api/planos</code> — Planos de venda (público)<br>
+              <code>/api/sub-usuarios</code> — Múltiplos usuários por escola
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Modelos do Banco -->
+      <div id="sec-modelos" style="background:#fff;border-radius:12px;padding:24px 28px;margin-bottom:24px;box-shadow:0 1px 3px rgba(0,0,0,.1)">
+        <h2 style="font-size:18px;color:#1e3a8a;margin-bottom:16px">🗄️ Modelos do Banco de Dados (MongoDB)</h2>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px">
+
+          <div style="background:#f8fafc;border-radius:8px;padding:16px;border:1px solid #e2e8f0">
+            <div style="font-weight:700;font-size:13px;color:#1e3a8a;margin-bottom:8px">👤 Usuario</div>
+            <div style="font-size:12px;color:#475569;line-height:1.9">
+              nome, email, senha (bcrypt), instituicao<br>
+              telefone, role: <code>admin|user</code><br>
+              ativo: Boolean, aceitouTermos: Boolean<br>
+              licenca → ref: Licenca<br>
+              criadoEm: Date
+            </div>
+          </div>
+
+          <div style="background:#f8fafc;border-radius:8px;padding:16px;border:1px solid #e2e8f0">
+            <div style="font-weight:700;font-size:13px;color:#1e3a8a;margin-bottom:8px">🔑 Licenca</div>
+            <div style="font-size:12px;color:#475569;line-height:1.9">
+              chaveLicenca: String (único)<br>
+              usuario → ref: Usuario<br>
+              tipo: <code>trial|mensal|anual|vitalicia|pay-per-certificate</code><br>
+              status: <code>ativa|expirada|suspensa|cancelada</code><br>
+              dataInicio, dataExpiracao: Date<br>
+              limiteCertificados, certificadosGerados: Number<br>
+              limiteHistoricos, historicosGerados: Number<br>
+              recursos: { multiplosTemplates, exportacaoPDF, historicosEscolares, marcaDagua }
+            </div>
+          </div>
+
+          <div style="background:#f8fafc;border-radius:8px;padding:16px;border:1px solid #e2e8f0">
+            <div style="font-weight:700;font-size:13px;color:#1e3a8a;margin-bottom:8px">🎓 Aluno</div>
+            <div style="font-size:12px;color:#475569;line-height:1.9">
+              usuario → ref: Usuario (escola)<br>
+              nome, rg, orgaoEmissor, cpf<br>
+              dataNascimento: { dia, mes, ano }<br>
+              naturalidade: { cidade, estado }<br>
+              filiacao: { mae, pai }<br>
+              dataConfeccao, cidadeConfeccao
+            </div>
+          </div>
+
+          <div style="background:#f8fafc;border-radius:8px;padding:16px;border:1px solid #e2e8f0">
+            <div style="font-weight:700;font-size:13px;color:#1e3a8a;margin-bottom:8px">💳 Pagamento</div>
+            <div style="font-size:12px;color:#475569;line-height:1.9">
+              usuario → ref: Usuario<br>
+              valor, desconto, valorFinal: Number<br>
+              metodoPagamento: <code>boleto|cartao_credito|pix|...</code><br>
+              status: <code>pendente|processando|aprovado|recusado|cancelado|reembolsado</code><br>
+              tipoProduto: <code>trial|mensal|anual|vitalicia|upgrade|renovacao</code><br>
+              codigoTransacao, gatewayPagamento<br>
+              dataPagamento, motivoRecusa, notaFiscal
+            </div>
+          </div>
+
+          <div style="background:#f8fafc;border-radius:8px;padding:16px;border:1px solid #e2e8f0">
+            <div style="font-weight:700;font-size:13px;color:#1e3a8a;margin-bottom:8px">🛒 PlanoVenda</div>
+            <div style="font-size:12px;color:#475569;line-height:1.9">
+              nome, descricao, subtitulo<br>
+              tipo: <code>limpo|com-templates|creditos</code><br>
+              preco: Number, maxParcelas: Number<br>
+              tipoLicenca: <code>trial|mensal|anual|vitalicia</code><br>
+              validadeDias: Number<br>
+              ativo: Boolean, destaque: Boolean<br>
+              templatesPadrao: [{ nome, tipo, config }]
+            </div>
+          </div>
+
+          <div style="background:#f8fafc;border-radius:8px;padding:16px;border:1px solid #e2e8f0">
+            <div style="font-weight:700;font-size:13px;color:#1e3a8a;margin-bottom:8px">📋 Log</div>
+            <div style="font-size:12px;color:#475569;line-height:1.9">
+              usuario → ref: Usuario<br>
+              acao: enum (LOGIN, LOGOUT, CRIAR_ALUNO, GERAR_CERTIFICADO, aprovacao_pagamento, recusa_pagamento…)<br>
+              descricao: String<br>
+              nivel: <code>INFO|WARNING|ERROR|CRITICAL</code><br>
+              ip, userAgent, dados: Mixed<br>
+              timestamp: Date
+            </div>
+          </div>
+
+          <div style="background:#f8fafc;border-radius:8px;padding:16px;border:1px solid #e2e8f0">
+            <div style="font-weight:700;font-size:13px;color:#1e3a8a;margin-bottom:8px">👥 SubUsuario</div>
+            <div style="font-size:12px;color:#475569;line-height:1.9">
+              nome, email, senha (bcrypt)<br>
+              escola → ref: Usuario (dono)<br>
+              permissoes: [String]<br>
+              ativo: Boolean<br>
+              criadoEm: Date
+            </div>
+          </div>
+
+          <div style="background:#f8fafc;border-radius:8px;padding:16px;border:1px solid #e2e8f0">
+            <div style="font-weight:700;font-size:13px;color:#1e3a8a;margin-bottom:8px">📄 NotaFiscal</div>
+            <div style="font-size:12px;color:#475569;line-height:1.9">
+              numero: String (auto-incremental)<br>
+              pagamento → ref: Pagamento<br>
+              usuario → ref: Usuario<br>
+              prestador, tomador: { nome, cpfCnpj, email… }<br>
+              valorServico, impostos: { iss, pis, cofins, inss, ir, csll }<br>
+              valorTotalImpostos, valorLiquido<br>
+              status: <code>emitida|cancelada|substituida</code>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Autenticação -->
+      <div id="sec-auth" style="background:#fff;border-radius:12px;padding:24px 28px;margin-bottom:24px;box-shadow:0 1px 3px rgba(0,0,0,.1)">
+        <h2 style="font-size:18px;color:#1e3a8a;margin-bottom:16px">🔐 Autenticação (JWT)</h2>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+          <div>
+            <h3 style="font-size:14px;margin-bottom:10px">Fluxo de Login</h3>
+            <pre style="background:#1e293b;color:#e2e8f0;padding:16px;border-radius:8px;font-size:12px;line-height:1.7">POST /api/auth/login
+Body: { email, senha }
+
+→ Resposta:
+{
+  token: "eyJhbGc...",   // JWT 30d
+  usuario: {
+    id, nome, email,
+    role: "admin"|"user",
+    licenca: { tipo, status, dataExpiracao }
+  }
+}</pre>
+          </div>
+          <div>
+            <h3 style="font-size:14px;margin-bottom:10px">Uso do Token</h3>
+            <pre style="background:#1e293b;color:#e2e8f0;padding:16px;border-radius:8px;font-size:12px;line-height:1.7">// Header em todas as rotas protegidas:
+Authorization: Bearer &lt;token&gt;
+
+// Middleware proteger() verifica:
+1. Presença do header Authorization
+2. Validade do JWT (JWT_SECRET)
+3. Existência do usuário no banco
+4. Se ativo: true
+
+// Middleware apenasAdmin():
+→ Verifica role === "admin"
+
+// SubUsuário:
+→ JWT com tipo: "subUsuario"
+→ Herda licença e escola do dono</pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- Licenças -->
+      <div id="sec-licencas" style="background:#fff;border-radius:12px;padding:24px 28px;margin-bottom:24px;box-shadow:0 1px 3px rgba(0,0,0,.1)">
+        <h2 style="font-size:18px;color:#1e3a8a;margin-bottom:16px">🔑 Sistema de Licenças</h2>
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:13px">
+            <thead><tr style="background:#f1f5f9">
+              <th style="padding:10px 14px;text-align:left;border-bottom:2px solid #e2e8f0">Tipo</th>
+              <th style="padding:10px 14px;text-align:left;border-bottom:2px solid #e2e8f0">Duração</th>
+              <th style="padding:10px 14px;text-align:left;border-bottom:2px solid #e2e8f0">Certificados</th>
+              <th style="padding:10px 14px;text-align:left;border-bottom:2px solid #e2e8f0">Históricos</th>
+              <th style="padding:10px 14px;text-align:left;border-bottom:2px solid #e2e8f0">Marca d'água</th>
+              <th style="padding:10px 14px;text-align:left;border-bottom:2px solid #e2e8f0">Templates Custom</th>
+            </tr></thead>
+            <tbody>
+              <tr style="border-bottom:1px solid #f1f5f9"><td style="padding:10px 14px"><strong>trial</strong></td><td>15 dias</td><td>Limitado</td><td>Não</td><td style="color:#dc2626">Sim</td><td style="color:#dc2626">Não</td></tr>
+              <tr style="border-bottom:1px solid #f1f5f9;background:#fafafa"><td style="padding:10px 14px"><strong>mensal</strong></td><td>30 dias</td><td>Ilimitado</td><td>Sim</td><td style="color:#059669">Não</td><td style="color:#059669">Sim</td></tr>
+              <tr style="border-bottom:1px solid #f1f5f9"><td style="padding:10px 14px"><strong>anual</strong></td><td>365 dias</td><td>Ilimitado</td><td>Sim</td><td style="color:#059669">Não</td><td style="color:#059669">Sim</td></tr>
+              <tr><td style="padding:10px 14px"><strong>vitalicia</strong></td><td>100 anos</td><td>Ilimitado</td><td>Sim</td><td style="color:#059669">Não</td><td style="color:#059669">Sim</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Fluxo de Pagamentos -->
+      <div id="sec-pagamentos" style="background:#fff;border-radius:12px;padding:24px 28px;margin-bottom:24px;box-shadow:0 1px 3px rgba(0,0,0,.1)">
+        <h2 style="font-size:18px;color:#1e3a8a;margin-bottom:16px">💳 Fluxo de Pagamentos (Mercado Pago)</h2>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+          <div>
+            <h3 style="font-size:14px;margin-bottom:10px;color:#374151">PIX</h3>
+            <div style="background:#f8fafc;border-radius:8px;padding:16px;font-size:12.5px;line-height:2.2;border-left:3px solid #22c55e">
+              1. Cliente escolhe plano<br>
+              2. <code>POST /api/pagamentos/pix</code> → cria Pagamento(pendente) + chama MP SDK<br>
+              3. Frontend exibe QR Code (base64)<br>
+              4. MP chama <code>POST /api/pagamentos/webhook</code><br>
+              5. Webhook verifica <code>status === "approved"</code><br>
+              6. Pagamento → <code>aprovado</code>, chama <code>provisionarLicenca()</code><br>
+              7. Licença criada/renovada no banco
+            </div>
+          </div>
+          <div>
+            <h3 style="font-size:14px;margin-bottom:10px;color:#374151">Cartão (Checkout Pro)</h3>
+            <div style="background:#f8fafc;border-radius:8px;padding:16px;font-size:12.5px;line-height:2.2;border-left:3px solid #3b82f6">
+              1. <code>POST /api/pagamentos/cartao</code> → cria Preference no MP<br>
+              2. Frontend redireciona para MP Checkout<br>
+              3. MP processa pagamento<br>
+              4. Redirect para <code>back_url success/failure/pending</code><br>
+              5. Frontend chama <code>POST /api/pagamentos/verificar-aprovacao</code><br>
+              6. Busca MP Payment mais recente do usuário<br>
+              7. Se aprovado → provisiona licença<br>
+              8. Webhook também pode confirmar o pagamento
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:16px;background:#fef3c7;border-radius:8px;padding:14px;font-size:12.5px;border-left:3px solid #f59e0b">
+          <strong>ISS:</strong> Em modo produção, aplica-se 5% de ISS (Simples Nacional, LC 116/2003, código 1.07 — software). Alíquota configurada em <code>DADOS_PRESTADOR.aliquotaISS</code> (admin.js) e exibida na seção Financeiro.
+        </div>
+      </div>
+
+      <!-- Diagrama de Dados -->
+      <div id="sec-diagrama-dados" style="background:#fff;border-radius:12px;padding:24px 28px;margin-bottom:24px;box-shadow:0 1px 3px rgba(0,0,0,.1)">
+        <h2 style="font-size:18px;color:#1e3a8a;margin-bottom:16px">📊 Diagrama Entidade-Relacionamento</h2>
+        <pre style="background:#1e293b;color:#e2e8f0;padding:20px;border-radius:10px;font-size:12px;line-height:1.7;overflow-x:auto">
+  ┌──────────────┐         ┌──────────────┐         ┌─────────────────┐
+  │   Usuario    │1──────1 │   Licenca    │         │   PlanoVenda    │
+  │──────────────│         │──────────────│         │─────────────────│
+  │ nome         │         │ chaveLicenca │         │ nome, preco     │
+  │ email        │         │ tipo         │         │ tipoLicenca     │
+  │ role         │         │ status       │         │ validadeDias    │
+  │ ativo        │         │ dataExpiracao│         │ templatesPadrao │
+  └──────┬───────┘         └──────────────┘         └─────────────────┘
+         │
+         │1                ┌──────────────┐
+         ├──────────────N──│   Aluno      │
+         │                 │──────────────│
+         │                 │ nome, cpf    │
+         │                 │ rg, filiacao │
+         │                 └──────────────┘
+         │
+         │1                ┌──────────────┐         ┌──────────────┐
+         ├──────────────N──│  Pagamento   │1──────1 │  NotaFiscal  │
+         │                 │──────────────│         │──────────────│
+         │                 │ valorFinal   │         │ numero       │
+         │                 │ tipoProduto  │         │ prestador    │
+         │                 │ status       │         │ tomador      │
+         │                 │ metodoPag.   │         │ impostos     │
+         │                 └──────────────┘         └──────────────┘
+         │
+         │1                ┌──────────────┐
+         ├──────────────N──│  SubUsuario  │
+         │                 │──────────────│
+         │                 │ nome, email  │
+         │                 │ permissoes   │
+         │                 └──────────────┘
+         │
+         │1                ┌──────────────┐
+         └──────────────N──│     Log      │
+                           │──────────────│
+                           │ acao, nivel  │
+                           │ timestamp    │
+                           └──────────────┘</pre>
+      </div>
+
+      <!-- Diagrama de Fluxo -->
+      <div id="sec-diagrama-fluxo" style="background:#fff;border-radius:12px;padding:24px 28px;margin-bottom:24px;box-shadow:0 1px 3px rgba(0,0,0,.1)">
+        <h2 style="font-size:18px;color:#1e3a8a;margin-bottom:16px">🔄 Fluxo Geral do Sistema</h2>
+        <pre style="background:#1e293b;color:#e2e8f0;padding:20px;border-radius:10px;font-size:12px;line-height:1.8;overflow-x:auto">
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │                        USUÁRIO (Escola)                             │
+  └───────────────────────────────┬─────────────────────────────────────┘
+                                  │
+          ┌───────────────────────▼────────────────────────┐
+          │  1. Registro / Login → JWT emitido (30 dias)   │
+          └───────────────────────┬────────────────────────┘
+                                  │
+          ┌───────────────────────▼────────────────────────┐
+          │  2. Trial automático (15 dias) ao registrar    │
+          └───────────────────────┬────────────────────────┘
+                                  │
+          ┌───────────────────────▼────────────────────────┐
+          │  3. Compra de Plano → PIX ou Cartão (MP)       │
+          │     Webhook confirma → Licença provisionada    │
+          └───────────────────────┬────────────────────────┘
+                                  │
+          ┌───────────────────────▼──────────────────────────────────┐
+          │  4. Uso do sistema (requer licença ativa):               │
+          │     • Cadastrar Alunos (CRUD)                            │
+          │     • Gerar Certificados (Canvas → PDF / PNG)            │
+          │     • Gerar Históricos Escolares                         │
+          │     • Criar Modelos Personalizados                       │
+          │     • Adicionar Sub-usuários (professores/secretários)   │
+          └───────────────────────┬──────────────────────────────────┘
+                                  │
+          ┌───────────────────────▼────────────────────────┐
+          │  5. Expiração → Bloqueio automático            │
+          │     Middleware verificarLicenca() em todas     │
+          │     rotas de uso                               │
+          └────────────────────────────────────────────────┘
+
+  ADMIN:
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │  Dashboard → Clientes → Licenças → Pagamentos → Notas Fiscais      │
+  │  Financeiro (bruto/ISS/líquido) → Planos de Venda → Logs           │
+  └─────────────────────────────────────────────────────────────────────┘</pre>
+      </div>
+
+      <!-- Deploy -->
+      <div id="sec-deploy" style="background:#fff;border-radius:12px;padding:24px 28px;margin-bottom:24px;box-shadow:0 1px 3px rgba(0,0,0,.1)">
+        <h2 style="font-size:18px;color:#1e3a8a;margin-bottom:16px">🚀 Deploy e Comandos</h2>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+          <div>
+            <h3 style="font-size:14px;margin-bottom:10px;color:#374151">Frontend → Surge.sh</h3>
+            <pre style="background:#1e293b;color:#e2e8f0;padding:14px;border-radius:8px;font-size:12px;line-height:1.8">
+# Deploy
+surge public --domain gerador-certificados.surge.sh
+
+# URL produção
+https://gerador-certificados.surge.sh
+
+# Arquivos ignorados:
+# node_modules/, server/, *.json (raiz)</pre>
+          </div>
+          <div>
+            <h3 style="font-size:14px;margin-bottom:10px;color:#374151">Backend → Render.com</h3>
+            <pre style="background:#1e293b;color:#e2e8f0;padding:14px;border-radius:8px;font-size:12px;line-height:1.8">
+# Deploy automático via push no GitHub
+git add . && git commit -m "..." && git push
+
+# URL produção
+https://gerador-certificados.onrender.com
+
+# Start command (render.yaml):
+node server/server.js
+
+# Build command:
+npm install</pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- Segurança -->
+      <div id="sec-seguranca" style="background:#fff;border-radius:12px;padding:24px 28px;margin-bottom:40px;box-shadow:0 1px 3px rgba(0,0,0,.1)">
+        <h2 style="font-size:18px;color:#1e3a8a;margin-bottom:16px">🛡️ Segurança</h2>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">
+          <div style="background:#f0fdf4;border-radius:8px;padding:14px;border-left:3px solid #22c55e;font-size:13px;line-height:1.8">
+            <strong>Autenticação</strong><br>
+            JWT assinado com JWT_SECRET<br>
+            Senhas com bcrypt (salt 12)<br>
+            Token expira em 30 dias<br>
+            Middleware proteger() em todas as rotas privadas
+          </div>
+          <div style="background:#eff6ff;border-radius:8px;padding:14px;border-left:3px solid #3b82f6;font-size:13px;line-height:1.8">
+            <strong>Headers de Segurança</strong><br>
+            X-Content-Type-Options: nosniff<br>
+            X-Frame-Options: DENY<br>
+            X-XSS-Protection: 1; mode=block<br>
+            Referrer-Policy: strict-origin
+          </div>
+          <div style="background:#fef3c7;border-radius:8px;padding:14px;border-left:3px solid #f59e0b;font-size:13px;line-height:1.8">
+            <strong>CORS</strong><br>
+            Origens permitidas via ALLOWED_ORIGINS<br>
+            Credenciais habilitadas<br>
+            Limite de payload: 10mb
+          </div>
+          <div style="background:#fdf4ff;border-radius:8px;padding:14px;border-left:3px solid #a855f7;font-size:13px;line-height:1.8">
+            <strong>Licença de Software</strong><br>
+            © 2026 Wander Pires Silva Coelho<br>
+            Lei 9.610/98 (direitos autorais)<br>
+            Lei 9.609/98 (software)<br>
+            Art. 184 CP (reprodução proibida)
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <!-- FIM PÁGINA SISTEMA -->
+
         </main>
     </div>
 

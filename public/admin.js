@@ -101,6 +101,7 @@ function navegarPara(page) {
         case 'financeiro': carregarFinanceiro(); break;
         case 'logs': carregarLogs(); break;
         case 'planos': carregarPlanos(); break;
+        case 'sistema': break; // conteúdo estático, sem carregamento assíncrono
     }
 }
 
@@ -894,9 +895,9 @@ async function carregarPagamentos() {
 
         tbody.innerHTML = pagamentos.map(pag => `
             <tr>
-                <td>${formatarData(pag.dataPagamento)}</td>
+                <td>${formatarData(pag.dataPagamento || pag.criadoEm)}</td>
                 <td>${pag.usuario?.nome || '-'}</td>
-                <td>${pag.tipoLicenca}</td>
+                <td>${pag.tipoProduto || '-'}</td>
                 <td>${formatarMoeda(pag.valorFinal)}</td>
                 <td>${pag.metodoPagamento}</td>
                 <td><span class="badge ${getBadgeStatusPagamento(pag.status)}">${pag.status}</span></td>
@@ -974,6 +975,34 @@ async function recusarPagamento(pagamentoId) {
     } catch (error) {
         console.error('Erro ao recusar pagamento:', error);
         alert('Erro ao recusar pagamento');
+    }
+}
+
+// Excluir todos os pagamentos recusados
+async function excluirPagamentosRecusados() {
+    const token = localStorage.getItem('token');
+
+    if (!confirm('Tem certeza que deseja excluir permanentemente todos os pagamentos recusados? Esta ação não pode ser desfeita.')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_URL}/admin/pagamentos/recusados`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Erro ao excluir pagamentos recusados');
+        }
+
+        alert(data.message);
+        carregarFinanceiro();
+    } catch (error) {
+        console.error('Erro ao excluir pagamentos recusados:', error);
+        alert('Erro ao excluir pagamentos recusados: ' + error.message);
     }
 }
 
@@ -1610,7 +1639,7 @@ async function carregarFinanceiro() {
             formatarMoeda(dashboard.financeiro?.receitaMensal || 0);
         document.getElementById('fin-receita-anual').textContent = 
             formatarMoeda(dashboard.financeiro?.receitaAnual || 0);
-        document.getElementById('fin-total-pagamentos').textContent = pagamentos.length;
+        document.getElementById('fin-total-pagamentos').textContent = pagamentos.filter(p => p.status === 'aprovado').length;
         
         // Contar licenças ativas
         const licencasAtivas = clientes.filter(c => 
@@ -1618,50 +1647,72 @@ async function carregarFinanceiro() {
         ).length;
         document.getElementById('fin-licencas-ativas').textContent = licencasAtivas;
 
-        // Calcular resumo por tipo de plano
+        // Calcular resumo por tipo de plano (apenas pagamentos aprovados)
+        const ISS_ALIQUOTA = 0.05; // 5% Simples Nacional
         const planos = {};
-        let receitaTotal = 0;
+        let receitaBruta = 0;
         
-        pagamentos.forEach(pag => {
-            const tipo = pag.tipo || 'Não especificado';
+        pagamentos.filter(pag => pag.status === 'aprovado').forEach(pag => {
+            const tipo = pag.tipoProduto || 'Não especificado';
             if (!planos[tipo]) {
                 planos[tipo] = { quantidade: 0, receita: 0 };
             }
             planos[tipo].quantidade++;
-            planos[tipo].receita += pag.valor || 0;
-            receitaTotal += pag.valor || 0;
+            planos[tipo].receita += pag.valorFinal || 0;
+            receitaBruta += pag.valorFinal || 0;
         });
+
+        const descontoImposto = receitaBruta * ISS_ALIQUOTA;
+        const receitaLiquida = receitaBruta - descontoImposto;
+
+        document.getElementById('fin-receita-bruta').textContent = formatarMoeda(receitaBruta);
+        document.getElementById('fin-desconto-imposto').textContent = '- ' + formatarMoeda(descontoImposto);
+        document.getElementById('fin-receita-liquida').textContent = formatarMoeda(receitaLiquida);
+
+        // variável mantida para cálculo de % por plano
+        const receitaTotal = receitaBruta;
 
         const tbodyPlanos = document.getElementById('fin-planos');
         if (Object.keys(planos).length === 0) {
             tbodyPlanos.innerHTML = '<tr><td colspan="4" style="text-align: center;">Nenhum pagamento registrado</td></tr>';
         } else {
-            tbodyPlanos.innerHTML = Object.entries(planos).map(([tipo, dados]) => `
+            tbodyPlanos.innerHTML = Object.entries(planos).map(([tipo, dados]) => {
+                const iss = dados.receita * ISS_ALIQUOTA;
+                const liquida = dados.receita - iss;
+                return `
                 <tr>
                     <td><strong>${tipo}</strong></td>
                     <td>${dados.quantidade}</td>
                     <td>${formatarMoeda(dados.receita)}</td>
+                    <td style="color:#b45309">- ${formatarMoeda(iss)}</td>
+                    <td style="color:#15803d"><strong>${formatarMoeda(liquida)}</strong></td>
                     <td>${receitaTotal > 0 ? ((dados.receita / receitaTotal) * 100).toFixed(1) : 0}%</td>
-                </tr>
-            `).join('');
+                </tr>`;
+            }).join('');
         }
 
         // Últimos pagamentos
         const tbodyPagamentos = document.getElementById('fin-ultimos-pagamentos');
         if (pagamentos.length === 0) {
-            tbodyPagamentos.innerHTML = '<tr><td colspan="6" style="text-align: center;">Nenhum pagamento registrado</td></tr>';
+            tbodyPagamentos.innerHTML = '<tr><td colspan="8" style="text-align: center;">Nenhum pagamento registrado</td></tr>';
         } else {
             const ultimosPagamentos = pagamentos.slice(0, 10);
-            tbodyPagamentos.innerHTML = ultimosPagamentos.map(pag => `
+            tbodyPagamentos.innerHTML = ultimosPagamentos.map(pag => {
+                const bruto = pag.valorFinal || 0;
+                const iss = bruto * ISS_ALIQUOTA;
+                const liquido = bruto - iss;
+                return `
                 <tr>
-                    <td>${formatarData(pag.data)}</td>
-                    <td>${pag.usuarioNome || 'N/A'}</td>
-                    <td><span class="badge badge-info">${pag.tipo || 'N/A'}</span></td>
-                    <td><strong>${formatarMoeda(pag.valor)}</strong></td>
+                    <td>${formatarData(pag.dataPagamento || pag.criadoEm)}</td>
+                    <td>${pag.usuario?.nome || 'N/A'}</td>
+                    <td><span class="badge badge-info">${pag.tipoProduto || 'N/A'}</span></td>
+                    <td>${formatarMoeda(bruto)}</td>
+                    <td style="color:#b45309">- ${formatarMoeda(iss)}</td>
+                    <td style="color:#15803d"><strong>${formatarMoeda(liquido)}</strong></td>
                     <td>${pag.metodoPagamento || 'N/A'}</td>
-                    <td><span class="badge badge-${pag.status === 'confirmado' ? 'success' : pag.status === 'pendente' ? 'warning' : 'danger'}">${pag.status || 'N/A'}</span></td>
-                </tr>
-            `).join('');
+                    <td><span class="badge badge-${pag.status === 'aprovado' ? 'success' : pag.status === 'pendente' ? 'warning' : 'danger'}">${pag.status || 'N/A'}</span></td>
+                </tr>`;
+            }).join('');
         }
         
     } catch (error) {
