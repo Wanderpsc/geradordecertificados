@@ -4246,26 +4246,35 @@ async function carregarDadosAssinatura() {
         const planoNomes = {
             'trial': '🎁 Trial Gratuito',
             'pay-per-certificate': '📜 Pagar por Certificado',
-            'mensal': '⚡ Plano Ilimitado'
+            'mensal': '⚡ Plano Ilimitado',
+            'anual': '⚡ Plano Ilimitado'
         };
         
         const planoDescricoes = {
             'trial': '7 dias de teste gratuito',
             'pay-per-certificate': 'Pague apenas quando usar',
-            'mensal': 'Certificados ilimitados'
+            'mensal': 'Certificados e históricos ilimitados',
+            'anual': 'Certificados e históricos ilimitados'
         };
         
         const valoresPlano = {
             'trial': 'GRÁTIS',
             'pay-per-certificate': 'R$ 10,00/cert',
-            'mensal': 'R$ 199,90/mês'
+            'mensal': 'R$ 199,90/mês',
+            'anual': 'R$ 199,90/mês'
         };
         
         document.getElementById('plano-nome').textContent = planoNomes[licenca.tipo] || 'Trial Gratuito';
         document.getElementById('plano-descricao').textContent = planoDescricoes[licenca.tipo] || '7 dias de teste';
         document.getElementById('plano-status').textContent = licenca.status === 'ativa' ? '✅ ATIVA' : '❌ EXPIRADA';
-        document.getElementById('cert-disponiveis').textContent = licenca.certificadosDisponiveis || 10;
-        document.getElementById('cert-gerados').textContent = licenca.certificadosGerados || 0;
+        const limCert = licenca.limiteCertificados;
+        const limHist = licenca.limiteHistoricos;
+        document.getElementById('cert-disponiveis').textContent = limCert === -1 ? '∞' : (limCert ?? '--');
+        document.getElementById('cert-gerados').textContent = licenca.certificadosGerados ?? 0;
+        const elHistDisp = document.getElementById('hist-disponiveis');
+        const elHistGer  = document.getElementById('hist-gerados');
+        if (elHistDisp) elHistDisp.textContent = limHist === -1 ? '∞' : (limHist ?? '--');
+        if (elHistGer)  elHistGer.textContent  = licenca.historicosGerados ?? 0;
         document.getElementById('valor-plano').textContent = valoresPlano[licenca.tipo] || 'GRÁTIS';
         
         // Iniciar cronômetro
