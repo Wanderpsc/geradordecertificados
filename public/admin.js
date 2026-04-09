@@ -1371,13 +1371,18 @@ async function verNotaFiscal(notaId) {
                     </div>
                 </div>
 
-                <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:14px;margin-bottom:20px">
-                    <p style="font-size:12px;color:#92400e;font-weight:600;margin:0">⚠️ Este é um registro interno. Para ter validade fiscal, emita a NFS-e no portal gratuito da Receita Federal abaixo, usando os dados acima.</p>
+                <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:14px;margin-bottom:12px">
+                    <p style="font-size:12px;color:#92400e;font-weight:600;margin:0 0 6px">⚠️ Este é um registro interno. Para ter validade fiscal, emita a NFS-e oficialmente (opções abaixo).</p>
+                    <p style="font-size:11px;color:#b45309;margin:0">O portal NFS-e Nacional pede o Recibo do IRPF para verificar sua identidade. Você encontra esse número no e-CAC da Receita Federal (link abaixo) ou no programa IRPF instalado no seu PC.</p>
                 </div>
 
-                <div style="display:flex;gap:10px;flex-wrap:wrap">
-                    <button onclick="navigator.clipboard.writeText(${JSON.stringify(textoParaCopiar).replace(/"/g, '&quot;')}).then(()=>this.textContent='✔ Copiado!').catch(()=>{})" style="flex:1;padding:11px;border:2px solid #2563eb;border-radius:10px;background:#eff6ff;color:#1d4ed8;font-weight:700;cursor:pointer;font-size:13px;transition:all .2s">📋 Copiar Dados</button>
-                    <button onclick="window.open('https://www.nfse.gov.br/EmissorNacional/','_blank')" style="flex:2;padding:11px;border:none;border-radius:10px;background:linear-gradient(165deg,#60a5fa,#2563eb,#1d4ed8);color:#fff;font-weight:700;cursor:pointer;font-size:13px;box-shadow:0 5px 14px rgba(37,99,235,.4)">🌐 Emitir no Portal NFS-e Nacional (Gratuito)</button>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+                    <button onclick="navigator.clipboard.writeText(${JSON.stringify(textoParaCopiar).replace(/"/g, '&quot;')}).then(()=>this.textContent='✔ Copiado!').catch(()=>{})" style="flex:1;min-width:120px;padding:10px;border:2px solid #2563eb;border-radius:10px;background:#eff6ff;color:#1d4ed8;font-weight:700;cursor:pointer;font-size:12px">📋 Copiar Dados</button>
+                    <button onclick="window.open('https://www.nfse.gov.br/EmissorNacional/','_blank')" style="flex:2;min-width:180px;padding:10px;border:none;border-radius:10px;background:linear-gradient(165deg,#60a5fa,#2563eb,#1d4ed8);color:#fff;font-weight:700;cursor:pointer;font-size:12px;box-shadow:0 5px 14px rgba(37,99,235,.4)">🌐 Portal NFS-e Nacional (Gratuito)</button>
+                </div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap">
+                    <button onclick="window.open('https://cav.receita.fazenda.gov.br/autenticacao/login','_blank')" style="flex:1;min-width:140px;padding:10px;border:2px solid #7c3aed;border-radius:10px;background:#f5f3ff;color:#6d28d9;font-weight:700;cursor:pointer;font-size:12px">🔑 e-CAC — Consultar Recibo IRPF</button>
+                    <button onclick="window.open('https://www.gov.br/prefeituras/curumata-pi','_blank')" style="flex:1;min-width:140px;padding:10px;border:2px solid #059669;border-radius:10px;background:#ecfdf5;color:#065f46;font-weight:700;cursor:pointer;font-size:12px">🏛️ Prefeitura de Curimatá/PI</button>
                 </div>
             </div>`;
         document.body.appendChild(modal);
