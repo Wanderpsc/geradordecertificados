@@ -778,7 +778,7 @@ exports.cancelarNotaFiscal = async (req, res) => {
             });
         }
 
-        if (nota.cancelada) {
+        if (nota.status === 'cancelada') {
             return res.status(400).json({
                 success: false,
                 message: 'Nota fiscal já está cancelada'
