@@ -633,15 +633,15 @@ exports.aprovarPagamento = async (req, res) => {
             // Renovar licença existente
             const dataExpiracao = new Date();
             
-            if (pagamento.tipoLicenca === 'mensal') {
+            if (pagamento.tipoProduto === 'mensal') {
                 dataExpiracao.setDate(dataExpiracao.getDate() + 30);
-            } else if (pagamento.tipoLicenca === 'anual') {
+            } else if (pagamento.tipoProduto === 'anual') {
                 dataExpiracao.setFullYear(dataExpiracao.getFullYear() + 1);
-            } else if (pagamento.tipoLicenca === 'vitalicia') {
+            } else if (pagamento.tipoProduto === 'vitalicia') {
                 dataExpiracao.setFullYear(dataExpiracao.getFullYear() + 100);
             }
 
-            licenca.tipo = pagamento.tipoLicenca;
+            licenca.tipo = pagamento.tipoProduto;
             licenca.dataExpiracao = dataExpiracao;
             licenca.status = 'ativa';
             await licenca.save();
@@ -649,17 +649,17 @@ exports.aprovarPagamento = async (req, res) => {
             // Criar nova licença
             const dataExpiracao = new Date();
             
-            if (pagamento.tipoLicenca === 'mensal') {
+            if (pagamento.tipoProduto === 'mensal') {
                 dataExpiracao.setDate(dataExpiracao.getDate() + 30);
-            } else if (pagamento.tipoLicenca === 'anual') {
+            } else if (pagamento.tipoProduto === 'anual') {
                 dataExpiracao.setFullYear(dataExpiracao.getFullYear() + 1);
-            } else if (pagamento.tipoLicenca === 'vitalicia') {
+            } else if (pagamento.tipoProduto === 'vitalicia') {
                 dataExpiracao.setFullYear(dataExpiracao.getFullYear() + 100);
             }
 
             licenca = await Licenca.create({
                 usuario: pagamento.usuario,
-                tipo: pagamento.tipoLicenca,
+                tipo: pagamento.tipoProduto,
                 dataInicio: new Date(),
                 dataExpiracao: dataExpiracao,
                 status: 'ativa'
@@ -670,7 +670,8 @@ exports.aprovarPagamento = async (req, res) => {
         await Log.create({
             usuario: req.usuario._id,
             acao: 'aprovacao_pagamento',
-            descricao: `Pagamento aprovado para ${pagamento.tipoLicenca}`,
+            descricao: `Pagamento aprovado para ${pagamento.tipoProduto}`,
+
             nivel: 'info'
         });
 

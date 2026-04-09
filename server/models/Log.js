@@ -21,7 +21,13 @@ const logSchema = new mongoose.Schema({
             'TENTAR_ACESSO_NAO_AUTORIZADO',
             'ERRO_AUTENTICACAO',
             'MODIFICAR_LICENCA',
-            'EXPORTAR_DADOS'
+            'EXPORTAR_DADOS',
+            'aprovacao_pagamento',
+            'recusa_pagamento',
+            'cancelamento_nota_fiscal',
+            'edicao_nota_fiscal',
+            'reemissao_nota_fiscal',
+            'resetar_senha_cliente'
         ]
     },
     descricao: {
@@ -39,7 +45,7 @@ const logSchema = new mongoose.Schema({
     },
     nivel: {
         type: String,
-        enum: ['INFO', 'WARNING', 'ERROR', 'CRITICAL'],
+        enum: ['INFO', 'WARNING', 'ERROR', 'CRITICAL', 'info', 'warning', 'error', 'critical'],
         default: 'INFO'
     },
     timestamp: {
