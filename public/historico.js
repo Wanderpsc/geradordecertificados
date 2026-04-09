@@ -1309,7 +1309,6 @@ async function criarGradesTurmas2025() {
             const data = await resp.json();
             if (data.success) {
                 criadas++;
-                console.log(`✅ Grade criada: ${grade.nome} (${grade.disciplinas.length} disciplinas)`);
             } else {
                 console.error(`❌ Erro: ${grade.nome} - ${data.message}`);
             }
