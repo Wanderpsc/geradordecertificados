@@ -1252,6 +1252,187 @@ async function cancelarNota(notaId) {
     }
 }
 
+// Editar nota fiscal
+async function editarNotaFiscal(notaId) {
+    const token = localStorage.getItem('token');
+    try {
+        const resp = await fetch(`${API_URL}/admin/notas-fiscais/${notaId}`, { headers: { 'Authorization': `Bearer ${token}` } });
+        if (!resp.ok) throw new Error('Erro ao carregar nota');
+        const nota = await resp.json();
+
+        document.getElementById('modal-editar-nf')?.remove();
+        const modal = document.createElement('div');
+        modal.id = 'modal-editar-nf';
+        modal.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.7);z-index:10001;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)';
+        modal.innerHTML = `
+            <div style="background:#fff;border-radius:18px;padding:28px;max-width:540px;width:100%;box-shadow:0 25px 60px rgba(0,0,0,0.35);max-height:90vh;overflow-y:auto;font-family:'Segoe UI',sans-serif">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+                    <h2 style="color:#f59e0b;font-size:1.2rem;font-weight:800;margin:0">✏️ Editar NFS-e Nº ${nota.numero}</h2>
+                    <button onclick="document.getElementById('modal-editar-nf').remove()" style="background:none;border:none;cursor:pointer;font-size:22px;color:#64748b">✕</button>
+                </div>
+
+                <div style="display:flex;flex-direction:column;gap:14px">
+                    <div>
+                        <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:5px">Nome do Tomador</label>
+                        <input id="enf-tomador-nome" value="${nota.tomador?.nome || ''}" style="width:100%;padding:10px 12px;border:2px solid #dde4f0;border-radius:9px;font-size:14px;font-family:inherit">
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                        <div>
+                            <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:5px">CPF/CNPJ do Tomador</label>
+                            <input id="enf-tomador-cpf" value="${nota.tomador?.cpfCnpj || ''}" style="width:100%;padding:10px 12px;border:2px solid #dde4f0;border-radius:9px;font-size:14px;font-family:inherit">
+                        </div>
+                        <div>
+                            <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:5px">E-mail do Tomador</label>
+                            <input id="enf-tomador-email" value="${nota.tomador?.email || ''}" style="width:100%;padding:10px 12px;border:2px solid #dde4f0;border-radius:9px;font-size:14px;font-family:inherit">
+                        </div>
+                    </div>
+                    <div>
+                        <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:5px">Descrição do Serviço</label>
+                        <textarea id="enf-descricao" rows="2" style="width:100%;padding:10px 12px;border:2px solid #dde4f0;border-radius:9px;font-size:14px;font-family:inherit;resize:vertical">${nota.descricaoServico || ''}</textarea>
+                    </div>
+                    <div>
+                        <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:5px">ISS (R$) — calculado sobre ${formatarMoeda(nota.valorServico || 0)}</label>
+                        <input id="enf-iss" type="number" step="0.01" value="${nota.impostos?.iss || 0}" oninput="const liq=document.getElementById('enf-liquido');if(liq)liq.textContent=formatarMoeda(${nota.valorServico||0}-parseFloat(this.value||0))" style="width:100%;padding:10px 12px;border:2px solid #dde4f0;border-radius:9px;font-size:14px;font-family:inherit">
+                        <p style="font-size:12px;color:#64748b;margin-top:4px">Valor líquido: <strong id="enf-liquido">${formatarMoeda(nota.valorLiquido || 0)}</strong></p>
+                    </div>
+                    <div>
+                        <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:5px">Observações</label>
+                        <textarea id="enf-obs" rows="2" style="width:100%;padding:10px 12px;border:2px solid #dde4f0;border-radius:9px;font-size:14px;font-family:inherit;resize:vertical">${nota.observacoes || ''}</textarea>
+                    </div>
+                </div>
+
+                <div style="display:flex;gap:10px;margin-top:20px">
+                    <button onclick="document.getElementById('modal-editar-nf').remove()" style="flex:1;padding:11px;border:2px solid #dde4f0;border-radius:10px;background:#f8faff;color:#64748b;font-weight:700;cursor:pointer;font-size:13px">Cancelar</button>
+                    <button onclick="salvarEdicaoNF('${notaId}')" style="flex:2;padding:11px;border:none;border-radius:10px;background:linear-gradient(165deg,#fcd34d,#f59e0b,#d97706);color:#fff;font-weight:700;cursor:pointer;font-size:13px;box-shadow:0 5px 14px rgba(245,158,11,.4)">✏️ Salvar Alterações</button>
+                </div>
+            </div>`;
+        document.body.appendChild(modal);
+        modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+    } catch (err) {
+        alert('Erro ao abrir edição: ' + err.message);
+    }
+}
+
+async function salvarEdicaoNF(notaId) {
+    const token = localStorage.getItem('token');
+    const body = {
+        descricaoServico: document.getElementById('enf-descricao').value.trim(),
+        observacoes: document.getElementById('enf-obs').value.trim(),
+        tomador: {
+            nome: document.getElementById('enf-tomador-nome').value.trim(),
+            cpfCnpj: document.getElementById('enf-tomador-cpf').value.trim(),
+            email: document.getElementById('enf-tomador-email').value.trim()
+        },
+        impostos: { iss: parseFloat(document.getElementById('enf-iss').value) || 0 }
+    };
+    try {
+        const resp = await fetch(`${API_URL}/admin/notas-fiscais/${notaId}`, {
+            method: 'PATCH',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.message || 'Erro ao salvar');
+        document.getElementById('modal-editar-nf')?.remove();
+        mostrarNotificacao('✅ Nota fiscal atualizada!', 'success');
+        carregarNotasFiscais();
+    } catch (err) {
+        alert('❌ Erro: ' + err.message);
+    }
+}
+
+// Reemitir nota fiscal (nova numeração, cancela a original)
+async function reemitirNotaFiscal(notaId) {
+    const token = localStorage.getItem('token');
+    try {
+        const resp = await fetch(`${API_URL}/admin/notas-fiscais/${notaId}`, { headers: { 'Authorization': `Bearer ${token}` } });
+        if (!resp.ok) throw new Error('Erro ao carregar nota');
+        const nota = await resp.json();
+
+        document.getElementById('modal-reemitir-nf')?.remove();
+        const modal = document.createElement('div');
+        modal.id = 'modal-reemitir-nf';
+        modal.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.7);z-index:10001;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)';
+        modal.innerHTML = `
+            <div style="background:#fff;border-radius:18px;padding:28px;max-width:520px;width:100%;box-shadow:0 25px 60px rgba(0,0,0,0.35);max-height:90vh;overflow-y:auto;font-family:'Segoe UI',sans-serif">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+                    <h2 style="color:#7c3aed;font-size:1.2rem;font-weight:800;margin:0">🔄 Reemitir NFS-e Nº ${nota.numero}</h2>
+                    <button onclick="document.getElementById('modal-reemitir-nf').remove()" style="background:none;border:none;cursor:pointer;font-size:22px;color:#64748b">✕</button>
+                </div>
+
+                <div style="background:#faf5ff;border:1px solid #e9d5ff;border-radius:12px;padding:14px;margin-bottom:16px">
+                    <p style="font-size:12px;color:#6d28d9;font-weight:600;margin:0">A nota <strong>Nº ${nota.numero}</strong> será marcada como <em>Substituída</em> e uma nova nota com número sequencial será criada. Você pode ajustar os dados antes de confirmar.</p>
+                </div>
+
+                <div style="display:flex;flex-direction:column;gap:14px">
+                    <div>
+                        <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:5px">Nome do Tomador</label>
+                        <input id="rnf-tomador-nome" value="${nota.tomador?.nome || ''}" style="width:100%;padding:10px 12px;border:2px solid #dde4f0;border-radius:9px;font-size:14px;font-family:inherit">
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                        <div>
+                            <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:5px">CPF/CNPJ</label>
+                            <input id="rnf-tomador-cpf" value="${nota.tomador?.cpfCnpj || ''}" style="width:100%;padding:10px 12px;border:2px solid #dde4f0;border-radius:9px;font-size:14px;font-family:inherit">
+                        </div>
+                        <div>
+                            <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:5px">E-mail</label>
+                            <input id="rnf-tomador-email" value="${nota.tomador?.email || ''}" style="width:100%;padding:10px 12px;border:2px solid #dde4f0;border-radius:9px;font-size:14px;font-family:inherit">
+                        </div>
+                    </div>
+                    <div>
+                        <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:5px">Descrição do Serviço</label>
+                        <textarea id="rnf-descricao" rows="2" style="width:100%;padding:10px 12px;border:2px solid #dde4f0;border-radius:9px;font-size:14px;font-family:inherit;resize:vertical">${nota.descricaoServico || ''}</textarea>
+                    </div>
+                    <div>
+                        <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:5px">ISS (R$)</label>
+                        <input id="rnf-iss" type="number" step="0.01" value="${nota.impostos?.iss || 0}" style="width:100%;padding:10px 12px;border:2px solid #dde4f0;border-radius:9px;font-size:14px;font-family:inherit">
+                    </div>
+                    <div>
+                        <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:5px">Observações</label>
+                        <textarea id="rnf-obs" rows="2" style="width:100%;padding:10px 12px;border:2px solid #dde4f0;border-radius:9px;font-size:14px;font-family:inherit;resize:vertical">${nota.observacoes || ''}</textarea>
+                    </div>
+                </div>
+
+                <div style="display:flex;gap:10px;margin-top:20px">
+                    <button onclick="document.getElementById('modal-reemitir-nf').remove()" style="flex:1;padding:11px;border:2px solid #dde4f0;border-radius:10px;background:#f8faff;color:#64748b;font-weight:700;cursor:pointer;font-size:13px">Cancelar</button>
+                    <button onclick="confirmarReemissaoNF('${notaId}')" style="flex:2;padding:11px;border:none;border-radius:10px;background:linear-gradient(165deg,#c4b5fd,#7c3aed,#6d28d9);color:#fff;font-weight:700;cursor:pointer;font-size:13px;box-shadow:0 5px 14px rgba(124,58,237,.4)">🔄 Confirmar Reemissão</button>
+                </div>
+            </div>`;
+        document.body.appendChild(modal);
+        modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+    } catch (err) {
+        alert('Erro ao abrir reemissão: ' + err.message);
+    }
+}
+
+async function confirmarReemissaoNF(notaId) {
+    const token = localStorage.getItem('token');
+    const body = {
+        descricaoServico: document.getElementById('rnf-descricao').value.trim(),
+        observacoes: document.getElementById('rnf-obs').value.trim(),
+        tomador: {
+            nome: document.getElementById('rnf-tomador-nome').value.trim(),
+            cpfCnpj: document.getElementById('rnf-tomador-cpf').value.trim(),
+            email: document.getElementById('rnf-tomador-email').value.trim()
+        },
+        impostos: { iss: parseFloat(document.getElementById('rnf-iss').value) || 0 }
+    };
+    try {
+        const resp = await fetch(`${API_URL}/admin/notas-fiscais/${notaId}/reemitir`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.message || 'Erro ao reemitir');
+        document.getElementById('modal-reemitir-nf')?.remove();
+        mostrarNotificacao(`✅ ${data.message}`, 'success');
+        carregarNotasFiscais();
+    } catch (err) {
+        alert('❌ Erro: ' + err.message);
+    }
+}
+
 // Carregar Notas Fiscais
 async function carregarNotasFiscais() {
     
@@ -1380,10 +1561,16 @@ async function verNotaFiscal(notaId) {
                     <button onclick="navigator.clipboard.writeText(${JSON.stringify(textoParaCopiar).replace(/"/g, '&quot;')}).then(()=>this.textContent='✔ Copiado!').catch(()=>{})" style="flex:1;min-width:120px;padding:10px;border:2px solid #2563eb;border-radius:10px;background:#eff6ff;color:#1d4ed8;font-weight:700;cursor:pointer;font-size:12px">📋 Copiar Dados</button>
                     <button onclick="window.open('https://www.nfse.gov.br/EmissorNacional/','_blank')" style="flex:2;min-width:180px;padding:10px;border:none;border-radius:10px;background:linear-gradient(165deg,#60a5fa,#2563eb,#1d4ed8);color:#fff;font-weight:700;cursor:pointer;font-size:12px;box-shadow:0 5px 14px rgba(37,99,235,.4)">🌐 Portal NFS-e Nacional (Gratuito)</button>
                 </div>
-                <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
                     <button onclick="window.open('https://cav.receita.fazenda.gov.br/autenticacao/login','_blank')" style="flex:1;min-width:140px;padding:10px;border:2px solid #7c3aed;border-radius:10px;background:#f5f3ff;color:#6d28d9;font-weight:700;cursor:pointer;font-size:12px">🔑 e-CAC — Consultar Recibo IRPF</button>
                     <button onclick="window.open('https://www.gov.br/prefeituras/curumata-pi','_blank')" style="flex:1;min-width:140px;padding:10px;border:2px solid #059669;border-radius:10px;background:#ecfdf5;color:#065f46;font-weight:700;cursor:pointer;font-size:12px">🏛️ Prefeitura de Curimatá/PI</button>
                 </div>
+                ${!isCancelada ? `
+                <hr style="border:none;border-top:2px solid #e2ebf8;margin:12px 0">
+                <div style="display:flex;gap:8px;flex-wrap:wrap">
+                    <button onclick="document.getElementById('modal-ver-nf').remove();editarNotaFiscal('${nota._id}')" style="flex:1;min-width:130px;padding:10px;border:2px solid #f59e0b;border-radius:10px;background:#fffbeb;color:#92400e;font-weight:700;cursor:pointer;font-size:12px">✏️ Editar Nota</button>
+                    <button onclick="document.getElementById('modal-ver-nf').remove();reemitirNotaFiscal('${nota._id}')" style="flex:1;min-width:130px;padding:10px;border:2px solid #7c3aed;border-radius:10px;background:#f5f3ff;color:#6d28d9;font-weight:700;cursor:pointer;font-size:12px">🔄 Reemitir (Nova Numeração)</button>
+                </div>` : ''}
             </div>`;
         document.body.appendChild(modal);
         modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });

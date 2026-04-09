@@ -18,6 +18,8 @@ const {
     listarNotasFiscais,
     detalhesNotaFiscal,
     cancelarNotaFiscal,
+    editarNotaFiscal,
+    reemitirNotaFiscal,
     relatorioFinanceiro,
     listarLogs
 } = require('../controllers/adminController');
@@ -54,7 +56,9 @@ router.patch('/pagamentos/:id/recusar', recusarPagamento);
 router.get('/notas-fiscais', listarNotasFiscais);
 router.get('/notas-fiscais/:id', detalhesNotaFiscal);
 router.post('/notas-fiscais', emitirNotaFiscal);
+router.patch('/notas-fiscais/:id', editarNotaFiscal);
 router.patch('/notas-fiscais/:id/cancelar', cancelarNotaFiscal);
+router.post('/notas-fiscais/:id/reemitir', reemitirNotaFiscal);
 
 // Relatórios
 router.get('/relatorio-financeiro', relatorioFinanceiro);

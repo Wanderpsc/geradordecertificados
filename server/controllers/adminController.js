@@ -809,6 +809,98 @@ exports.cancelarNotaFiscal = async (req, res) => {
     }
 };
 
+// @desc    Editar nota fiscal (apenas se não enviada ao governo)
+// @route   PATCH /api/admin/notas-fiscais/:id
+// @access  Private/Admin
+exports.editarNotaFiscal = async (req, res) => {
+    try {
+        const nota = await NotaFiscal.findById(req.params.id);
+        if (!nota) return res.status(404).json({ success: false, message: 'Nota fiscal não encontrada' });
+        if (nota.status === 'cancelada') return res.status(400).json({ success: false, message: 'Não é possível editar uma nota cancelada' });
+        if (nota.codigoVerificacao) return res.status(400).json({ success: false, message: 'Nota já enviada ao governo — não pode ser editada' });
+
+        const { descricaoServico, observacoes, tomador, impostos } = req.body;
+
+        if (descricaoServico !== undefined) nota.descricaoServico = descricaoServico;
+        if (observacoes !== undefined) nota.observacoes = observacoes;
+        if (tomador) {
+            nota.tomador = { ...nota.tomador.toObject(), ...tomador };
+        }
+        if (impostos) {
+            nota.impostos = { ...nota.impostos.toObject(), ...impostos };
+            const { iss = 0, pis = 0, cofins = 0, inss = 0, ir = 0, csll = 0 } = nota.impostos;
+            nota.valorTotalImpostos = iss + pis + cofins + inss + ir + csll;
+            nota.valorLiquido = nota.valorServico - nota.valorTotalImpostos;
+        }
+
+        await nota.save();
+
+        await Log.create({
+            usuario: req.usuario._id,
+            acao: 'edicao_nota_fiscal',
+            descricao: `Nota fiscal ${nota.numero} editada`,
+            nivel: 'info'
+        });
+
+        res.json({ success: true, message: 'Nota fiscal atualizada', notaFiscal: nota });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Erro ao editar nota fiscal', error: error.message });
+    }
+};
+
+// @desc    Reemitir nota fiscal (cancela a atual e cria nova com mesmos dados)
+// @route   POST /api/admin/notas-fiscais/:id/reemitir
+// @access  Private/Admin
+exports.reemitirNotaFiscal = async (req, res) => {
+    try {
+        const notaOriginal = await NotaFiscal.findById(req.params.id);
+        if (!notaOriginal) return res.status(404).json({ success: false, message: 'Nota fiscal não encontrada' });
+        if (notaOriginal.status === 'cancelada') return res.status(400).json({ success: false, message: 'Nota já está cancelada' });
+        if (notaOriginal.codigoVerificacao) return res.status(400).json({ success: false, message: 'Nota já foi enviada ao governo — use o portal para substituir' });
+
+        // Marcar original como substituída
+        notaOriginal.status = 'substituida';
+        notaOriginal.dataCancelamento = new Date();
+        notaOriginal.motivoCancelamento = 'Substituída por reemissão';
+        await notaOriginal.save();
+
+        const { descricaoServico, observacoes, tomador, impostos } = req.body;
+        const numero = await NotaFiscal.gerarNumero();
+
+        const novosTomador = tomador ? { ...notaOriginal.tomador.toObject(), ...tomador } : notaOriginal.tomador.toObject();
+        const novosImpostos = impostos ? { ...notaOriginal.impostos.toObject(), ...impostos } : notaOriginal.impostos.toObject();
+        const { iss = 0, pis = 0, cofins = 0, inss = 0, ir = 0, csll = 0 } = novosImpostos;
+        const valorTotalImpostos = iss + pis + cofins + inss + ir + csll;
+        const valorLiquido = notaOriginal.valorServico - valorTotalImpostos;
+
+        const novaNota = await NotaFiscal.create({
+            numero,
+            pagamento: notaOriginal.pagamento,
+            usuario: notaOriginal.usuario,
+            prestador: notaOriginal.prestador.toObject(),
+            tomador: novosTomador,
+            descricaoServico: descricaoServico || notaOriginal.descricaoServico,
+            valorServico: notaOriginal.valorServico,
+            impostos: novosImpostos,
+            valorTotalImpostos,
+            valorLiquido,
+            dataCompetencia: notaOriginal.dataCompetencia,
+            observacoes: observacoes !== undefined ? observacoes : notaOriginal.observacoes
+        });
+
+        await Log.create({
+            usuario: req.usuario._id,
+            acao: 'reemissao_nota_fiscal',
+            descricao: `Nota ${notaOriginal.numero} substituída pela nota ${novaNota.numero}`,
+            nivel: 'warning'
+        });
+
+        res.status(201).json({ success: true, message: `Nota ${novaNota.numero} emitida em substituição à ${notaOriginal.numero}`, notaFiscal: novaNota });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Erro ao reemitir nota fiscal', error: error.message });
+    }
+};
+
 // @desc    Listar logs de auditoria
 // @route   GET /api/admin/logs
 // @access  Private/Admin
