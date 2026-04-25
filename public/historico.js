@@ -264,8 +264,11 @@ function abrirModalGrade(gradeExistente) {
                 <h3 style="color:#1e3a8a;font-size:15px;">Disciplinas</h3>
                 <button class="btn btn-primary btn-sm" onclick="adicionarDisciplinaGrade()" style="font-size:12px;">+ Adicionar Disciplina</button>
             </div>
-            <div id="gradeDisciplinas" style="max-height:400px;overflow-y:auto;">
-                <!-- Disciplinas serão listadas aqui -->
+            <div id="gradeDisciplinas" style="overflow-x:auto;max-height:420px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:8px;">
+                <table style="width:100%;border-collapse:collapse;min-width:400px;" id="gradeDisciplinasTable">
+                    <thead id="gradeDisciplinasHead"></thead>
+                    <tbody id="gradeDisciplinasTbody"></tbody>
+                </table>
             </div>
         </div>
 
@@ -299,8 +302,17 @@ function atualizarSeriesGrade(seriesExistentes) {
 
     const series = seriesExistentes && seriesExistentes.length === numSeries ? seriesExistentes : seriesPadrao;
 
+    // Coletar dados das disciplinas existentes antes de reconstruir (para preservar ao trocar tipo)
+    const existingRows = [...document.querySelectorAll('#gradeDisciplinasTbody .grade-disc-row')];
+    const existingDiscs = existingRows.map(row => {
+        const nome = row.querySelector('.disc-nome').value.trim();
+        const categoria = row.querySelector('.disc-categoria').value;
+        const chValues = [...row.querySelectorAll('.disc-ch-serie')].map(el => parseInt(el.value) || 0);
+        return { nome, categoria, cargaHorariaPorSerie: chValues };
+    }).filter(d => d.nome);
+
     container.innerHTML = series.map((s, i) => `
-        <input type="text" class="form-control grade-serie-nome" value="${s}" style="width:120px;font-size:12px;padding:6px 8px;" data-index="${i}">
+        <input type="text" class="form-control grade-serie-nome" value="${s}" style="width:120px;font-size:12px;padding:6px 8px;" data-index="${i}" oninput="atualizarHeaderSeriesGrade()">
     `).join('');
 
     // Atualizar o label do botão carregar padrão
@@ -308,6 +320,32 @@ function atualizarSeriesGrade(seriesExistentes) {
     if (btnPadrao) {
         btnPadrao.textContent = tipo === 'medio' ? '📋 Carregar Padrão Médio' : '📋 Carregar Padrão Fundamental';
     }
+
+    // Atualizar cabeçalho da tabela de disciplinas
+    atualizarHeaderDisciplinas(series);
+
+    // Reconstruir linhas de disciplinas preservando nomes/categorias e CH por série
+    if (existingDiscs.length > 0) {
+        const tbody = document.getElementById('gradeDisciplinasTbody');
+        if (tbody) tbody.innerHTML = '';
+        existingDiscs.forEach(d => adicionarDisciplinaGrade(d));
+    }
+}
+
+function atualizarHeaderSeriesGrade() {
+    const series = [...document.querySelectorAll('.grade-serie-nome')].map(el => el.value.trim());
+    atualizarHeaderDisciplinas(series);
+}
+
+function atualizarHeaderDisciplinas(series) {
+    const thead = document.getElementById('gradeDisciplinasHead');
+    if (!thead) return;
+    thead.innerHTML = `<tr style="background:#e2e8f0;">
+        <th style="padding:7px 10px;text-align:left;border:1px solid #cbd5e1;font-size:12px;font-weight:600;min-width:185px;">Disciplina</th>
+        <th style="padding:7px 8px;text-align:left;border:1px solid #cbd5e1;font-size:12px;font-weight:600;min-width:155px;">Categoria</th>
+        ${series.map(s => `<th style="padding:7px 6px;text-align:center;border:1px solid #cbd5e1;font-size:11px;font-weight:600;min-width:68px;white-space:nowrap;">${escapeHtml(s)}<br><span style="font-weight:400;color:#64748b;font-size:10px;">CH (h)</span></th>`).join('')}
+        <th style="padding:4px;border:1px solid #cbd5e1;width:38px;"></th>
+    </tr>`;
 }
 
 function obterCategoriasPorTipo(tipo) {
@@ -329,22 +367,41 @@ function obterCategoriasPorTipo(tipo) {
 }
 
 function adicionarDisciplinaGrade(disc) {
-    const container = document.getElementById('gradeDisciplinas');
+    const tbody = document.getElementById('gradeDisciplinasTbody');
     const tipo = document.getElementById('gradeTipo').value;
     const categorias = obterCategoriasPorTipo(tipo);
+    const series = [...document.querySelectorAll('.grade-serie-nome')].map(el => el.value.trim());
 
-    const row = document.createElement('div');
+    // Suporte ao formato antigo (cargaHorariaPadrao) e ao novo (cargaHorariaPorSerie)
+    let chPorSerie = [];
+    if (disc) {
+        if (disc.cargaHorariaPorSerie && disc.cargaHorariaPorSerie.length) {
+            chPorSerie = disc.cargaHorariaPorSerie;
+        } else if (disc.cargaHorariaPadrao) {
+            chPorSerie = series.map(() => disc.cargaHorariaPadrao);
+        }
+    }
+
+    const row = document.createElement('tr');
     row.className = 'grade-disc-row';
-    row.style.cssText = 'display:flex;gap:8px;align-items:center;margin-bottom:6px;padding:6px;background:#f8fafc;border-radius:8px;';
     row.innerHTML = `
-        <input type="text" class="form-control disc-nome" value="${disc ? escapeHtml(disc.nome) : ''}" placeholder="Nome da Disciplina" style="flex:2;font-size:12px;padding:6px 8px;">
-        <select class="form-control disc-categoria" style="flex:1;font-size:12px;padding:6px 8px;">
-            ${categorias.map(c => `<option value="${c[0]}" ${disc && disc.categoria === c[0] ? 'selected' : ''}>${c[1]}</option>`).join('')}
-        </select>
-        <input type="number" class="form-control disc-ch" value="${disc ? disc.cargaHorariaPadrao || '' : ''}" placeholder="CH" title="Carga Horária Padrão" style="width:70px;font-size:12px;padding:6px 8px;">
-        <button onclick="this.closest('.grade-disc-row').remove()" style="background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;padding:4px 8px;border-radius:6px;cursor:pointer;font-size:14px;" title="Remover">✕</button>
+        <td style="padding:3px 6px;border:1px solid #e5e7eb;background:#f8fafc;">
+            <input type="text" class="form-control disc-nome" value="${disc ? escapeHtml(disc.nome) : ''}" placeholder="Nome da Disciplina" style="font-size:12px;padding:5px 7px;min-width:170px;">
+        </td>
+        <td style="padding:3px 6px;border:1px solid #e5e7eb;">
+            <select class="form-control disc-categoria" style="font-size:12px;padding:5px 7px;min-width:145px;">
+                ${categorias.map(c => `<option value="${c[0]}" ${disc && disc.categoria === c[0] ? 'selected' : ''}>${c[1]}</option>`).join('')}
+            </select>
+        </td>
+        ${series.map((s, i) => `
+            <td style="padding:3px 4px;border:1px solid #e5e7eb;text-align:center;">
+                <input type="number" class="form-control disc-ch-serie" min="0" value="${chPorSerie[i] !== undefined ? chPorSerie[i] : ''}" placeholder="0" style="width:62px;font-size:12px;padding:4px 5px;text-align:center;" data-serie-idx="${i}" title="CH ${escapeHtml(s)}">
+            </td>`).join('')}
+        <td style="padding:3px 4px;border:1px solid #e5e7eb;text-align:center;">
+            <button onclick="this.closest('tr').remove()" style="background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;padding:4px 8px;border-radius:6px;cursor:pointer;font-size:14px;" title="Remover">✕</button>
+        </td>
     `;
-    container.appendChild(row);
+    tbody.appendChild(row);
 }
 
 function carregarDisciplinasPadrao() {
@@ -357,8 +414,8 @@ function carregarDisciplinasPadrao() {
 }
 
 function carregarDisciplinasPadraoFundamental() {
-    const container = document.getElementById('gradeDisciplinas');
-    container.innerHTML = '';
+    const tbody = document.getElementById('gradeDisciplinasTbody');
+    if (tbody) tbody.innerHTML = '';
 
     const disciplinas = [
         // Linguagens, Códigos e Suas Tecnologias
@@ -391,8 +448,8 @@ function carregarDisciplinasPadraoFundamental() {
 }
 
 function carregarDisciplinasPadraoMedio() {
-    const container = document.getElementById('gradeDisciplinas');
-    container.innerHTML = '';
+    const tbody = document.getElementById('gradeDisciplinasTbody');
+    if (tbody) tbody.innerHTML = '';
 
     const disciplinas = [
         // Formação Geral Básica
@@ -441,10 +498,12 @@ async function salvarGrade(id) {
     rows.forEach(row => {
         const n = row.querySelector('.disc-nome').value.trim();
         if (!n) return;
+        const chPorSerie = [...row.querySelectorAll('.disc-ch-serie')].map(el => parseInt(el.value) || 0);
         disciplinas.push({
             nome: n,
             categoria: row.querySelector('.disc-categoria').value,
-            cargaHorariaPadrao: parseInt(row.querySelector('.disc-ch').value) || 0
+            cargaHorariaPorSerie: chPorSerie,
+            cargaHorariaPadrao: chPorSerie.reduce((a, b) => a + b, 0) // soma total (compatibilidade)
         });
     });
 
@@ -791,7 +850,7 @@ function renderizarTabelaNotas(grade, notasExistentes) {
                         </td>
                         <td style="padding:2px;border:1px solid #e5e7eb;text-align:center;">
                             <input type="number" min="0" class="nota-input" data-disc="${escapeHtml(disc.nome)}" data-serie="${idx}" data-campo="ch"
-                                value="${nd.ch !== undefined ? nd.ch : disc.cargaHorariaPadrao || ''}" style="width:55px;text-align:center;border:1px solid #d1d5db;border-radius:4px;padding:3px;font-size:11px;">
+                                value="${nd.ch !== undefined ? nd.ch : (disc.cargaHorariaPorSerie ? (disc.cargaHorariaPorSerie[i] || '') : (disc.cargaHorariaPadrao || ''))}" style="width:55px;text-align:center;border:1px solid #d1d5db;border-radius:4px;padding:3px;font-size:11px;">
                         </td>`;
                 }).join('')}
             </tr>`;
@@ -1791,54 +1850,98 @@ function _histFrente(pdf, hist, cfg) {
     y += 8.5;
 
     // --- dados do aluno ---
-    const boxH = 14;
-    _hRect(pdf, ML, y, UW, boxH, null, [0, 40, 120]);
-    pdf.setLineWidth(0.2);
-    pdf.setDrawColor(0, 40, 120);
-    pdf.line(ML, y + 7, ML + UW, y + 7);
-
     const nascStr = aluno.dataNascimento
         ? `${aluno.dataNascimento.dia}/${String(Object.keys({janeiro:1,fevereiro:2,março:3,abril:4,maio:5,junho:6,julho:7,agosto:8,setembro:9,outubro:10,novembro:11,dezembro:12}).indexOf(aluno.dataNascimento.mes)+1).padStart(2,'0')}/${aluno.dataNascimento.ano}`
         : '';
 
-    // linha 1 do aluno
-    const fy1 = y + 4.5;
-    _hText(pdf, 'ESTUDANTE:', ML + 1, fy1, { bold: true, size: 6 });
-    _hText(pdf, aluno.nome || '', ML + 22, fy1, { size: 6 });
+    if (isFund) {
+        // === ENSINO FUNDAMENTAL: 3 linhas ===
+        // Linha 1: ESTUDANTE | CPF | DATA DE NASCIMENTO
+        // Linha 2: MUNICÍPIO DE NASC. | RG | SSP | ESTADO
+        // Linha 3: MÃE | PAI
+        const boxH = 21;
+        _hRect(pdf, ML, y, UW, boxH, null, [0, 40, 120]);
+        pdf.setLineWidth(0.2); pdf.setDrawColor(0, 40, 120);
+        pdf.line(ML, y + 7, ML + UW, y + 7);
+        pdf.line(ML, y + 14, ML + UW, y + 14);
 
-    const cpfX = ML + 78; const nascX = ML + 108; const munX = ML + 148;
-    pdf.setDrawColor(0, 40, 120); pdf.setLineWidth(0.2);
-    pdf.line(cpfX, y, cpfX, y + 7);
-    pdf.line(nascX, y, nascX, y + 7);
-    pdf.line(munX, y, munX, y + 7);
+        // Linha 1 — divisores em x=110 e x=150 (relativo a ML)
+        const fCpfX = ML + 110; const fNascX = ML + 152;
+        pdf.line(fCpfX, y, fCpfX, y + 7);
+        pdf.line(fNascX, y, fNascX, y + 7);
+        const fy1 = y + 4.5;
+        _hText(pdf, 'ESTUDANTE:', ML + 1, fy1, { bold: true, size: 6 });
+        _hText(pdf, aluno.nome || '', ML + 23, fy1, { size: 6, maxWidth: fCpfX - ML - 25 });
+        _hText(pdf, 'CPF:', fCpfX + 1, fy1, { bold: true, size: 6 });
+        _hText(pdf, aluno.cpf || '', fCpfX + 9, fy1, { size: 6 });
+        _hText(pdf, 'DATA DE NASCIMENTO:', fNascX + 1, fy1, { bold: true, size: 5.5 });
+        _hText(pdf, nascStr, fNascX + 35, fy1, { size: 6 });
 
-    _hText(pdf, 'CPF:', cpfX + 1, fy1, { bold: true, size: 6 });
-    _hText(pdf, aluno.cpf || '', cpfX + 10, fy1, { size: 6 });
-    _hText(pdf, 'DATA NASC.:', nascX + 1, fy1, { bold: true, size: 6 });
-    _hText(pdf, nascStr, nascX + 22, fy1, { size: 6 });
-    _hText(pdf, 'MUN. NASC.:', munX + 1, fy1, { bold: true, size: 6 });
-    _hText(pdf, aluno.naturalidade?.cidade || '', munX + 22, fy1, { size: 6, maxWidth: 22 });
+        // Linha 2 — divisores em x=80, x=113, x=130
+        const fMunW = 80; const fRgX = ML + fMunW; const fSspX = ML + fMunW + 33; const fEstX = ML + fMunW + 50;
+        pdf.line(fRgX, y + 7, fRgX, y + 14);
+        pdf.line(fSspX, y + 7, fSspX, y + 14);
+        pdf.line(fEstX, y + 7, fEstX, y + 14);
+        const fy2 = y + 11.5;
+        _hText(pdf, 'MUNICÍPIO DE NASC.:', ML + 1, fy2, { bold: true, size: 6 });
+        _hText(pdf, aluno.naturalidade?.cidade || '', ML + 35, fy2, { size: 6, maxWidth: fMunW - 37 });
+        _hText(pdf, 'RG:', fRgX + 1, fy2, { bold: true, size: 6 });
+        _hText(pdf, aluno.rg || '', fRgX + 8, fy2, { size: 6, maxWidth: 22 });
+        _hText(pdf, 'SSP:', fSspX + 1, fy2, { bold: true, size: 6 });
+        _hText(pdf, aluno.orgaoEmissor || 'DF', fSspX + 10, fy2, { size: 6, maxWidth: 14 });
+        _hText(pdf, 'ESTADO:', fEstX + 1, fy2, { bold: true, size: 6 });
+        _hText(pdf, aluno.naturalidade?.estado || '', fEstX + 14, fy2, { size: 6, maxWidth: 40 });
 
-    // linha 2 do aluno
-    const fy2 = y + 11.5;
-    const rgX = ML; const sspX = ML + 38; const estX = ML + 62; const maeX = ML + 86; const paiX = ML + 143;
-    pdf.line(sspX, y + 7, sspX, y + boxH);
-    pdf.line(estX, y + 7, estX, y + boxH);
-    pdf.line(maeX, y + 7, maeX, y + boxH);
-    pdf.line(paiX, y + 7, paiX, y + boxH);
+        // Linha 3 — divisor em x=UW*0.55
+        const fPaiX = ML + Math.round(UW * 0.55);
+        pdf.line(fPaiX, y + 14, fPaiX, y + boxH);
+        const fy3 = y + 18.5;
+        _hText(pdf, 'MÃE:', ML + 1, fy3, { bold: true, size: 6 });
+        _hText(pdf, aluno.filiacao?.mae || '', ML + 10, fy3, { size: 6, maxWidth: fPaiX - ML - 12 });
+        _hText(pdf, 'PAI:', fPaiX + 1, fy3, { bold: true, size: 6 });
+        _hText(pdf, aluno.filiacao?.pai || '', fPaiX + 9, fy3, { size: 6, maxWidth: ML + UW - fPaiX - 11 });
 
-    _hText(pdf, 'RG:', rgX + 1, fy2, { bold: true, size: 6 });
-    _hText(pdf, aluno.rg || '', rgX + 8, fy2, { size: 6 });
-    _hText(pdf, 'SSP:', sspX + 1, fy2, { bold: true, size: 6 });
-    _hText(pdf, aluno.orgaoEmissor || '', sspX + 10, fy2, { size: 6 });
-    _hText(pdf, 'ESTADO:', estX + 1, fy2, { bold: true, size: 6 });
-    _hText(pdf, aluno.naturalidade?.estado || '', estX + 14, fy2, { size: 6 });
-    _hText(pdf, 'MÃE:', maeX + 1, fy2, { bold: true, size: 6 });
-    _hText(pdf, aluno.filiacao?.mae || '', maeX + 10, fy2, { size: 6, maxWidth: 50 });
-    _hText(pdf, 'PAI:', paiX + 1, fy2, { bold: true, size: 6 });
-    _hText(pdf, aluno.filiacao?.pai || '', paiX + 9, fy2, { size: 6, maxWidth: 44 });
+        y += boxH + 2;
+    } else {
+        // === ENSINO MÉDIO: 2 linhas (layout original) ===
+        const boxH = 14;
+        _hRect(pdf, ML, y, UW, boxH, null, [0, 40, 120]);
+        pdf.setLineWidth(0.2); pdf.setDrawColor(0, 40, 120);
+        pdf.line(ML, y + 7, ML + UW, y + 7);
 
-    y += boxH + 2;
+        const fy1 = y + 4.5;
+        _hText(pdf, 'ESTUDANTE:', ML + 1, fy1, { bold: true, size: 6 });
+        _hText(pdf, aluno.nome || '', ML + 22, fy1, { size: 6 });
+        const cpfX = ML + 78; const nascX = ML + 108; const munX = ML + 148;
+        pdf.line(cpfX, y, cpfX, y + 7);
+        pdf.line(nascX, y, nascX, y + 7);
+        pdf.line(munX, y, munX, y + 7);
+        _hText(pdf, 'CPF:', cpfX + 1, fy1, { bold: true, size: 6 });
+        _hText(pdf, aluno.cpf || '', cpfX + 10, fy1, { size: 6 });
+        _hText(pdf, 'DATA NASC.:', nascX + 1, fy1, { bold: true, size: 6 });
+        _hText(pdf, nascStr, nascX + 22, fy1, { size: 6 });
+        _hText(pdf, 'MUN. NASC.:', munX + 1, fy1, { bold: true, size: 6 });
+        _hText(pdf, aluno.naturalidade?.cidade || '', munX + 22, fy1, { size: 6, maxWidth: 22 });
+
+        const fy2 = y + 11.5;
+        const rgX = ML; const sspX = ML + 38; const estX = ML + 62; const maeX = ML + 86; const paiX = ML + 143;
+        pdf.line(sspX, y + 7, sspX, y + boxH);
+        pdf.line(estX, y + 7, estX, y + boxH);
+        pdf.line(maeX, y + 7, maeX, y + boxH);
+        pdf.line(paiX, y + 7, paiX, y + boxH);
+        _hText(pdf, 'RG:', rgX + 1, fy2, { bold: true, size: 6 });
+        _hText(pdf, aluno.rg || '', rgX + 8, fy2, { size: 6 });
+        _hText(pdf, 'SSP:', sspX + 1, fy2, { bold: true, size: 6 });
+        _hText(pdf, aluno.orgaoEmissor || '', sspX + 10, fy2, { size: 6 });
+        _hText(pdf, 'ESTADO:', estX + 1, fy2, { bold: true, size: 6 });
+        _hText(pdf, aluno.naturalidade?.estado || '', estX + 14, fy2, { size: 6 });
+        _hText(pdf, 'MÃE:', maeX + 1, fy2, { bold: true, size: 6 });
+        _hText(pdf, aluno.filiacao?.mae || '', maeX + 10, fy2, { size: 6, maxWidth: 50 });
+        _hText(pdf, 'PAI:', paiX + 1, fy2, { bold: true, size: 6 });
+        _hText(pdf, aluno.filiacao?.pai || '', paiX + 9, fy2, { size: 6, maxWidth: 44 });
+
+        y += boxH + 2;
+    }
 
     // --- tabela principal ---
     const discs = grade.disciplinas || [];
@@ -2032,7 +2135,7 @@ function _histFrente(pdf, hist, cfg) {
     y += 3;
 
     // --- autenticação e observações ---
-    _hText(pdf, `AUTENTICAÇÃO  Nº DE REGISTRO: ${hist.registro || '______________________________'}`, ML, y, { bold: true, size: 7 });
+    _hText(pdf, `AUTENTICAÇÃO/ Nº DE REGISTRO: ${hist.registro || '________________________________________'}`, ML, y, { bold: true, size: 7 });
     y += 5;
 
     if (hist.observacoes) {
@@ -2040,6 +2143,15 @@ function _histFrente(pdf, hist, cfg) {
         const obsL = pdf.splitTextToSize(hist.observacoes, UW);
         pdf.text(obsL.slice(0, 3), ML, y);
         y += obsL.slice(0, 3).length * 3.5 + 2;
+    }
+
+    // para Fundamental: texto de aprovação antes da data/assinaturas
+    if (isFund) {
+        const textoAprov = 'Considerar-se-á aprovado o aluno quanto a: 1. Nota/ Média obtiver o mínimo de 60 % (sessenta por cento) de rendimento escolar em cada componente curricular; 2. Assiduidade obtiver frequência mínima de 75% (setenta e cinco por cento) do total da carga horária trabalhada pela escola durante o ano letivo.';
+        pdf.setFont('helvetica', 'normal'); pdf.setFontSize(6); pdf.setTextColor(20, 20, 20);
+        const aprvLines = pdf.splitTextToSize(textoAprov, UW);
+        pdf.text(aprvLines, ML, y);
+        y += aprvLines.length * 3 + 2;
     }
 
     // data de emissão
@@ -2085,23 +2197,18 @@ function _histVersoFundamental(pdf, hist, cfg) {
     _hLine(pdf, ML, y + 1.3, PW - MR, y + 1.3, 0.2, [0, 40, 120]);
     y += 3;
 
-    // título
+    // título + ANO na mesma barra
     pdf.setFillColor(0, 40, 120);
     pdf.rect(ML, y, UW, 7, 'F');
-    _hText(pdf, 'FICHA INDIVIDUAL DO RENDIMENTO ESCOLAR E FREQUÊNCIA DO ALUNO', PW / 2, y + 5, { bold: true, size: 8, align: 'center', color: [255, 255, 255] });
+    _hText(pdf, 'FICHA INDIVIDUAL DO RENDIMENTO ESCOLAR E FREQUÊNCIA DO ALUNO', PW / 2, y + 4, { bold: true, size: 7.5, align: 'center', color: [255, 255, 255] });
     y += 9;
 
-    // aluno + ano
+    // linha secundária com ANO
     const fichaEntry = fichaIndividual.length ? fichaIndividual[0] : {};
     const fichaAno = fichaEntry.ano || '';
-    _hText(pdf, `ALUNO(A): ${aluno.nome || ''}`, ML, y + 3, { bold: true, size: 7 });
-    _hText(pdf, `ANO: ${fichaAno}`, PW - MR - 35, y + 3, { bold: true, size: 7 });
-    y += 7;
-
-    // atenção
-    _hText(pdf, 'ATENÇÃO:', ML, y, { bold: true, size: 6, color: [100, 50, 0] });
-    _hText(pdf, ' Preencher somente em caso do aluno solicitar transferência durante o período letivo.', ML + 14, y, { size: 6 });
-    y += 5;
+    pdf.setFont('helvetica', 'bold'); pdf.setFontSize(8); pdf.setTextColor(0, 40, 120);
+    pdf.text(`ANO:  ${fichaAno}`, PW / 2, y + 4, { align: 'center' });
+    y += 9;
 
     // tabela — Fundamental: 8 avaliações, cada uma com Notas + Faltas
     const cDiscW = 52;
@@ -2173,6 +2280,19 @@ function _histVersoFundamental(pdf, hist, cfg) {
         }
         y += rH;
     });
+
+    // Linha ATENÇÃO dentro da tabela (última linha antes da borda externa)
+    const atencaoH = 5;
+    pdf.setFillColor(255, 252, 240);
+    pdf.rect(ML, y, UW, atencaoH, 'F');
+    pdf.setDrawColor(200, 150, 50); pdf.setLineWidth(0.15);
+    pdf.rect(ML, y, UW, atencaoH, 'S');
+    pdf.setFont('helvetica', 'bold'); pdf.setFontSize(6); pdf.setTextColor(100, 55, 0);
+    pdf.text('ATENÇÃO: ', ML + 2, y + 3.3);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text('Preencher somente em caso do aluno solicitar transferência durante o período letivo.', ML + 19, y + 3.3);
+    y += atencaoH;
+
     pdf.setDrawColor(0, 40, 120); pdf.setLineWidth(0.35);
     pdf.rect(ML, tblAvalStart - 2 * hH, UW, y - tblAvalStart + 2 * hH, 'S');
     y += 4;
@@ -2342,20 +2462,16 @@ function _histVersoRodape(pdf, hist, cfg, { PW, PH, ML, MR, UW, y, isMedio }) {
 
     // VERIFICAÇÃO
     pdf.setFillColor(230, 237, 255);
-    const verH = isMedio ? 15 : 11;
+    const verH = isMedio ? 15 : 17;
     pdf.rect(ML, y, UW, verH, 'F');
     pdf.setDrawColor(0, 40, 120); pdf.setLineWidth(0.3);
     pdf.rect(ML, y, UW, verH, 'S');
     pdf.setFont('helvetica', 'bold'); pdf.setFontSize(6.5); pdf.setTextColor(0, 40, 120);
     pdf.text('VERIFICAÇÃO DO RENDIMENTO E FREQUÊNCIA ESCOLAR', ML + 2, y + 4);
     pdf.setFont('helvetica', 'normal'); pdf.setFontSize(5.8); pdf.setTextColor(20, 20, 20);
-    if (isMedio) {
-        pdf.text('Considerar-se-á aprovado o aluno que quanto a:', ML + 2, y + 8);
-        pdf.text('1. Nota/ Média obtiver o mínimo de 60 % (sessenta por cento) de rendimento escolar em cada componente curricular;', ML + 2, y + 11.5);
-        pdf.text('2. Assiduidade  obtiver frequência mínima de 75% (setenta e cinco por cento) do total da carga horária trabalhada pela escola durante o ano letivo.', ML + 2, y + 14.5);
-    } else {
-        pdf.text('Nota mínima para aprovação: 60 (sessenta). Frequência mínima obrigatória: 75%.', ML + 2, y + 8.5);
-    }
+    pdf.text('Considerar-se-á aprovado o aluno que quanto a:', ML + 2, y + 8);
+    pdf.text('1. Nota/ Média obtiver o mínimo de 60 % (sessenta por cento) de rendimento escolar em cada componente curricular;', ML + 2, y + 11.5);
+    pdf.text('2. Assiduidade  obtiver frequência mínima de 75% (setenta e cinco por cento) do total da carga horária trabalhada pela escola durante o ano letivo.', ML + 2, y + 14.5);
     y += verH + 3;
 
     // OBSERVAÇÃO
