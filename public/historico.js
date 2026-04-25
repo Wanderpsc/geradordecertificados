@@ -8,6 +8,7 @@ let HIST_UPLOADS = JSON.parse(localStorage.getItem('histUploads') || '{}');
 
 const HIST_STATE = {
     grades: [],
+    matrizes: [],
     gradeAtual: null,
     historicoAtual: null,
     historicosSelecionados: new Set(),
@@ -19,6 +20,7 @@ const HIST_STATE = {
 
 function inicializarHistorico() {
     carregarConfigHist();
+    carregarListaMatrizes();
     carregarListaGrades();
     popularSelectAlunos();
     carregarListaHistoricos();
@@ -165,6 +167,194 @@ function handleUploadEmblemaHist(event) {
     reader.readAsDataURL(file);
 }
 
+// ==================== MATRIZES CURRICULARES ====================
+
+let _gradeSeriesMatrizes = []; // [{id, titulo}|null, ...] — estado temporário do modal de grade
+
+async function carregarListaMatrizes() {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    const container = document.getElementById('listaMatrizes');
+    if (!container) return;
+    try {
+        const resp = await fetch(`${API_URL}/historicos/matrizes`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await resp.json();
+        HIST_STATE.matrizes = data.success ? data.matrizes : [];
+        if (!HIST_STATE.matrizes.length) {
+            container.innerHTML = '<div style="text-align:center;color:#9ca3af;padding:30px;grid-column:1/-1;">Nenhuma matriz cadastrada. Clique em "+ Nova Matriz" para começar.</div>';
+            return;
+        }
+        container.innerHTML = HIST_STATE.matrizes.map(m => `
+            <div style="background:white;border:2px solid #a5b4fc;border-radius:12px;padding:14px;">
+                <h3 style="font-size:14px;font-weight:700;color:#1e3a8a;margin:0 0 6px 0;">${escapeHtml(m.titulo)}</h3>
+                <div style="font-size:12px;color:#6b7280;margin-bottom:10px;">${m.disciplinas ? m.disciplinas.length : 0} disciplina(s)</div>
+                <div style="display:flex;gap:4px;flex-wrap:wrap;">
+                    <button class="btn btn-primary btn-sm" onclick="editarMatriz('${m._id}')" style="font-size:11px;padding:4px 10px;">✏️ Editar</button>
+                    <button class="btn btn-danger btn-sm" onclick="excluirMatriz('${m._id}', '${escapeHtml(m.titulo)}')" style="font-size:11px;padding:4px 10px;">🗑️</button>
+                </div>
+            </div>
+        `).join('');
+    } catch (e) {
+        if (container) container.innerHTML = '<div style="text-align:center;color:#ef4444;padding:20px;grid-column:1/-1;">Erro ao carregar matrizes.</div>';
+    }
+}
+
+function abrirModalNovaMatriz() { abrirModalMatriz(null); }
+
+function abrirModalMatriz(matrizExistente) {
+    const isEdit = !!matrizExistente;
+    const m = matrizExistente || { titulo: '', disciplinas: [] };
+
+    const modal = document.createElement('div');
+    modal.className = 'overlay-modal';
+    modal.id = 'modalMatriz';
+    modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;overflow-y:auto;padding:20px;';
+
+    modal.innerHTML = `
+    <div style="background:white;border-radius:16px;padding:28px;max-width:780px;width:95%;max-height:90vh;overflow-y:auto;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+            <h2 style="color:#1e3a8a;margin:0;">${isEdit ? '✏️ Editar' : '➕ Nova'} Matriz Curricular</h2>
+            <button onclick="this.closest('.overlay-modal').remove()" style="background:none;border:none;font-size:24px;cursor:pointer;">✕</button>
+        </div>
+        <div style="margin-bottom:16px;">
+            <label style="font-weight:600;font-size:13px;display:block;margin-bottom:4px;">Título da Matriz</label>
+            <input type="text" id="matrizTitulo" class="form-control" value="${escapeHtml(m.titulo)}" placeholder="Ex: Ensino Médio – 1ª Série 2025">
+        </div>
+        <div style="border-top:2px solid #e5e7eb;padding-top:16px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                <h3 style="color:#1e3a8a;font-size:15px;margin:0;">Disciplinas e Cargas Horárias</h3>
+                <button class="btn btn-primary btn-sm" onclick="adicionarDisciplinaMatriz()" style="font-size:12px;">+ Adicionar Disciplina</button>
+            </div>
+            <div style="overflow-x:auto;border:1px solid #e5e7eb;border-radius:8px;">
+                <table style="width:100%;border-collapse:collapse;min-width:400px;">
+                    <thead>
+                        <tr style="background:#e2e8f0;">
+                            <th style="padding:7px 10px;text-align:left;border:1px solid #cbd5e1;font-size:12px;font-weight:600;min-width:200px;">Disciplina</th>
+                            <th style="padding:7px 8px;text-align:left;border:1px solid #cbd5e1;font-size:12px;font-weight:600;min-width:180px;">Categoria</th>
+                            <th style="padding:7px 8px;text-align:center;border:1px solid #cbd5e1;font-size:12px;font-weight:600;width:100px;">CH (horas)</th>
+                            <th style="padding:4px;border:1px solid #cbd5e1;width:38px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="matrizDisciplinasTbody"></tbody>
+                </table>
+            </div>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;border-top:2px solid #e5e7eb;padding-top:16px;">
+            <button class="btn btn-secondary" onclick="this.closest('.overlay-modal').remove()">Cancelar</button>
+            <button class="btn btn-primary" onclick="salvarMatriz('${isEdit ? m._id : ''}')">${isEdit ? '💾 Salvar Alterações' : '✅ Criar Matriz'}</button>
+        </div>
+    </div>`;
+
+    document.body.appendChild(modal);
+    modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+    if (m.disciplinas && m.disciplinas.length) m.disciplinas.forEach(d => adicionarDisciplinaMatriz(d));
+}
+
+function _obterCategoriasMatriz() {
+    return [
+        ['formacao_geral', 'Formação Geral Básica'],
+        ['itinerarios', 'Itinerários Formativos'],
+        ['atividades_integradoras', 'Atividades Integradoras'],
+        ['linguagens', 'Linguagens, Códigos e Suas Tecnologias'],
+        ['ciencias_humanas', 'Ciências Humanas e Suas Tecnologias'],
+        ['ciencias_natureza', 'Ciências da Natureza e Suas Tecnologias'],
+        ['matematica', 'Matemática e Suas Tecnologias'],
+        ['parte_flexivel', 'Parte Flexível (Diversificada)'],
+        ['ensino_religioso', 'Ensino Religioso']
+    ];
+}
+
+function adicionarDisciplinaMatriz(disc) {
+    const tbody = document.getElementById('matrizDisciplinasTbody');
+    if (!tbody) return;
+    const cats = _obterCategoriasMatriz();
+    const row = document.createElement('tr');
+    row.className = 'matriz-disc-row';
+    row.innerHTML = `
+        <td style="padding:3px 6px;border:1px solid #e5e7eb;background:#f8fafc;">
+            <input type="text" class="form-control mdisc-nome" value="${disc ? escapeHtml(disc.nome) : ''}" placeholder="Nome da Disciplina" style="font-size:12px;padding:5px 7px;min-width:185px;">
+        </td>
+        <td style="padding:3px 6px;border:1px solid #e5e7eb;">
+            <select class="form-control mdisc-categoria" style="font-size:12px;padding:5px 7px;min-width:165px;">
+                ${cats.map(c => `<option value="${c[0]}" ${disc && disc.categoria === c[0] ? 'selected' : ''}>${c[1]}</option>`).join('')}
+            </select>
+        </td>
+        <td style="padding:3px 6px;border:1px solid #e5e7eb;text-align:center;">
+            <input type="number" class="form-control mdisc-ch" min="0" value="${disc ? (disc.cargaHoraria !== undefined ? disc.cargaHoraria : (disc.cargaHorariaPadrao || '')) : ''}" placeholder="0" style="width:80px;font-size:12px;padding:4px 6px;text-align:center;">
+        </td>
+        <td style="padding:3px 4px;border:1px solid #e5e7eb;text-align:center;">
+            <button onclick="this.closest('tr').remove()" style="background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;padding:4px 8px;border-radius:6px;cursor:pointer;font-size:14px;" title="Remover">✕</button>
+        </td>
+    `;
+    tbody.appendChild(row);
+}
+
+async function salvarMatriz(id) {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    const titulo = document.getElementById('matrizTitulo')?.value.trim();
+    if (!titulo) { mostrarNotificacao('Informe o título da matriz.', 'error'); return; }
+    const rows = document.querySelectorAll('.matriz-disc-row');
+    const disciplinas = [];
+    rows.forEach(row => {
+        const n = row.querySelector('.mdisc-nome').value.trim();
+        if (!n) return;
+        disciplinas.push({
+            nome: n,
+            categoria: row.querySelector('.mdisc-categoria').value,
+            cargaHoraria: parseInt(row.querySelector('.mdisc-ch').value) || 0
+        });
+    });
+    if (!disciplinas.length) { mostrarNotificacao('Adicione ao menos uma disciplina.', 'error'); return; }
+    const url = id ? `${API_URL}/historicos/matrizes/${id}` : `${API_URL}/historicos/matrizes`;
+    const method = id ? 'PUT' : 'POST';
+    try {
+        const resp = await fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ titulo, disciplinas })
+        });
+        const data = await resp.json();
+        if (data.success) {
+            document.getElementById('modalMatriz')?.remove();
+            mostrarNotificacao(`Matriz "${titulo}" ${id ? 'atualizada' : 'criada'} com sucesso!`, 'success');
+            carregarListaMatrizes();
+        } else {
+            mostrarNotificacao(data.message || 'Erro ao salvar matriz.', 'error');
+        }
+    } catch (e) { mostrarNotificacao('Erro de conexão.', 'error'); }
+}
+
+async function editarMatriz(id) {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    try {
+        const resp = await fetch(`${API_URL}/historicos/matrizes/${id}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await resp.json();
+        if (data.success) abrirModalMatriz(data.matriz);
+    } catch (e) { mostrarNotificacao('Erro ao carregar matriz.', 'error'); }
+}
+
+async function excluirMatriz(id, titulo) {
+    if (!confirm(`Excluir a matriz "${titulo}"? Esta ação não pode ser desfeita.`)) return;
+    const token = localStorage.getItem('token');
+    try {
+        const resp = await fetch(`${API_URL}/historicos/matrizes/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await resp.json();
+        if (data.success) {
+            mostrarNotificacao('Matriz excluída!', 'success');
+            carregarListaMatrizes();
+        } else { mostrarNotificacao(data.message || 'Erro ao excluir.', 'error'); }
+    } catch (e) { mostrarNotificacao('Erro de conexão.', 'error'); }
+}
+
 // ==================== GRADES (Templates de Disciplinas) ====================
 
 async function carregarListaGrades() {
@@ -282,6 +472,20 @@ function abrirModalGrade(gradeExistente) {
     document.body.appendChild(modal);
     modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
 
+    // Inicializar _gradeSeriesMatrizes com dados existentes
+    const numSeriesTotal = g.nomesSeries?.length || (g.tipo === 'medio' ? 3 : 9);
+    _gradeSeriesMatrizes = new Array(numSeriesTotal).fill(null);
+    if (g.seriesMatrizes && g.seriesMatrizes.length) {
+        g.seriesMatrizes.forEach(sm => {
+            const idx = sm.serieIdx;
+            if (idx >= 0 && idx < numSeriesTotal) {
+                const mId = sm.matrizId?._id || sm.matrizId;
+                const mTitulo = sm.matrizId?.titulo || '';
+                if (mId) _gradeSeriesMatrizes[idx] = { id: mId.toString(), titulo: mTitulo };
+            }
+        });
+    }
+
     // Preencher séries
     atualizarSeriesGrade(g.nomesSeries);
 
@@ -302,6 +506,10 @@ function atualizarSeriesGrade(seriesExistentes) {
 
     const series = seriesExistentes && seriesExistentes.length === numSeries ? seriesExistentes : seriesPadrao;
 
+    // Ajustar tamanho do array de matrizes por série
+    while (_gradeSeriesMatrizes.length < numSeries) _gradeSeriesMatrizes.push(null);
+    _gradeSeriesMatrizes = _gradeSeriesMatrizes.slice(0, numSeries);
+
     // Coletar dados das disciplinas existentes antes de reconstruir (para preservar ao trocar tipo)
     const existingRows = [...document.querySelectorAll('#gradeDisciplinasTbody .grade-disc-row')];
     const existingDiscs = existingRows.map(row => {
@@ -311,9 +519,17 @@ function atualizarSeriesGrade(seriesExistentes) {
         return { nome, categoria, cargaHorariaPorSerie: chValues };
     }).filter(d => d.nome);
 
-    container.innerHTML = series.map((s, i) => `
-        <input type="text" class="form-control grade-serie-nome" value="${s}" style="width:120px;font-size:12px;padding:6px 8px;" data-index="${i}" oninput="atualizarHeaderSeriesGrade()">
-    `).join('');
+    container.innerHTML = series.map((s, i) => {
+        const mat = _gradeSeriesMatrizes[i];
+        return `
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;padding:6px 10px;background:#f8fafc;border-radius:8px;border:1px solid #e5e7eb;flex-wrap:wrap;">
+            <input type="text" class="form-control grade-serie-nome" value="${escapeHtml(s)}" style="width:110px;font-size:12px;padding:5px 7px;" data-index="${i}" oninput="atualizarHeaderSeriesGrade()">
+            <span style="font-size:11px;color:#6b7280;white-space:nowrap;">Matriz:</span>
+            <span class="grade-serie-matriz-label" data-serie-idx="${i}" style="font-size:12px;font-weight:600;color:${mat ? '#1e3a8a' : '#9ca3af'};flex:1;min-width:70px;">${mat ? escapeHtml(mat.titulo) : 'Nenhuma'}</span>
+            <button onclick="selecionarMatrizParaSerie(${i})" style="background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;padding:3px 8px;border-radius:6px;cursor:pointer;font-size:11px;white-space:nowrap;">📋 Selecionar</button>
+            <button onclick="limparMatrizSerie(${i})" style="background:#fef2f2;color:#991b1b;border:1px solid #fecaca;padding:3px 6px;border-radius:6px;cursor:pointer;font-size:11px;" title="Remover matriz desta série">✕</button>
+        </div>`;
+    }).join('');
 
     // Atualizar o label do botão carregar padrão
     const btnPadrao = document.getElementById('btnCarregarPadrao');
@@ -330,6 +546,86 @@ function atualizarSeriesGrade(seriesExistentes) {
         if (tbody) tbody.innerHTML = '';
         existingDiscs.forEach(d => adicionarDisciplinaGrade(d));
     }
+}
+
+async function selecionarMatrizParaSerie(serieIdx) {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    let matrizes = HIST_STATE.matrizes || [];
+    if (!matrizes.length) {
+        try {
+            const resp = await fetch(`${API_URL}/historicos/matrizes`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await resp.json();
+            if (data.success) { matrizes = data.matrizes; HIST_STATE.matrizes = matrizes; }
+        } catch (e) {}
+    }
+    if (!matrizes.length) {
+        mostrarNotificacao('Nenhuma matriz cadastrada. Cadastre primeiro em "Matrizes Curriculares".', 'warning');
+        return;
+    }
+    // Guardar dados para uso no onclick
+    window._matrizPickerData = {};
+    matrizes.forEach(m => { window._matrizPickerData[m._id] = m; });
+
+    const serieNome = document.querySelectorAll('.grade-serie-nome')[serieIdx]?.value || `Série ${serieIdx + 1}`;
+    const picker = document.createElement('div');
+    picker.id = 'modalMatrizPicker';
+    picker.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px;';
+    picker.innerHTML = `
+    <div style="background:white;border-radius:16px;padding:24px;max-width:480px;width:95%;max-height:80vh;overflow-y:auto;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <h3 style="color:#1e3a8a;margin:0;">Selecionar Matriz — ${escapeHtml(serieNome)}</h3>
+            <button onclick="document.getElementById('modalMatrizPicker').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;">✕</button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+            ${matrizes.map(m => `
+            <div onclick="aplicarMatrizNaSerie(${serieIdx}, '${m._id}')"
+                 style="padding:12px 16px;border:2px solid #e5e7eb;border-radius:10px;cursor:pointer;"
+                 onmouseover="this.style.borderColor='#3b82f6';this.style.background='#eff6ff'"
+                 onmouseout="this.style.borderColor='#e5e7eb';this.style.background='white'">
+                <div style="font-weight:600;font-size:13px;color:#1e3a8a;">${escapeHtml(m.titulo)}</div>
+                <div style="font-size:11px;color:#6b7280;margin-top:2px;">${m.disciplinas ? m.disciplinas.length : 0} disciplina(s)</div>
+            </div>`).join('')}
+        </div>
+    </div>`;
+    document.body.appendChild(picker);
+    picker.addEventListener('click', e => { if (e.target === picker) picker.remove(); });
+}
+
+function aplicarMatrizNaSerie(serieIdx, matrizId) {
+    const matriz = window._matrizPickerData?.[matrizId];
+    if (!matriz) return;
+    _gradeSeriesMatrizes[serieIdx] = { id: matrizId, titulo: matriz.titulo };
+    // Atualizar label na UI
+    const labels = document.querySelectorAll('.grade-serie-matriz-label');
+    if (labels[serieIdx]) {
+        labels[serieIdx].textContent = matriz.titulo;
+        labels[serieIdx].style.color = '#1e3a8a';
+    }
+    // Aplicar disciplinas da matriz na coluna desta série
+    if (matriz.disciplinas && matriz.disciplinas.length) {
+        const numSeries = document.querySelectorAll('.grade-serie-nome').length;
+        matriz.disciplinas.forEach(disc => {
+            const rows = [...document.querySelectorAll('#gradeDisciplinasTbody .grade-disc-row')];
+            const existing = rows.find(r => r.querySelector('.disc-nome').value.trim().toLowerCase() === disc.nome.toLowerCase());
+            if (existing) {
+                const chInputs = existing.querySelectorAll('.disc-ch-serie');
+                if (chInputs[serieIdx]) chInputs[serieIdx].value = disc.cargaHoraria || 0;
+            } else {
+                const chPorSerie = Array.from({ length: numSeries }, (_, i) => i === serieIdx ? (disc.cargaHoraria || 0) : '');
+                adicionarDisciplinaGrade({ nome: disc.nome, categoria: disc.categoria, cargaHorariaPorSerie: chPorSerie });
+            }
+        });
+    }
+    document.getElementById('modalMatrizPicker')?.remove();
+}
+
+function limparMatrizSerie(serieIdx) {
+    _gradeSeriesMatrizes[serieIdx] = null;
+    const labels = document.querySelectorAll('.grade-serie-matriz-label');
+    if (labels[serieIdx]) { labels[serieIdx].textContent = 'Nenhuma'; labels[serieIdx].style.color = '#9ca3af'; }
 }
 
 function atualizarHeaderSeriesGrade() {
@@ -509,7 +805,11 @@ async function salvarGrade(id) {
 
     if (!disciplinas.length) { mostrarNotificacao('Adicione ao menos uma disciplina.', 'error'); return; }
 
-    const body = { tipo, nome, disciplinas, numSeries: nomesSeries.length, nomesSeries };
+    const seriesMatrizes = _gradeSeriesMatrizes
+        .map((m, i) => m ? { serieIdx: i, serieNome: nomesSeries[i] || '', matrizId: m.id } : null)
+        .filter(Boolean);
+
+    const body = { tipo, nome, disciplinas, numSeries: nomesSeries.length, nomesSeries, seriesMatrizes };
     const url = id ? `${API_URL}/historicos/grades/${id}` : `${API_URL}/historicos/grades`;
     const method = id ? 'PUT' : 'POST';
 

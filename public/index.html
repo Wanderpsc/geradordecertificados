@@ -1396,7 +1396,7 @@
                 </div>
                 <p style="color: #6b7280; font-size: 13px; margin-bottom: 16px;">Estes campos aparecem no cabeçalho e rodapé do PDF do Histórico Escolar gerado.</p>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px;">
                     <div>
                         <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 4px;">Linha 1 (País)</label>
                         <input type="text" id="histCfgLinha1" class="form-control" placeholder="REPÚBLICA FEDERATIVA DO BRASIL">
@@ -1442,7 +1442,7 @@
                 <!-- Emblema / Brasão -->
                 <div style="border-top: 1px solid #e5e7eb; margin-top: 16px; padding-top: 16px;">
                     <h3 style="font-size: 14px; font-weight: 700; color: #1e3a8a; margin-bottom: 12px;">🏛️ Emblema / Brasão</h3>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; align-items: end;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; align-items: end;">
                         <div>
                             <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 4px;">Tipo de Emblema</label>
                             <select id="histCfgEmblema" class="form-control" onchange="document.getElementById('histEmblemaUploadGroup').style.display=this.value==='custom'?'block':'none'">
@@ -1478,13 +1478,27 @@
                 </div>
             </div>
 
-            <!-- Seção 1: Grades de Disciplinas -->
+            <!-- Seção 1: Matrizes Curriculares -->
+            <div class="card" style="margin-top: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+                    <div>
+                        <h2 style="margin-bottom: 2px;">📚 Matrizes Curriculares</h2>
+                        <p style="color: #6b7280; font-size: 13px; margin: 0;">Cadastre as disciplinas e cargas horárias de cada série/ano. Ao montar uma Grade, selecione a matriz para cada série.</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="abrirModalNovaMatriz()">+ Nova Matriz</button>
+                </div>
+                <div id="listaMatrizes" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; margin-top: 14px;">
+                    <div style="text-align: center; color: #9ca3af; padding: 30px; grid-column: 1/-1;">Carregando matrizes...</div>
+                </div>
+            </div>
+
+            <!-- Seção 2: Grades de Disciplinas -->
             <div class="card" style="margin-top: 20px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                     <h2>📋 Grades de Disciplinas</h2>
                     <button class="btn btn-primary" onclick="abrirModalNovaGrade()">+ Nova Grade</button>
                 </div>
-                <p style="color: #6b7280; font-size: 13px; margin-bottom: 15px;">Configure as disciplinas para cada modalidade de ensino. A grade será usada para todos os alunos dessa modalidade.</p>
+                <p style="color: #6b7280; font-size: 13px; margin-bottom: 15px;">Monte uma Grade combinando matrizes por série/ano. A grade é usada para lançar notas dos alunos.</p>
                 <div id="listaGrades" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px;">
                     <div style="text-align: center; color: #9ca3af; padding: 30px; grid-column: 1/-1;">Carregando grades...</div>
                 </div>

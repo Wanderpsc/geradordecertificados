@@ -19,7 +19,7 @@ const GradeHistoricoSchema = new mongoose.Schema({
         maxlength: 150
     },
     // Disciplinas organizadas por categoria
-    // [{ nome: "Língua Portuguesa", categoria: "formacao_geral", cargaHorariaPadrao: 240 }]
+    // [{ nome, categoria, cargaHorariaPorSerie: [ch1, ch2, ...], cargaHorariaPadrao }]
     disciplinas: {
         type: mongoose.Schema.Types.Mixed,
         default: []
@@ -32,6 +32,16 @@ const GradeHistoricoSchema = new mongoose.Schema({
     // Nomes das séries ['1ª Série', '2ª Série', '3ª Série']
     nomesSeries: {
         type: [String],
+        default: []
+    },
+    // Matrizes curriculares por série
+    // [{ serieIdx: 0, serieNome: '6º Ano', matrizId: ObjectId }]
+    seriesMatrizes: {
+        type: [{
+            serieIdx: Number,
+            serieNome: String,
+            matrizId: { type: mongoose.Schema.Types.ObjectId, ref: 'MatrizCurricular' }
+        }],
         default: []
     },
     criadoEm: {

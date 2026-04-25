@@ -17,7 +17,8 @@ exports.listarGrades = async (req, res) => {
 
 exports.obterGrade = async (req, res) => {
     try {
-        const grade = await GradeHistorico.findOne({ _id: req.params.id, usuario: req.usuario._id });
+        const grade = await GradeHistorico.findOne({ _id: req.params.id, usuario: req.usuario._id })
+            .populate('seriesMatrizes.matrizId');
         if (!grade) return res.status(404).json({ success: false, message: 'Grade não encontrada.' });
         res.json({ success: true, grade });
     } catch (error) {
@@ -27,7 +28,7 @@ exports.obterGrade = async (req, res) => {
 
 exports.salvarGrade = async (req, res) => {
     try {
-        const { tipo, nome, disciplinas, numSeries, nomesSeries } = req.body;
+        const { tipo, nome, disciplinas, numSeries, nomesSeries, seriesMatrizes } = req.body;
         if (!tipo || !nome) {
             return res.status(400).json({ success: false, message: 'Tipo e nome são obrigatórios.' });
         }
@@ -37,7 +38,8 @@ exports.salvarGrade = async (req, res) => {
             nome,
             disciplinas: disciplinas || [],
             numSeries: numSeries || (tipo === 'medio' ? 3 : 9),
-            nomesSeries: nomesSeries || []
+            nomesSeries: nomesSeries || [],
+            seriesMatrizes: seriesMatrizes || []
         });
         res.status(201).json({ success: true, grade });
     } catch (error) {
@@ -50,7 +52,7 @@ exports.atualizarGrade = async (req, res) => {
         const grade = await GradeHistorico.findOne({ _id: req.params.id, usuario: req.usuario._id });
         if (!grade) return res.status(404).json({ success: false, message: 'Grade não encontrada.' });
 
-        const { nome, disciplinas, numSeries, nomesSeries } = req.body;
+        const { nome, disciplinas, numSeries, nomesSeries, seriesMatrizes } = req.body;
         if (nome) grade.nome = nome;
         if (disciplinas !== undefined) {
             grade.disciplinas = disciplinas;
@@ -58,6 +60,10 @@ exports.atualizarGrade = async (req, res) => {
         }
         if (numSeries) grade.numSeries = numSeries;
         if (nomesSeries) grade.nomesSeries = nomesSeries;
+        if (seriesMatrizes !== undefined) {
+            grade.seriesMatrizes = seriesMatrizes;
+            grade.markModified('seriesMatrizes');
+        }
         await grade.save();
         res.json({ success: true, grade });
     } catch (error) {
