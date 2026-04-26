@@ -2453,11 +2453,11 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     // CABEÇALHO
     _hLine(pdf,ML,y,PW-MR,y,0.6,[0,40,120]);
     _hLine(pdf,ML,y+1.3,PW-MR,y+1.3,0.2,[0,40,120]);
-    y+=3;
+    y+=4;
 
     const emb=cfg?.emblema||{};
     const tipoEmb=emb.tipo||'brasao-brasil';
-    const bW=18,bH=22;
+    const bW=22,bH=26;
     const hCfg=cfg?.cabecalho||{};
     const l1=hCfg.linha1||'REPÚBLICA FEDERATIVA DO BRASIL';
     const l2=hCfg.linha2||'ESTADO DO PIAUÍ';
@@ -2466,23 +2466,21 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     const end_=hCfg.endereco||'';
     const resol=cfg?.frente?.resolucao||'';
 
-    // Brasão alinhado à esquerda
+    // Brasão centralizado no topo
     if(tipoEmb!=='nenhum'){
         try{
             let src=null,fmt='PNG';
             if(tipoEmb==='custom'&&typeof HIST_UPLOADS!=='undefined'&&HIST_UPLOADS?.emblemaCustom){src=HIST_UPLOADS.emblemaCustom;fmt=src.startsWith('data:image/png')?'PNG':'JPEG';}
             else if(tipoEmb==='brasao-brasil'&&typeof BRASAO_BRASIL!=='undefined'){src=BRASAO_BRASIL;}
-            if(src)pdf.addImage(src,fmt,ML,y,bW,bH,undefined,'FAST');
+            if(src)pdf.addImage(src,fmt,PW/2-bW/2,y,bW,bH,undefined,'FAST');
         }catch(_){}
     }
-    // Textos centralizados na página, verticalmente centrados na altura do brasão
-    // Bloco de texto ~11.5mm; centralizar em bH=22mm → offset=(22-11.5)/2=5.25
-    const tyBase=y+(bH-11.5)/2;
-    _hText(pdf,l1,PW/2,tyBase+3,{bold:true,size:6.5,align:'center'});
-    _hText(pdf,l2,PW/2,tyBase+7.5,{bold:true,size:8,align:'center'});
-    _hText(pdf,l3,PW/2,tyBase+12,{size:6,align:'center'});
+    // Textos centralizados abaixo do brasão
+    y+=bH+2;
+    _hText(pdf,l1,PW/2,y,{bold:true,size:6.5,align:'center'});y+=4;
+    _hText(pdf,l2,PW/2,y,{bold:true,size:8,align:'center'});y+=4.5;
+    _hText(pdf,l3,PW/2,y,{size:6,align:'center'});y+=4;
 
-    y=y+bH+1.5;
     _hLine(pdf,ML,y,PW-MR,y,0.2,[0,40,120]);
     _hLine(pdf,ML,y+1.2,PW-MR,y+1.2,0.6,[0,40,120]);
     y+=3.5;
