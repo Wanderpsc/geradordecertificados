@@ -2479,29 +2479,35 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     y+=bH+2;
     _hText(pdf,l1,PW/2,y,{bold:true,size:6.5,align:'center'});y+=4;
     _hText(pdf,l2,PW/2,y,{bold:true,size:8,align:'center'});y+=4.5;
-    _hText(pdf,l3,PW/2,y,{size:6,align:'center'});y+=4;
+    _hText(pdf,l3,PW/2,y,{size:6,align:'center'});y+=6;
 
-    _hLine(pdf,ML,y,PW-MR,y,0.2,[0,40,120]);
-    _hLine(pdf,ML,y+1.2,PW-MR,y+1.2,0.6,[0,40,120]);
-    y+=3.5;
-
-    // CAMPOS ESTABELECIMENTO
-    const fldLine=(label,value,lW)=>{
-        pdf.setFont('helvetica','bold');pdf.setFontSize(6.5);pdf.setTextColor(0,0,0);
-        pdf.text(label,ML,y+3.5);
-        pdf.setFont('helvetica','normal');
-        pdf.text(value||'',ML+lW,y+3.5,{maxWidth:UW-lW-0.5});
-        pdf.setDrawColor(80,80,80);pdf.setLineWidth(0.2);
-        pdf.line(ML+lW,y+4,ML+UW,y+4);
-        y+=6.5;
+    // CAMPOS centralizados (estilo formulário: valor na linha, label abaixo centralizado)
+    const fldCentro=(label,value)=>{
+        // valor centralizado acima da linha
+        if(value){
+            pdf.setFont('helvetica','normal');pdf.setFontSize(7);pdf.setTextColor(0,0,0);
+            pdf.text(value,PW/2,y+3,{align:'center',maxWidth:UW-4});
+        }
+        pdf.setDrawColor(80,80,80);pdf.setLineWidth(0.25);
+        pdf.line(ML,y+4,ML+UW,y+4);
+        // label centralizado abaixo da linha
+        pdf.setFont('helvetica','bold');pdf.setFontSize(5.8);pdf.setTextColor(0,0,0);
+        pdf.text(label,PW/2,y+7.5,{align:'center'});
+        y+=11;
     };
-    fldLine('ESTABELECIMENTO DE ENSINO: ',inst,53);
-    fldLine('ENDEREÇO: ',end_,20);
-    pdf.setFont('helvetica','bold');pdf.setFontSize(6);pdf.setTextColor(0,0,0);
-    pdf.text('Autorização de Funcionamento pela Resolução CEE/PI Nº ',ML,y+3.5);
-    pdf.setFont('helvetica','normal');pdf.text(resol,ML+89,y+3.5,{maxWidth:UW-91});
-    pdf.setDrawColor(80,80,80);pdf.setLineWidth(0.2);pdf.line(ML+89,y+4,ML+UW,y+4);
-    y+=7;
+    fldCentro('ESTABELECIMENTO DE ENSINO',inst);
+    fldCentro('ENDEREÇO',end_);
+
+    // Resolução — texto pequeno à esquerda com linha após o número
+    pdf.setFont('helvetica','normal');pdf.setFontSize(6);pdf.setTextColor(0,0,0);
+    pdf.text('Autorização de Funcionamento pela Resolução CEE/PI Nº',ML,y+3.5);
+    if(resol){
+        pdf.setFont('helvetica','normal');
+        pdf.text(resol,ML+83,y+3.5,{maxWidth:UW-85});
+    }
+    pdf.setDrawColor(80,80,80);pdf.setLineWidth(0.25);
+    pdf.line(ML+82,y+4,ML+UW,y+4);
+    y+=9;
 
     // TÍTULO
     pdf.setFillColor(0,40,120);pdf.rect(ML,y,UW,7,'F');
