@@ -195,6 +195,7 @@ async function carregarListaMatrizes() {
                 <div style="font-size:12px;color:#6b7280;margin-bottom:10px;">${m.disciplinas ? m.disciplinas.length : 0} disciplina(s)</div>
                 <div style="display:flex;gap:4px;flex-wrap:wrap;">
                     <button class="btn btn-primary btn-sm" onclick="editarMatriz('${m._id}')" style="font-size:11px;padding:4px 10px;">✏️ Editar</button>
+                    <button class="btn btn-sm" onclick="duplicarMatriz('${m._id}', '${escapeHtml(m.titulo)}')" style="font-size:11px;padding:4px 10px;background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;">📋 Duplicar</button>
                     <button class="btn btn-danger btn-sm" onclick="excluirMatriz('${m._id}', '${escapeHtml(m.titulo)}')" style="font-size:11px;padding:4px 10px;">🗑️</button>
                 </div>
             </div>
@@ -328,6 +329,24 @@ async function salvarMatriz(id) {
             mostrarNotificacao(data.message || 'Erro ao salvar matriz.', 'error');
         }
     } catch (e) { mostrarNotificacao('Erro de conexão.', 'error'); }
+}
+
+async function duplicarMatriz(id, titulo) {
+    if (!confirm(`Duplicar a matriz "${titulo}"?`)) return;
+    const token = localStorage.getItem('token');
+    try {
+        const resp = await fetch(`${API_URL}/historicos/matrizes/${id}/duplicar`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await resp.json();
+        if (data.success) {
+            mostrarNotificacao(`Matriz duplicada como "${data.matriz.titulo}"!`, 'success');
+            carregarListaMatrizes();
+        } else {
+            mostrarNotificacao(data.message || 'Erro ao duplicar matriz.', 'error');
+        }
+    } catch (e) { mostrarNotificacao('Erro ao duplicar matriz.', 'error'); }
 }
 
 async function editarMatriz(id) {

@@ -61,3 +61,18 @@ exports.excluir = async (req, res) => {
         res.status(500).json({ success: false, message: 'Erro ao excluir matriz.' });
     }
 };
+
+exports.duplicar = async (req, res) => {
+    try {
+        const original = await MatrizCurricular.findOne({ _id: req.params.id, usuario: req.usuario._id });
+        if (!original) return res.status(404).json({ success: false, message: 'Matriz não encontrada.' });
+        const copia = await MatrizCurricular.create({
+            usuario: req.usuario._id,
+            titulo: `Cópia de ${original.titulo}`,
+            disciplinas: JSON.parse(JSON.stringify(original.disciplinas))
+        });
+        res.status(201).json({ success: true, matriz: copia });
+    } catch (e) {
+        res.status(500).json({ success: false, message: 'Erro ao duplicar matriz.' });
+    }
+};

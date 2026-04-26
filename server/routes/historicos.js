@@ -10,6 +10,7 @@ router.use(proteger, apenasCliente, verificarLicenca);
 router.get('/matrizes', matrizCtrl.listar);
 router.get('/matrizes/:id', matrizCtrl.obter);
 router.post('/matrizes', checarPermissao('editarModelos'), matrizCtrl.criar);
+router.post('/matrizes/:id/duplicar', checarPermissao('editarModelos'), matrizCtrl.duplicar);
 router.put('/matrizes/:id', checarPermissao('editarModelos'), matrizCtrl.atualizar);
 router.delete('/matrizes/:id', checarPermissao('editarModelos'), matrizCtrl.excluir);
 
