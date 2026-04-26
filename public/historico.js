@@ -2287,11 +2287,17 @@ async function previewHistorico(id) {
         const cfg = obterConfigHist();
         const { jsPDF } = window.jspdf;
 const isMedioPreview = hist.tipo === 'medio';
-    const pdf = new jsPDF({ orientation: isMedioPreview ? 'landscape' : 'portrait', unit: 'mm', format: 'a4' });
+        const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
-        _histFrente(pdf, hist, cfg);
-        pdf.addPage({ orientation: isMedioPreview ? 'landscape' : 'portrait' });
-        _histVerso(pdf, hist, cfg);
+        if (isMedioPreview) {
+            _histFrenteMedioPortrait(pdf, hist, cfg);
+            pdf.addPage();
+            _histVersoMedioPortrait(pdf, hist, cfg);
+        } else {
+            _histFrente(pdf, hist, cfg);
+            pdf.addPage();
+            _histVerso(pdf, hist, cfg);
+        }
 
         // Revogar blob anterior para liberar memória
         if (_histPreviewBlobUrl) URL.revokeObjectURL(_histPreviewBlobUrl);
@@ -2319,13 +2325,11 @@ const isMedioPreview = hist.tipo === 'medio';
 function _atualizarOrientacaoHist(tipo) {
     const sel = document.getElementById('histOrientacao');
     if (!sel) return;
-    sel.value = tipo === 'medio' ? 'landscape' : 'portrait';
+    sel.value = 'portrait';
 }
 
 function _getOrientacaoHist(hist) {
-    const sel = document.getElementById('histOrientacao');
-    if (sel && sel.value) return sel.value;
-    return (hist?.tipo === 'medio') ? 'landscape' : 'portrait';
+    return 'portrait';
 }
 
 function fecharHistPreview() {
@@ -2367,15 +2371,21 @@ async function gerarHistoricoPDF() {
             const hist = data.historico;
             const isMedio = hist.tipo === 'medio';
             if (!primeiroDoc) {
-                pdf.addPage({ orientation: isMedio ? 'landscape' : 'portrait' });
+                pdf.addPage({ orientation: 'portrait' });
             } else {
-                pdf = new jsPDF({ orientation: isMedio ? 'landscape' : 'portrait', unit: 'mm', format: 'a4' });
+                pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
             }
             primeiroDoc = false;
 
-            _histFrente(pdf, hist, cfg);
-            pdf.addPage({ orientation: isMedio ? 'landscape' : 'portrait' });
-            _histVerso(pdf, hist, cfg);
+            if (isMedio) {
+                _histFrenteMedioPortrait(pdf, hist, cfg);
+                pdf.addPage();
+                _histVersoMedioPortrait(pdf, hist, cfg);
+            } else {
+                _histFrente(pdf, hist, cfg);
+                pdf.addPage();
+                _histVerso(pdf, hist, cfg);
+            }
         } catch (e) {
             console.error('Erro ao gerar histórico:', histId, e);
         }
@@ -2411,6 +2421,422 @@ function _hText(pdf, text, x, y, opts) {
     pdf.setFontSize(o.size || 7);
     pdf.setTextColor(...(o.color || [0, 0, 0]));
     pdf.text(String(text ?? ''), x, y, { align: o.align || 'left', angle: o.angle || 0, maxWidth: o.maxWidth });
+}
+
+// ==================== HISTÓRICO MÉDIO – RETRATO A4 ====================
+
+function _romanos(n) {
+    const vals=[1000,900,500,400,100,90,50,40,10,9,5,4,1];
+    const syms=['M','CM','D','CD','C','XC','L','XL','X','IX','V','IV','I'];
+    let r='';for(let i=0;i<vals.length;i++)while(n>=vals[i]){r+=syms[i];n-=vals[i];}return r;
+}
+
+function _histFrenteMedioPortrait(pdf, hist, cfg) {
+    const aluno=hist.aluno||{};
+    const grade=hist.grade||{};
+    const notas=hist.notas||{};
+    const series=(grade.nomesSeries&&grade.nomesSeries.length)?grade.nomesSeries:['1ª Série','2ª Série','3ª Série'];
+    const numSeries=Math.min(series.length,3);
+    const discs=grade.disciplinas||[];
+
+    const PW=210,PH=297,ML=8,MR=8,MT=7;
+    const UW=PW-ML-MR;
+    let y=MT;
+
+    // CABEÇALHO
+    _hLine(pdf,ML,y,PW-MR,y,0.6,[0,40,120]);
+    _hLine(pdf,ML,y+1.3,PW-MR,y+1.3,0.2,[0,40,120]);
+    y+=3;
+
+    const emb=cfg?.emblema||{};
+    const tipoEmb=emb.tipo||'brasao-brasil';
+    const bW=18,bH=22;
+    if(tipoEmb!=='nenhum'){
+        try{
+            let src=null,fmt='PNG';
+            if(tipoEmb==='custom'&&typeof HIST_UPLOADS!=='undefined'&&HIST_UPLOADS?.emblemaCustom){src=HIST_UPLOADS.emblemaCustom;fmt=src.startsWith('data:image/png')?'PNG':'JPEG';}
+            else if(tipoEmb==='brasao-brasil'&&typeof BRASAO_BRASIL!=='undefined'){src=BRASAO_BRASIL;}
+            if(src)pdf.addImage(src,fmt,PW/2-bW/2,y,bW,bH,undefined,'FAST');
+        }catch(_){}
+    }
+    const hCfg=cfg?.cabecalho||{};
+    const l1=hCfg.linha1||'REPÚBLICA FEDERATIVA DO BRASIL';
+    const l2=hCfg.linha2||'ESTADO DO PIAUÍ';
+    const l3=hCfg.linha3||'SECRETARIA DE ESTADO DA EDUCAÇÃO';
+    const inst=hCfg.nomeInstituicao||'';
+    const end_=hCfg.endereco||'';
+    const resol=cfg?.frente?.resolucao||'';
+
+    let ty=y+2;
+    _hText(pdf,l1,PW/2,ty,{bold:true,size:6.5,align:'center'});ty+=3.8;
+    _hText(pdf,l2,PW/2,ty,{bold:true,size:8,align:'center'});ty+=4.2;
+    _hText(pdf,l3,PW/2,ty,{size:6,align:'center'});ty+=3.2;
+
+    y=Math.max(y+bH,ty)+1.5;
+    _hLine(pdf,ML,y,PW-MR,y,0.2,[0,40,120]);
+    _hLine(pdf,ML,y+1.2,PW-MR,y+1.2,0.6,[0,40,120]);
+    y+=3.5;
+
+    // CAMPOS ESTABELECIMENTO
+    const fldLine=(label,value,lW)=>{
+        pdf.setFont('helvetica','bold');pdf.setFontSize(6.5);pdf.setTextColor(0,0,0);
+        pdf.text(label,ML,y+3.5);
+        pdf.setFont('helvetica','normal');
+        pdf.text(value||'',ML+lW,y+3.5,{maxWidth:UW-lW-0.5});
+        pdf.setDrawColor(80,80,80);pdf.setLineWidth(0.2);
+        pdf.line(ML+lW,y+4,ML+UW,y+4);
+        y+=6.5;
+    };
+    fldLine('ESTABELECIMENTO DE ENSINO: ',inst,53);
+    fldLine('ENDEREÇO: ',end_,20);
+    pdf.setFont('helvetica','bold');pdf.setFontSize(6);pdf.setTextColor(0,0,0);
+    pdf.text('Autorização de Funcionamento pela Resolução CEE/PI Nº ',ML,y+3.5);
+    pdf.setFont('helvetica','normal');pdf.text(resol,ML+89,y+3.5,{maxWidth:UW-91});
+    pdf.setDrawColor(80,80,80);pdf.setLineWidth(0.2);pdf.line(ML+89,y+4,ML+UW,y+4);
+    y+=7;
+
+    // TÍTULO
+    pdf.setFillColor(0,40,120);pdf.rect(ML,y,UW,7,'F');
+    _hText(pdf,'HISTÓRICO ESCOLAR  –  ENSINO MÉDIO',PW/2,y+5,{bold:true,size:9,align:'center',color:[255,255,255]});
+    y+=9;
+
+    // DADOS DO ALUNO
+    const dN=aluno.dataNascimento||{};
+    const nascStr=dN.dia?`${dN.dia} de ${dN.mes||''} de ${dN.ano||''}`:'';
+    const natStr=[aluno.naturalidade?.cidade,aluno.naturalidade?.estado].filter(Boolean).join(' / ');
+    const filStr=[aluno.filiacao?.mae,aluno.filiacao?.pai].filter(Boolean).join('  e  ');
+    const boxH=34;
+    _hRect(pdf,ML,y,UW,boxH,null,[0,40,120]);
+    pdf.setDrawColor(180,200,230);pdf.setLineWidth(0.15);
+    [6,12,17.5,23,28.5].forEach(off=>pdf.line(ML+0.5,y+off,ML+UW-0.5,y+off));
+
+    const aFld=(by,lbl,lW,val,maxW)=>{
+        pdf.setFont('helvetica','bold');pdf.setFontSize(6.5);pdf.setTextColor(0,30,100);
+        pdf.text(lbl,ML+2,by);
+        pdf.setFont('helvetica','normal');pdf.setTextColor(0,0,0);
+        pdf.text(val||'',ML+lW,by,{maxWidth:maxW||(UW-lW-3)});
+    };
+    aFld(y+4.5,'ESTUDANTE:',22,aluno.nome||'');
+    aFld(y+10,'NOME SOCIAL:',26,aluno.nomeSocial||'');
+    aFld(y+15.5,'RG:',8,aluno.rg||'',28);
+    aFld(y+15.5,'ÓRGÃO EMISSOR:',63,aluno.orgaoEmissor||'',22);
+    aFld(y+15.5,'CPF:',98,aluno.cpf||'',UW-100);
+    aFld(y+21,'DATA DE NASCIMENTO:',40,nascStr);
+    aFld(y+26.5,'NATURALIDADE:',28,natStr,78);
+    aFld(y+26.5,'NACIONALIDADE:',130,aluno.nacionalidade||'Brasileira',UW-132);
+    aFld(y+32,'FILIAÇÃO:',18,filStr);
+    y+=boxH+2;
+
+    // TABELA PRINCIPAL
+    const cNum=6,cDisc=60,cTot=17;
+    const rem=UW-cNum-cDisc-cTot;
+    const pairW=rem/numSeries;
+    const cNota=parseFloat((pairW*0.57).toFixed(2));
+    const cCH=parseFloat((pairW-cNota).toFixed(2));
+    const tblX=ML,tblStartY=y;
+    const hH=5.5;
+
+    // Header linha 1
+    pdf.setFillColor(0,35,105);pdf.rect(tblX,y,UW,hH,'F');
+    _hText(pdf,'COMPONENTES CURRICULARES',tblX+cNum+cDisc/2,y+4,{bold:true,size:5.5,align:'center',color:[255,255,255]});
+    let sx=tblX+cNum+cDisc;
+    for(let i=0;i<numSeries;i++){
+        _hText(pdf,series[i]||`${i+1}ª SÉRIE`,sx+pairW/2,y+4,{bold:true,size:6,align:'center',color:[255,255,255]});
+        sx+=pairW;
+    }
+    _hText(pdf,'CH\nTOTAL',tblX+UW-cTot/2,y+2.5,{bold:true,size:4.8,align:'center',color:[255,255,255]});
+    pdf.setDrawColor(80,120,200);pdf.setLineWidth(0.15);
+    pdf.line(tblX+cNum,y,tblX+cNum,y+hH*2);
+    pdf.line(tblX+cNum+cDisc,y,tblX+cNum+cDisc,y+hH*2);
+    sx=tblX+cNum+cDisc;
+    for(let i=0;i<numSeries;i++){pdf.line(sx+pairW,y,sx+pairW,y+hH*2);sx+=pairW;}
+    pdf.line(tblX+UW-cTot,y,tblX+UW-cTot,y+hH*2);
+    pdf.rect(tblX,y,UW,hH,'S');
+    y+=hH;
+
+    // Header linha 2
+    pdf.setFillColor(15,55,150);pdf.rect(tblX,y,UW,hH,'F');
+    _hText(pdf,'Nº',tblX+cNum/2,y+4,{bold:true,size:5,align:'center',color:[255,255,255]});
+    sx=tblX+cNum+cDisc;
+    for(let i=0;i<numSeries;i++){
+        _hText(pdf,'NOTA',sx+cNota/2,y+4,{bold:true,size:5,align:'center',color:[255,255,255]});
+        pdf.setDrawColor(80,120,200);pdf.setLineWidth(0.15);
+        pdf.line(sx+cNota,y,sx+cNota,y+hH);
+        _hText(pdf,'CH',sx+cNota+cCH/2,y+4,{bold:true,size:5,align:'center',color:[255,255,255]});
+        pdf.line(sx+pairW,y,sx+pairW,y+hH);
+        sx+=pairW;
+    }
+    pdf.setDrawColor(80,120,200);pdf.setLineWidth(0.15);
+    pdf.rect(tblX,y,UW,hH,'S');
+    y+=hH;
+
+    // Dados por categoria → subcategoria → disciplina
+    const catMap=new Map();
+    discs.forEach(dc=>{const k=dc.categoria||'outros';if(!catMap.has(k))catMap.set(k,[]);catMap.get(k).push(dc);});
+    const catLabels={formacao_geral:'FORMAÇÃO GERAL BÁSICA',itinerarios:'ITINERÁRIOS FORMATIVOS',atividades_integradoras:'ATIVIDADES INTEGRADORAS',linguagens:'LINGUAGENS, CÓDIGOS E SUAS TECNOLOGIAS',ciencias_humanas:'CIÊNCIAS HUMANAS E SUAS TECNOLOGIAS',ciencias_natureza:'CIÊNCIAS DA NATUREZA E SUAS TECNOLOGIAS',matematica:'MATEMÁTICA E SUAS TECNOLOGIAS',parte_flexivel:'PARTE FLEXÍVEL (DIVERSIFICADA)',ensino_religioso:'ENSINO RELIGIOSO'};
+    const subcatLabels={aprofundamento_linguagens:'Aprofundamento de Linguagens e suas Tecnologias',aprofundamento_matematica_ciencias:'Aprofundamento de Matemática, Ciências da Natureza e Linguagens e suas Tecnologias',atividades_integradoras:'Atividades Integradoras'};
+    const catH=4.0,rowH=3.6,subcatH=3.8;
+    let romNum=1;
+    const totalCHSerie=Array(numSeries).fill(0);
+    let chTotalGeral=0;
+
+    catMap.forEach((catDiscs,catId)=>{
+        const catNome=catLabels[catId]||catId.toUpperCase();
+        pdf.setFillColor(220,228,248);pdf.rect(tblX,y,UW,catH,'F');
+        pdf.setDrawColor(150,170,220);pdf.setLineWidth(0.1);pdf.rect(tblX,y,UW,catH,'S');
+        pdf.setFont('helvetica','bold');pdf.setFontSize(5.5);pdf.setTextColor(10,30,110);
+        pdf.text(catNome,tblX+cNum+2,y+catH-1.2,{maxWidth:cDisc+rem-3});
+        y+=catH;
+
+        const subcatMap=new Map();
+        catDiscs.forEach(dc=>{const sk=dc.subcategoria||'';if(!subcatMap.has(sk))subcatMap.set(sk,[]);subcatMap.get(sk).push(dc);});
+
+        subcatMap.forEach((subDiscs,subcatId)=>{
+            if(subcatId){
+                const subLabel=subcatLabels[subcatId]||subcatId;
+                pdf.setFillColor(234,240,255);pdf.rect(tblX,y,UW,subcatH,'F');
+                pdf.setDrawColor(170,190,230);pdf.setLineWidth(0.1);pdf.rect(tblX,y,UW,subcatH,'S');
+                pdf.setFont('helvetica','italic');pdf.setFontSize(5);pdf.setTextColor(40,60,140);
+                pdf.text('  '+subLabel,tblX+cNum+4,y+subcatH-1,{maxWidth:cDisc+rem-6});
+                y+=subcatH;
+            }
+            subDiscs.forEach(disc=>{
+                const notasDisc=notas[disc.nome]||{};
+                const bg=romNum%2===0?[248,252,255]:[255,255,255];
+                pdf.setFillColor(...bg);pdf.rect(tblX,y,UW,rowH,'F');
+                pdf.setDrawColor(205,220,240);pdf.setLineWidth(0.1);pdf.rect(tblX,y,UW,rowH,'S');
+                pdf.setFont('helvetica','bold');pdf.setFontSize(4.8);pdf.setTextColor(40,40,80);
+                pdf.text(_romanos(romNum)+'.',tblX+cNum/2,y+rowH-1,{align:'center'});
+                pdf.setDrawColor(185,205,235);pdf.line(tblX+cNum,y,tblX+cNum,y+rowH);
+                pdf.setFont('helvetica','normal');pdf.setFontSize(5.5);pdf.setTextColor(10,10,10);
+                pdf.text(disc.nome,tblX+cNum+1.5,y+rowH-1,{maxWidth:cDisc-3});
+                pdf.line(tblX+cNum+cDisc,y,tblX+cNum+cDisc,y+rowH);
+                let nx=tblX+cNum+cDisc;
+                let discChTot=0;
+                for(let si=0;si<numSeries;si++){
+                    const nd=notasDisc[String(si+1)]||{};
+                    const nv=nd.nota!==undefined?Number(nd.nota).toFixed(1):'';
+                    const ch=disc.cargaHorariaPorSerie?.[si]??disc.cargaHorariaPadrao??0;
+                    const cv=ch?String(ch):'';
+                    discChTot+=ch||0;totalCHSerie[si]+=ch||0;
+                    pdf.setFont('helvetica','normal');pdf.setFontSize(5.5);pdf.setTextColor(0,0,0);
+                    pdf.text(nv,nx+cNota/2,y+rowH-1,{align:'center'});
+                    pdf.setDrawColor(185,205,235);pdf.line(nx+cNota,y,nx+cNota,y+rowH);
+                    pdf.text(cv,nx+cNota+cCH/2,y+rowH-1,{align:'center'});
+                    pdf.line(nx+pairW,y,nx+pairW,y+rowH);nx+=pairW;
+                }
+                pdf.setDrawColor(185,205,235);pdf.line(tblX+UW-cTot,y,tblX+UW-cTot,y+rowH);
+                if(discChTot)pdf.text(String(discChTot),tblX+UW-cTot+cTot/2,y+rowH-1,{align:'center'});
+                chTotalGeral+=discChTot;romNum++;y+=rowH;
+            });
+        });
+    });
+
+    // Linha CARGA HORÁRIA TOTAL
+    const totH=4.5;
+    pdf.setFillColor(200,215,245);pdf.rect(tblX,y,UW,totH,'F');
+    pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.2);pdf.rect(tblX,y,UW,totH,'S');
+    pdf.setFont('helvetica','bold');pdf.setFontSize(5.5);pdf.setTextColor(0,20,80);
+    pdf.text('CARGA HORÁRIA TOTAL',tblX+cNum+2,y+totH-1.3,{maxWidth:cDisc-3});
+    let nx2=tblX+cNum+cDisc;
+    for(let si=0;si<numSeries;si++){
+        pdf.setDrawColor(0,40,120);pdf.line(nx2+cNota,y,nx2+cNota,y+totH);
+        pdf.text(String(totalCHSerie[si]||''),nx2+cNota+cCH/2,y+totH-1.3,{align:'center'});
+        pdf.line(nx2+pairW,y,nx2+pairW,y+totH);nx2+=pairW;
+    }
+    pdf.line(tblX+UW-cTot,y,tblX+UW-cTot,y+totH);
+    pdf.text(String(chTotalGeral||''),tblX+UW-cTot+cTot/2,y+totH-1.3,{align:'center'});
+    y+=totH;
+
+    // Linha RESULTADO FINAL
+    pdf.setFillColor(0,40,120);pdf.rect(tblX,y,UW,totH,'F');
+    pdf.setFont('helvetica','bold');pdf.setFontSize(6.5);pdf.setTextColor(255,255,255);
+    pdf.text('RESULTADO FINAL: ',tblX+cNum+2,y+totH-1.3);
+    pdf.setFont('helvetica','normal');
+    pdf.text(hist.resultadoFinal||hist.resultado||'',tblX+cNum+37,y+totH-1.3,{maxWidth:UW-cNum-40});
+    y+=totH;
+
+    pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.4);
+    pdf.rect(tblX,tblStartY,UW,y-tblStartY,'S');
+    y+=4;
+
+    // RODAPÉ
+    _hText(pdf,hist.dataEmissao||'',PW/2,y+2,{size:7,align:'center'});
+    y+=10;
+    const sig1=cfg?.frente?.assinatura1||'SECRETÁRIO(A)';
+    const sig2=cfg?.frente?.assinatura2||'DIRETOR(A)';
+    [{cx:ML+UW*0.25,sig:sig1},{cx:ML+UW*0.75,sig:sig2}].forEach(({cx,sig})=>{
+        pdf.setLineWidth(0.4);pdf.setDrawColor(0,0,0);
+        pdf.line(cx-35,y,cx+35,y);
+        _hText(pdf,sig,cx,y+4,{size:6.5,align:'center',bold:true});
+    });
+    const fyBot=PH-8;
+    _hLine(pdf,ML,fyBot,PW-MR,fyBot,0.6,[0,40,120]);
+    _hLine(pdf,ML,fyBot+1.2,PW-MR,fyBot+1.2,0.2,[0,40,120]);
+}
+
+function _histVersoMedioPortrait(pdf, hist, cfg) {
+    const aluno=hist.aluno||{};
+    const grade=hist.grade||{};
+    const seriesInfo=hist.seriesInfo||[];
+    const series=(grade.nomesSeries&&grade.nomesSeries.length)?grade.nomesSeries:['1ª Série','2ª Série','3ª Série'];
+
+    const PW=210,PH=297,ML=8,MR=8,MT=8;
+    const UW=PW-ML-MR;
+    let y=MT;
+
+    const hCfg=cfg?.cabecalho||{};
+    const inst=hCfg.nomeInstituicao||'';
+    const end_=hCfg.endereco||'';
+    const dN=aluno.dataNascimento||{};
+    const nascStr=dN.dia?`${dN.dia} de ${dN.mes||''} de ${dN.ano||''}`:'';
+    const natStr=[aluno.naturalidade?.cidade,aluno.naturalidade?.estado].filter(Boolean).join(' / ');
+    const filStr=[aluno.filiacao?.mae,aluno.filiacao?.pai].filter(Boolean).join('  e  ');
+
+    _hLine(pdf,ML,y,PW-MR,y,0.6,[0,40,120]);
+    _hLine(pdf,ML,y+1.3,PW-MR,y+1.3,0.2,[0,40,120]);
+    y+=4;
+
+    // CAMPOS CABEÇALHO VERSO
+    const fLine=(lbl,val,lW)=>{
+        pdf.setFont('helvetica','bold');pdf.setFontSize(6.5);pdf.setTextColor(0,0,0);
+        pdf.text(lbl,ML,y+3.5);
+        pdf.setFont('helvetica','normal');
+        pdf.text(val||'',ML+lW,y+3.5,{maxWidth:UW-lW-1});
+        pdf.setDrawColor(80,80,80);pdf.setLineWidth(0.2);
+        pdf.line(ML+lW,y+4,ML+UW,y+4);y+=6;
+    };
+    fLine('ESTABELECIMENTO DE ENSINO: ',inst,53);
+    fLine('ENDEREÇO: ',end_,20);
+    fLine('ESTUDANTE: ',aluno.nome||'',20);
+    fLine('NOME SOCIAL: ',aluno.nomeSocial||'',25);
+
+    // RG / ÓRGÃO / CPF
+    pdf.setFont('helvetica','bold');pdf.setFontSize(6.5);pdf.setTextColor(0,0,0);
+    pdf.text('RG: ',ML,y+3.5);pdf.setFont('helvetica','normal');
+    pdf.text(aluno.rg||'',ML+8,y+3.5,{maxWidth:26});
+    pdf.setDrawColor(80,80,80);pdf.setLineWidth(0.2);pdf.line(ML+8,y+4,ML+36,y+4);
+    pdf.setFont('helvetica','bold');pdf.text('ÓRGÃO EMISSOR: ',ML+38,y+3.5);
+    pdf.setFont('helvetica','normal');pdf.text(aluno.orgaoEmissor||'',ML+68,y+3.5,{maxWidth:20});
+    pdf.line(ML+68,y+4,ML+92,y+4);
+    pdf.setFont('helvetica','bold');pdf.text('CPF: ',ML+94,y+3.5);
+    pdf.setFont('helvetica','normal');pdf.text(aluno.cpf||'',ML+104,y+3.5,{maxWidth:UW-106});
+    pdf.line(ML+104,y+4,ML+UW,y+4);y+=6;
+
+    pdf.setFont('helvetica','bold');pdf.setFontSize(6.5);
+    pdf.text('DATA DE NASCIMENTO: ',ML,y+3.5);
+    pdf.setFont('helvetica','normal');pdf.text(nascStr,ML+41,y+3.5);
+    pdf.line(ML+41,y+4,ML+UW,y+4);y+=6;
+
+    pdf.setFont('helvetica','bold');pdf.text('NATURALIDADE: ',ML,y+3.5);
+    pdf.setFont('helvetica','normal');pdf.text(natStr,ML+30,y+3.5,{maxWidth:78});
+    pdf.line(ML+30,y+4,ML+110,y+4);
+    pdf.setFont('helvetica','bold');pdf.text('NACIONALIDADE: ',ML+112,y+3.5);
+    pdf.setFont('helvetica','normal');pdf.text(aluno.nacionalidade||'Brasileira',ML+140,y+3.5,{maxWidth:UW-142});
+    pdf.line(ML+140,y+4,ML+UW,y+4);y+=6;
+
+    pdf.setFont('helvetica','bold');pdf.text('FILIAÇÃO: ',ML,y+3.5);
+    pdf.setFont('helvetica','normal');pdf.text(filStr,ML+20,y+3.5,{maxWidth:UW-22});
+    pdf.line(ML+20,y+4,ML+UW,y+4);y+=8;
+
+    // TABELA DE SÉRIES
+    const sColW=[22,18,96,30,28];
+    const sHdrs=['SÉRIE','ANO','ESTABELECIMENTO DE ENSINO','MUNICÍPIO','ESTADO'];
+    const sHdrH=5,sRowH=6;
+    pdf.setFillColor(0,40,120);pdf.rect(ML,y,UW,sHdrH,'F');
+    let sx=ML;
+    sHdrs.forEach((h,i)=>{
+        _hText(pdf,h,sx+sColW[i]/2,y+sHdrH-1.2,{bold:true,size:5.5,align:'center',color:[255,255,255]});
+        if(i<sHdrs.length-1){pdf.setDrawColor(80,120,200);pdf.setLineWidth(0.15);pdf.line(sx+sColW[i],y,sx+sColW[i],y+sHdrH);}
+        sx+=sColW[i];
+    });
+    pdf.setDrawColor(80,120,200);pdf.setLineWidth(0.15);pdf.rect(ML,y,UW,sHdrH,'S');
+    y+=sHdrH;
+    const tblSerieStart=y;
+    series.forEach((sNome,ri)=>{
+        const info=seriesInfo.find(si=>si.serie===String(ri+1))||{};
+        const bg=ri%2===0?[245,248,255]:[255,255,255];
+        pdf.setFillColor(...bg);pdf.rect(ML,y,UW,sRowH,'F');
+        const partes=(info.cidadeUf||'').split(/\s*[\/\-–]\s*/);
+        const municipio=info.municipio||partes[0]||'';
+        const estado=info.estado||partes[1]||'';
+        const vals=[sNome,info.ano||'',info.estabelecimento||inst,municipio,estado];
+        sx=ML;
+        vals.forEach((v,ci)=>{
+            pdf.setFont('helvetica',ci===0?'bold':'normal');pdf.setFontSize(5.5);pdf.setTextColor(10,10,10);
+            pdf.text(String(v),sx+sColW[ci]/2,y+sRowH-1.8,{align:'center',maxWidth:sColW[ci]-2});
+            pdf.setDrawColor(185,200,230);pdf.setLineWidth(0.1);pdf.rect(sx,y,sColW[ci],sRowH,'S');
+            sx+=sColW[ci];
+        });
+        y+=sRowH;
+    });
+    pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.35);
+    pdf.rect(ML,tblSerieStart-sHdrH,UW,y-tblSerieStart+sHdrH,'S');
+    y+=6;
+
+    // VERIFICAÇÃO DE RENDIMENTO
+    const verLines=[
+        'Consideram-se os seguintes critérios para o rendimento e frequência escolar:',
+        '1. As notas das unidades curriculares dos Itinerários Formativos do Ensino Médio Regular (Tempo Integral e Parcial), avaliadas exclusivamente de forma qualitativa.',
+        '2. As unidades curriculares dos Itinerários Formativos possuem uma escala de arquivamento única, com as seguintes siglas: A (Avançado), AA (Ainda Avançando).',
+        '3. I - Desempenho Avançado (A); II – Desempenho Satisfatório (S); III – Desempenho Abaixo do Básico (AB). Os conceitos correspondem às notas: (A) de 7,0 a 10,0; (S) de 4,0 a 6,9; (AB) menor que 4,0.',
+        '4. Atividades Integradoras com frequência mínima de 75% do total da carga horária trabalhada para cada turma durante o ano letivo.',
+    ];
+    pdf.setFontSize(5.8);
+    let verH=10;
+    verLines.forEach(t=>{verH+=pdf.splitTextToSize(t,UW-7).length*3.3+1.5;});
+    verH=Math.max(verH,35);
+    pdf.setFillColor(235,240,255);pdf.rect(ML,y,UW,verH,'F');
+    pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.3);pdf.rect(ML,y,UW,verH,'S');
+    pdf.setFont('helvetica','bold');pdf.setFontSize(7);pdf.setTextColor(0,40,120);
+    pdf.text('VERIFICAÇÃO DE RENDIMENTO E FREQUÊNCIA ESCOLAR',ML+2,y+5.5);
+    pdf.setFont('helvetica','normal');pdf.setFontSize(5.8);pdf.setTextColor(15,15,15);
+    let vy=y+10;
+    verLines.forEach(t=>{
+        const ls=pdf.splitTextToSize(t,UW-7);
+        pdf.text(ls,ML+3,vy);vy+=ls.length*3.3+1.5;
+    });
+    y+=verH+4;
+
+    // OBSERVAÇÕES + RESULTADO PARA AUTENTICAÇÃO
+    const footerSpace=28;
+    const boxesH=Math.max(PH-y-ML-footerSpace,28);
+    const obsW=Math.round(UW*0.62);
+    const resW=UW-obsW-2;
+
+    pdf.setFillColor(255,255,255);pdf.rect(ML,y,obsW,boxesH,'F');
+    pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.3);pdf.rect(ML,y,obsW,boxesH,'S');
+    pdf.setFont('helvetica','bold');pdf.setFontSize(6.5);pdf.setTextColor(0,40,120);
+    pdf.text('OBSERVAÇÕES',ML+2,y+5);
+    if(hist.observacoes){
+        pdf.setFont('helvetica','normal');pdf.setFontSize(6);pdf.setTextColor(0,0,0);
+        const obsL=pdf.splitTextToSize(hist.observacoes,obsW-5);
+        pdf.text(obsL.slice(0,Math.floor((boxesH-9)/3.5)),ML+2,y+10);
+    }
+    pdf.setFillColor(255,255,255);pdf.rect(ML+obsW+2,y,resW,boxesH,'F');
+    pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.3);pdf.rect(ML+obsW+2,y,resW,boxesH,'S');
+    pdf.setFont('helvetica','bold');pdf.setFontSize(6);pdf.setTextColor(0,40,120);
+    const rLabel=pdf.splitTextToSize('RESULTADO PARA AUTENTICAÇÃO',resW-4);
+    pdf.text(rLabel,ML+obsW+4,y+5);
+    y+=boxesH+3;
+
+    // Nota sobre rasuras
+    pdf.setFont('helvetica','italic');pdf.setFontSize(5.8);pdf.setTextColor(60,60,60);
+    pdf.text('Neste documento não deverão haver emendas e nem rasuras.',PW/2,y+2,{align:'center'});
+    y+=7;
+
+    _hText(pdf,hist.dataEmissao||'',PW/2,y,{size:7,align:'center'});
+    y+=9;
+    const sig1=cfg?.frente?.assinatura1||'SECRETÁRIO(A)';
+    const sig2=cfg?.frente?.assinatura2||'DIRETOR(A)';
+    [{cx:ML+UW*0.25,sig:sig1},{cx:ML+UW*0.75,sig:sig2}].forEach(({cx,sig})=>{
+        pdf.setLineWidth(0.4);pdf.setDrawColor(0,0,0);
+        pdf.line(cx-35,y,cx+35,y);
+        _hText(pdf,sig,cx,y+4,{size:6.5,align:'center',bold:true});
+    });
+    const fyBot=PH-8;
+    _hLine(pdf,ML,fyBot,PW-MR,fyBot,0.6,[0,40,120]);
+    _hLine(pdf,ML,fyBot+1.2,PW-MR,fyBot+1.2,0.2,[0,40,120]);
 }
 
 // ---------- Página da frente ----------
