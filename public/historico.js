@@ -2458,14 +2458,6 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     const emb=cfg?.emblema||{};
     const tipoEmb=emb.tipo||'brasao-brasil';
     const bW=18,bH=22;
-    if(tipoEmb!=='nenhum'){
-        try{
-            let src=null,fmt='PNG';
-            if(tipoEmb==='custom'&&typeof HIST_UPLOADS!=='undefined'&&HIST_UPLOADS?.emblemaCustom){src=HIST_UPLOADS.emblemaCustom;fmt=src.startsWith('data:image/png')?'PNG':'JPEG';}
-            else if(tipoEmb==='brasao-brasil'&&typeof BRASAO_BRASIL!=='undefined'){src=BRASAO_BRASIL;}
-            if(src)pdf.addImage(src,fmt,PW/2-bW/2,y,bW,bH,undefined,'FAST');
-        }catch(_){}
-    }
     const hCfg=cfg?.cabecalho||{};
     const l1=hCfg.linha1||'REPÚBLICA FEDERATIVA DO BRASIL';
     const l2=hCfg.linha2||'ESTADO DO PIAUÍ';
@@ -2474,12 +2466,23 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     const end_=hCfg.endereco||'';
     const resol=cfg?.frente?.resolucao||'';
 
-    let ty=y+2;
-    _hText(pdf,l1,PW/2,ty,{bold:true,size:6.5,align:'center'});ty+=3.8;
-    _hText(pdf,l2,PW/2,ty,{bold:true,size:8,align:'center'});ty+=4.2;
-    _hText(pdf,l3,PW/2,ty,{size:6,align:'center'});ty+=3.2;
+    // Brasão alinhado à esquerda
+    if(tipoEmb!=='nenhum'){
+        try{
+            let src=null,fmt='PNG';
+            if(tipoEmb==='custom'&&typeof HIST_UPLOADS!=='undefined'&&HIST_UPLOADS?.emblemaCustom){src=HIST_UPLOADS.emblemaCustom;fmt=src.startsWith('data:image/png')?'PNG':'JPEG';}
+            else if(tipoEmb==='brasao-brasil'&&typeof BRASAO_BRASIL!=='undefined'){src=BRASAO_BRASIL;}
+            if(src)pdf.addImage(src,fmt,ML,y,bW,bH,undefined,'FAST');
+        }catch(_){}
+    }
+    // Textos centralizados na página, verticalmente centrados na altura do brasão
+    // Bloco de texto ~11.5mm; centralizar em bH=22mm → offset=(22-11.5)/2=5.25
+    const tyBase=y+(bH-11.5)/2;
+    _hText(pdf,l1,PW/2,tyBase+3,{bold:true,size:6.5,align:'center'});
+    _hText(pdf,l2,PW/2,tyBase+7.5,{bold:true,size:8,align:'center'});
+    _hText(pdf,l3,PW/2,tyBase+12,{size:6,align:'center'});
 
-    y=Math.max(y+bH,ty)+1.5;
+    y=y+bH+1.5;
     _hLine(pdf,ML,y,PW-MR,y,0.2,[0,40,120]);
     _hLine(pdf,ML,y+1.2,PW-MR,y+1.2,0.6,[0,40,120]);
     y+=3.5;
