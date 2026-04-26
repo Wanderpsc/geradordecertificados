@@ -2481,33 +2481,25 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     _hText(pdf,l2,PW/2,y,{bold:true,size:8,align:'center'});y+=4.5;
     _hText(pdf,l3,PW/2,y,{size:6,align:'center'});y+=6;
 
-    // CAMPOS centralizados (estilo formulário: valor na linha, label abaixo centralizado)
+    // CAMPOS centralizados sem linhas — só valor + label
     const fldCentro=(label,value)=>{
-        // valor centralizado acima da linha
         if(value){
             pdf.setFont('helvetica','normal');pdf.setFontSize(7);pdf.setTextColor(0,0,0);
-            pdf.text(value,PW/2,y+3,{align:'center',maxWidth:UW-4});
+            pdf.text(value,PW/2,y,{align:'center',maxWidth:UW-4});
         }
-        pdf.setDrawColor(80,80,80);pdf.setLineWidth(0.25);
-        pdf.line(ML,y+4,ML+UW,y+4);
-        // label centralizado abaixo da linha
         pdf.setFont('helvetica','bold');pdf.setFontSize(5.8);pdf.setTextColor(0,0,0);
-        pdf.text(label,PW/2,y+7.5,{align:'center'});
-        y+=11;
+        pdf.text(label,PW/2,y+3.5,{align:'center'});
+        y+=7;
     };
     fldCentro('ESTABELECIMENTO DE ENSINO',inst);
     fldCentro('ENDEREÇO',end_);
 
-    // Resolução — texto pequeno à esquerda com linha após o número
+    // Resolução — centralizada, sem repetir "Resolução CEE/PI"
+    const resolNum=resol.replace(/^resolu[çc][aã]o\s+cee\/pi\s*/i,'').trim();
+    const resolTxt='Autorização de Funcionamento pela Resolução CEE/PI Nº '+(resolNum||resol);
     pdf.setFont('helvetica','normal');pdf.setFontSize(6);pdf.setTextColor(0,0,0);
-    pdf.text('Autorização de Funcionamento pela Resolução CEE/PI Nº',ML,y+3.5);
-    if(resol){
-        pdf.setFont('helvetica','normal');
-        pdf.text(resol,ML+83,y+3.5,{maxWidth:UW-85});
-    }
-    pdf.setDrawColor(80,80,80);pdf.setLineWidth(0.25);
-    pdf.line(ML+82,y+4,ML+UW,y+4);
-    y+=9;
+    pdf.text(resolTxt,PW/2,y+3,{align:'center',maxWidth:UW-4});
+    y+=8;
 
     // TÍTULO
     pdf.setFillColor(0,40,120);pdf.rect(ML,y,UW,7,'F');
