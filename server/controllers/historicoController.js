@@ -28,7 +28,7 @@ exports.obterGrade = async (req, res) => {
 
 exports.salvarGrade = async (req, res) => {
     try {
-        const { tipo, nome, disciplinas, numSeries, nomesSeries, seriesMatrizes } = req.body;
+        const { tipo, nome, disciplinas, numSeries, nomesSeries, seriesMatrizes, serie } = req.body;
         if (!tipo || !nome) {
             return res.status(400).json({ success: false, message: 'Tipo e nome são obrigatórios.' });
         }
@@ -36,6 +36,7 @@ exports.salvarGrade = async (req, res) => {
             usuario: req.usuario._id,
             tipo,
             nome,
+            serie: serie || '',
             disciplinas: disciplinas || [],
             numSeries: numSeries || (tipo === 'medio' ? 3 : 9),
             nomesSeries: nomesSeries || [],
@@ -52,8 +53,9 @@ exports.atualizarGrade = async (req, res) => {
         const grade = await GradeHistorico.findOne({ _id: req.params.id, usuario: req.usuario._id });
         if (!grade) return res.status(404).json({ success: false, message: 'Grade não encontrada.' });
 
-        const { nome, disciplinas, numSeries, nomesSeries, seriesMatrizes } = req.body;
+        const { nome, disciplinas, numSeries, nomesSeries, seriesMatrizes, serie } = req.body;
         if (nome) grade.nome = nome;
+        if (serie !== undefined) grade.serie = serie;
         if (disciplinas !== undefined) {
             grade.disciplinas = disciplinas;
             grade.markModified('disciplinas');
@@ -109,7 +111,8 @@ exports.obterHistorico = async (req, res) => {
     try {
         const historico = await Historico.findOne({ _id: req.params.id, usuario: req.usuario._id })
             .populate('aluno')
-            .populate('grade');
+            .populate('grade')
+            .populate('grades');
         if (!historico) return res.status(404).json({ success: false, message: 'Histórico não encontrado.' });
         res.json({ success: true, historico });
     } catch (error) {
@@ -119,15 +122,19 @@ exports.obterHistorico = async (req, res) => {
 
 exports.salvarHistorico = async (req, res) => {
     try {
-        const { aluno, grade, tipo, notas, seriesInfo, fichaIndividual, observacoes, dataEmissao, registro } = req.body;
-        if (!aluno || !grade || !tipo) {
+        const { aluno, grade, grades, tipo, notas, seriesInfo, fichaIndividual, observacoes, dataEmissao, registro } = req.body;
+        // Aceita grades (array) ou grade (singular) para backward compat
+        const gradeId = (grades && grades.length) ? grades[0] : grade;
+        const gradesArr = grades && grades.length ? grades : (grade ? [grade] : []);
+        if (!aluno || !gradeId || !tipo) {
             return res.status(400).json({ success: false, message: 'Aluno, grade e tipo são obrigatórios.' });
         }
         // Verificar se já existe histórico deste tipo para este aluno
         let historico = await Historico.findOne({ usuario: req.usuario._id, aluno, tipo });
         if (historico) {
             // Atualizar existente
-            historico.grade = grade;
+            historico.grade = gradeId;
+            historico.grades = gradesArr;
             if (notas !== undefined) { historico.notas = notas; historico.markModified('notas'); }
             if (seriesInfo !== undefined) { historico.seriesInfo = seriesInfo; historico.markModified('seriesInfo'); }
             if (fichaIndividual !== undefined) { historico.fichaIndividual = fichaIndividual; historico.markModified('fichaIndividual'); }
@@ -140,7 +147,8 @@ exports.salvarHistorico = async (req, res) => {
         historico = await Historico.create({
             usuario: req.usuario._id,
             aluno,
-            grade,
+            grade: gradeId,
+            grades: gradesArr,
             tipo,
             notas: notas || {},
             seriesInfo: seriesInfo || [],
@@ -160,8 +168,11 @@ exports.atualizarHistorico = async (req, res) => {
         const historico = await Historico.findOne({ _id: req.params.id, usuario: req.usuario._id });
         if (!historico) return res.status(404).json({ success: false, message: 'Histórico não encontrado.' });
 
-        const { notas, seriesInfo, fichaIndividual, observacoes, dataEmissao, registro, grade } = req.body;
-        if (grade) historico.grade = grade;
+        const { notas, seriesInfo, fichaIndividual, observacoes, dataEmissao, registro, grade, grades } = req.body;
+        const gradeId = (grades && grades.length) ? grades[0] : grade;
+        const gradesArr = grades && grades.length ? grades : (grade ? [grade] : undefined);
+        if (gradeId) historico.grade = gradeId;
+        if (gradesArr) historico.grades = gradesArr;
         if (notas !== undefined) { historico.notas = notas; historico.markModified('notas'); }
         if (seriesInfo !== undefined) { historico.seriesInfo = seriesInfo; historico.markModified('seriesInfo'); }
         if (fichaIndividual !== undefined) { historico.fichaIndividual = fichaIndividual; historico.markModified('fichaIndividual'); }

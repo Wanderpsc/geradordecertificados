@@ -1519,11 +1519,11 @@
                             <option value="fundamental">Ensino Fundamental</option>
                         </select>
                     </div>
-                    <div style="flex: 1 1 180px; min-width: 160px;">
-                        <label style="font-weight: 600; font-size: 12px; display: block; margin-bottom: 3px; color: #374151;">Grade</label>
-                        <select id="histGrade" class="form-control" style="font-size: 13px;" onchange="carregarFormNotas()">
-                            <option value="">Selecione a modalidade...</option>
-                        </select>
+                    <div style="flex: 1 1 100%; min-width: 200px;" id="histGradeSelectorsWrap">
+                        <label style="font-weight: 600; font-size: 12px; display: block; margin-bottom: 3px; color: #374151;">Grades por Série</label>
+                        <div id="histGradeSelectors" style="display:flex;gap:8px;flex-wrap:wrap;">
+                            <span style="font-size:13px;color:#9ca3af;">Selecione a modalidade primeiro...</span>
+                        </div>
                     </div>
                     <div style="flex: 1 1 160px; min-width: 140px;">
                         <label style="font-weight: 600; font-size: 12px; display: block; margin-bottom: 3px; color: #374151;">Série</label>

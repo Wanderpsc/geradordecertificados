@@ -17,6 +17,11 @@ const HistoricoSchema = new mongoose.Schema({
         ref: 'GradeHistorico',
         required: true
     },
+    // Array de grades por série (uma grade por série/ano)
+    grades: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'GradeHistorico'
+    }],
     tipo: {
         type: String,
         enum: ['fundamental', 'medio'],

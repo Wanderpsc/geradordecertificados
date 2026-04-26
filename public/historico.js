@@ -382,15 +382,18 @@ async function carregarListaGrades() {
         container.innerHTML = HIST_STATE.grades.map(g => `
             <div class="card" style="padding: 14px; border: 2px solid ${g.tipo === 'medio' ? '#3b82f6' : '#10b981'}; border-radius: 12px;">
                 <div style="display: flex; justify-content: space-between; align-items: start;">
-                    <div>
-                        <span style="background: ${g.tipo === 'medio' ? '#dbeafe' : '#d1fae5'}; color: ${g.tipo === 'medio' ? '#1e40af' : '#065f46'}; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 600;">
-                            ${g.tipo === 'medio' ? 'ENSINO MÉDIO' : 'ENSINO FUNDAMENTAL'}
-                        </span>
-                        <h3 style="margin-top: 6px; font-size: 15px; color: #1e3a8a;">${escapeHtml(g.nome)}</h3>
+                    <div style="flex:1;">
+                        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;">
+                            <span style="background: ${g.tipo === 'medio' ? '#dbeafe' : '#d1fae5'}; color: ${g.tipo === 'medio' ? '#1e40af' : '#065f46'}; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 600;">
+                                ${g.tipo === 'medio' ? 'ENSINO MÉDIO' : 'ENSINO FUNDAMENTAL'}
+                            </span>
+                            ${g.serie ? `<span style="background:#f3f4f6;color:#374151;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;">${escapeHtml(g.serie)}</span>` : ''}
+                        </div>
+                        <h3 style="margin:0; font-size: 15px; color: #1e3a8a;">${escapeHtml(g.nome)}</h3>
                     </div>
                 </div>
                 <div style="color: #6b7280; font-size: 12px; margin: 6px 0;">
-                    ${g.disciplinas ? g.disciplinas.length : 0} disciplina(s) · ${g.numSeries} série(s)/ano(s)
+                    ${g.disciplinas ? g.disciplinas.length : 0} disciplina(s)
                 </div>
                 <div style="display: flex; gap: 4px; flex-wrap: wrap; margin-top: 8px;">
                     <button class="btn btn-primary btn-sm" onclick="editarGrade('${g._id}')" style="font-size: 11px; padding: 4px 10px;">✏️ Editar</button>
@@ -409,44 +412,28 @@ function abrirModalNovaGrade() {
 
 function abrirModalGrade(gradeExistente) {
     const isEdit = !!gradeExistente;
-    const g = gradeExistente || { tipo: 'medio', nome: '', disciplinas: [], numSeries: 3, nomesSeries: ['1ª Série', '2ª Série', '3ª Série'] };
+    const g = gradeExistente || { tipo: 'medio', nome: '', disciplinas: [], serie: '', nomesSeries: [] };
 
-    const numSeriesTotal = g.nomesSeries?.length || (g.tipo === 'medio' ? 3 : 9);
-    const nomesPadrao = g.tipo === 'medio'
-        ? ['1ª Série', '2ª Série', '3ª Série']
-        : ['1º Ano', '2º Ano', '3º Ano', '4º Ano', '5º Ano', '6º Ano', '7º Ano', '8º Ano', '9º Ano'];
+    const tipo = g.tipo || 'medio';
+    const serieAtual = g.serie || g.nomesSeries?.[0] || '';
 
-    // Inicializar estado das tabs
-    _gradeActiveTab = 0;
-    _gradeSeriesNomes = g.nomesSeries?.length ? [...g.nomesSeries] : [...nomesPadrao];
-    _gradeSeriesMatrizes = new Array(numSeriesTotal).fill(null);
-    _gradeTabDiscs = Array.from({ length: numSeriesTotal }, () => []);
-
+    // Matriz da grade (se houver)
+    let _matrizGrade = null;
     if (g.seriesMatrizes?.length) {
-        g.seriesMatrizes.forEach(sm => {
-            const idx = sm.serieIdx;
-            if (idx >= 0 && idx < numSeriesTotal) {
-                const mId = sm.matrizId?._id || sm.matrizId;
-                if (mId) _gradeSeriesMatrizes[idx] = { id: mId.toString(), titulo: sm.matrizId?.titulo || '' };
-            }
-        });
+        const sm = g.seriesMatrizes[0];
+        const mId = sm.matrizId?._id || sm.matrizId;
+        if (mId) _matrizGrade = { id: mId.toString(), titulo: sm.matrizId?.titulo || '' };
     }
 
-    // Distribuir disciplinas por tab a partir de cargaHorariaPorSerie
-    if (g.disciplinas?.length) {
-        g.disciplinas.forEach(d => {
-            const chArr = d.cargaHorariaPorSerie;
-            if (chArr && chArr.length >= numSeriesTotal) {
-                for (let i = 0; i < numSeriesTotal; i++) {
-                    const ch = chArr[i] !== undefined ? chArr[i] : 0;
-                    if (ch > 0) _gradeTabDiscs[i].push({ nome: d.nome, categoria: d.categoria, ch });
-                }
-            } else {
-                const ch = d.cargaHorariaPadrao || 0;
-                for (let i = 0; i < numSeriesTotal; i++) _gradeTabDiscs[i].push({ nome: d.nome, categoria: d.categoria, ch });
-            }
-        });
-    }
+    // Disciplinas existentes (aceita cargaHorariaPorSerie[0] ou cargaHorariaPadrao)
+    const discsExistentes = (g.disciplinas || []).map(d => ({
+        nome: d.nome,
+        categoria: d.categoria,
+        ch: d.cargaHorariaPorSerie?.[0] ?? d.cargaHorariaPadrao ?? 0
+    }));
+
+    const seriesMedio = ['1ª Série', '2ª Série', '3ª Série'];
+    const seriesFund = ['1º Ano','2º Ano','3º Ano','4º Ano','5º Ano','6º Ano','7º Ano','8º Ano','9º Ano'];
 
     const modal = document.createElement('div');
     modal.className = 'overlay-modal';
@@ -454,49 +441,51 @@ function abrirModalGrade(gradeExistente) {
     modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;overflow-y:auto;padding:20px;';
 
     modal.innerHTML = `
-    <div style="background:white;border-radius:16px;padding:28px;max-width:720px;width:95%;max-height:90vh;overflow-y:auto;">
+    <div style="background:white;border-radius:16px;padding:28px;max-width:680px;width:95%;max-height:90vh;overflow-y:auto;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
             <h2 style="color:#1e3a8a;margin:0;">${isEdit ? '✏️ Editar' : '➕ Nova'} Grade de Disciplinas</h2>
             <button onclick="this.closest('.overlay-modal').remove()" style="background:none;border:none;font-size:24px;cursor:pointer;">✕</button>
         </div>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
             <div>
                 <label style="font-weight:600;font-size:13px;display:block;margin-bottom:4px;">Modalidade</label>
-                <select id="gradeTipo" class="form-control" onchange="atualizarSeriesGrade()">
-                    <option value="medio" ${g.tipo === 'medio' ? 'selected' : ''}>Ensino Médio</option>
-                    <option value="fundamental" ${g.tipo === 'fundamental' ? 'selected' : ''}>Ensino Fundamental</option>
+                <select id="gradeTipo" class="form-control" onchange="_atualizarSeriesDropdown()">
+                    <option value="medio" ${tipo === 'medio' ? 'selected' : ''}>Ensino Médio</option>
+                    <option value="fundamental" ${tipo === 'fundamental' ? 'selected' : ''}>Ensino Fundamental</option>
                 </select>
             </div>
             <div>
-                <label style="font-weight:600;font-size:13px;display:block;margin-bottom:4px;">Nome da Grade</label>
-                <input type="text" id="gradeNome" class="form-control" value="${escapeHtml(g.nome)}" placeholder="Ex: Ensino Médio Integral 2025">
+                <label style="font-weight:600;font-size:13px;display:block;margin-bottom:4px;">Série / Ano desta Grade</label>
+                <select id="gradeSerie" class="form-control">
+                    <option value="">Selecione...</option>
+                    ${(tipo === 'medio' ? seriesMedio : seriesFund).map(s =>
+                        `<option value="${s}" ${serieAtual === s ? 'selected' : ''}>${s}</option>`
+                    ).join('')}
+                </select>
             </div>
         </div>
 
         <div style="margin-bottom:16px;">
-            <label style="font-weight:600;font-size:13px;display:block;margin-bottom:8px;">Séries / Anos</label>
-            <div id="gradeSeriesTabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;"></div>
-            <div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;padding:10px 14px;">
-                <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
-                    <label style="font-size:12px;font-weight:600;white-space:nowrap;color:#374151;">Nome desta série:</label>
-                    <input type="text" id="gradeSerieNomeInput" class="form-control" style="max-width:180px;font-size:12px;padding:5px 8px;" oninput="atualizarNomeSerieAtiva()">
-                </div>
-                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-                    <span style="font-size:12px;color:#6b7280;white-space:nowrap;">Matriz curricular:</span>
-                    <span id="gradeSerieMatrizLabel" style="font-size:12px;font-weight:600;color:#9ca3af;flex:1;min-width:60px;">Nenhuma</span>
-                    <button onclick="selecionarMatrizParaSerie(_gradeActiveTab)" style="background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:11px;white-space:nowrap;">📋 Selecionar Matriz</button>
-                    <button onclick="limparMatrizSerie(_gradeActiveTab)" style="background:#fef2f2;color:#991b1b;border:1px solid #fecaca;padding:4px 8px;border-radius:6px;cursor:pointer;font-size:11px;" title="Remover matriz">✕</button>
-                </div>
+            <label style="font-weight:600;font-size:13px;display:block;margin-bottom:4px;">Nome da Grade</label>
+            <input type="text" id="gradeNome" class="form-control" value="${escapeHtml(g.nome)}" placeholder="Ex: 1ª Série — Ensino Médio 2025">
+        </div>
+
+        <div style="margin-bottom:16px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;padding:10px 14px;">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                <span style="font-size:12px;color:#6b7280;white-space:nowrap;">Matriz curricular:</span>
+                <span id="gradeMatrizLabel" style="font-size:12px;font-weight:600;color:${_matrizGrade ? '#1e3a8a' : '#9ca3af'};flex:1;">${_matrizGrade ? escapeHtml(_matrizGrade.titulo) : 'Nenhuma'}</span>
+                <button onclick="selecionarMatrizGrade()" style="background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:11px;">  Selecionar Matriz</button>
+                <button onclick="limparMatrizGrade()" style="background:#fef2f2;color:#991b1b;border:1px solid #fecaca;padding:4px 8px;border-radius:6px;cursor:pointer;font-size:11px;">✕</button>
             </div>
         </div>
 
         <div style="border-top:2px solid #e5e7eb;padding-top:16px;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-                <h3 id="gradeDisciplinasTitle" style="color:#1e3a8a;font-size:15px;margin:0;">Disciplinas</h3>
+                <h3 style="color:#1e3a8a;font-size:15px;margin:0;">Disciplinas</h3>
                 <button class="btn btn-primary btn-sm" onclick="adicionarDisciplinaGrade()" style="font-size:12px;">+ Adicionar Disciplina</button>
             </div>
-            <div style="overflow-x:auto;max-height:370px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:8px;">
+            <div style="overflow-x:auto;max-height:380px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:8px;">
                 <table style="width:100%;border-collapse:collapse;" id="gradeDisciplinasTable">
                     <thead>
                         <tr style="background:#e2e8f0;">
@@ -511,24 +500,98 @@ function abrirModalGrade(gradeExistente) {
             </div>
         </div>
 
-        <div id="gradeModalFooter" style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;border-top:2px solid #e5e7eb;padding-top:16px;">
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;border-top:2px solid #e5e7eb;padding-top:16px;">
             <button class="btn btn-secondary" onclick="this.closest('.overlay-modal').remove()">Cancelar</button>
             <button class="btn btn-secondary" id="btnCarregarPadrao" onclick="carregarDisciplinasPadrao()">📋 Carregar Padrão</button>
-            <button class="btn btn-primary" onclick="salvarGrade('${isEdit ? gradeExistente._id : ''}')">${isEdit ? '💾 Salvar Alterações' : '✅ Criar Grade'}</button>
+            <button class="btn btn-primary" onclick="salvarGrade('${isEdit ? gradeExistente._id : ''}')"> ${isEdit ? '💾 Salvar Alterações' : '✅ Criar Grade'}</button>
         </div>
     </div>`;
 
     document.body.appendChild(modal);
     modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
 
-    renderGradeTabs();
-    renderGradeTabContent(0);
+    // Guardar matriz da grade para uso posterior
+    window._gradeMatrizAtual = _matrizGrade;
+
+    // Preencher disciplinas existentes
+    discsExistentes.forEach(d => adicionarDisciplinaGrade(d));
 
     const btnPadrao = document.getElementById('btnCarregarPadrao');
-    if (btnPadrao) btnPadrao.textContent = g.tipo === 'medio' ? '📋 Carregar Padrão Médio' : '📋 Carregar Padrão Fundamental';
+    if (btnPadrao) btnPadrao.textContent = tipo === 'medio' ? '📋 Carregar Padrão Médio' : '📋 Carregar Padrão Fundamental';
 }
 
-// ==================== TABS DE SÉRIES NA GRADE ====================
+function _atualizarSeriesDropdown() {
+    const tipo = document.getElementById('gradeTipo').value;
+    const sel = document.getElementById('gradeSerie');
+    if (!sel) return;
+    const series = tipo === 'medio'
+        ? ['1ª Série','2ª Série','3ª Série']
+        : ['1º Ano','2º Ano','3º Ano','4º Ano','5º Ano','6º Ano','7º Ano','8º Ano','9º Ano'];
+    sel.innerHTML = '<option value="">Selecione...</option>' + series.map(s => `<option value="${s}">${s}</option>`).join('');
+    const btnPadrao = document.getElementById('btnCarregarPadrao');
+    if (btnPadrao) btnPadrao.textContent = tipo === 'medio' ? '📋 Carregar Padrão Médio' : '📋 Carregar Padrão Fundamental';
+}
+
+async function selecionarMatrizGrade() {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    let matrizes = HIST_STATE.matrizes || [];
+    if (!matrizes.length) {
+        try {
+            const resp = await fetch(`${API_URL}/historicos/matrizes`, { headers: { 'Authorization': `Bearer ${token}` } });
+            const data = await resp.json();
+            if (data.success) { matrizes = data.matrizes; HIST_STATE.matrizes = matrizes; }
+        } catch(e) {}
+    }
+    if (!matrizes.length) { mostrarNotificacao('Nenhuma matriz cadastrada.', 'warning'); return; }
+    window._matrizPickerData = {};
+    matrizes.forEach(m => { window._matrizPickerData[m._id] = m; });
+    const picker = document.createElement('div');
+    picker.id = 'modalMatrizPicker';
+    picker.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px;';
+    picker.innerHTML = `
+    <div style="background:white;border-radius:16px;padding:24px;max-width:460px;width:95%;max-height:80vh;overflow-y:auto;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+            <h3 style="color:#1e3a8a;margin:0;">Selecionar Matriz</h3>
+            <button onclick="document.getElementById('modalMatrizPicker').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;">✕</button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+            ${matrizes.map(m => `
+            <div onclick="aplicarMatrizGrade('${m._id}')"
+                 style="padding:12px 16px;border:2px solid #e5e7eb;border-radius:10px;cursor:pointer;"
+                 onmouseover="this.style.borderColor='#3b82f6';this.style.background='#eff6ff'"
+                 onmouseout="this.style.borderColor='#e5e7eb';this.style.background='white'">
+                <div style="font-weight:600;font-size:13px;color:#1e3a8a;">${escapeHtml(m.titulo)}</div>
+                <div style="font-size:11px;color:#6b7280;">${m.disciplinas?.length||0} disciplina(s)</div>
+            </div>`).join('')}
+        </div>
+    </div>`;
+    document.body.appendChild(picker);
+    picker.addEventListener('click', e => { if (e.target === picker) picker.remove(); });
+}
+
+function aplicarMatrizGrade(matrizId) {
+    const matriz = window._matrizPickerData?.[matrizId];
+    if (!matriz) return;
+    window._gradeMatrizAtual = { id: matrizId, titulo: matriz.titulo };
+    const label = document.getElementById('gradeMatrizLabel');
+    if (label) { label.textContent = matriz.titulo; label.style.color = '#1e3a8a'; }
+    // Preencher disciplinas da matriz
+    const tbody = document.getElementById('gradeDisciplinasTbody');
+    if (tbody) {
+        tbody.innerHTML = '';
+        (matriz.disciplinas || []).forEach(d => adicionarDisciplinaGrade({ nome: d.nome, categoria: d.categoria, ch: d.cargaHoraria || 0 }));
+    }
+    document.getElementById('modalMatrizPicker')?.remove();
+}
+
+function limparMatrizGrade() {
+    window._gradeMatrizAtual = null;
+    const label = document.getElementById('gradeMatrizLabel');
+    if (label) { label.textContent = 'Nenhuma'; label.style.color = '#9ca3af'; }
+}
+
+// ==================== TABS DE SÉRIES NA GRADE (funções legadas mantidas) ====================
 
 function renderGradeTabs() {
     const container = document.getElementById('gradeSeriesTabs');
@@ -809,39 +872,31 @@ async function salvarGrade(id) {
     if (!token) return;
 
     const tipo = document.getElementById('gradeTipo').value;
+    const serie = document.getElementById('gradeSerie').value;
     const nome = document.getElementById('gradeNome').value.trim();
     if (!nome) { mostrarNotificacao('Informe o nome da grade.', 'error'); return; }
+    if (!serie) { mostrarNotificacao('Selecione a série/ano desta grade.', 'error'); return; }
 
-    // Salvar tab ativa antes de mesclar
-    saveCurrentTabDiscs();
+    // Coletar disciplinas
+    const rows = [...document.querySelectorAll('#gradeDisciplinasTbody .grade-disc-row')];
+    const disciplinas = rows.map(row => {
+        const n = row.querySelector('.disc-nome').value.trim();
+        if (!n) return null;
+        const ch = parseInt(row.querySelector('.disc-ch').value) || 0;
+        return {
+            nome: n,
+            categoria: row.querySelector('.disc-categoria').value,
+            cargaHorariaPorSerie: [ch],
+            cargaHorariaPadrao: ch
+        };
+    }).filter(Boolean);
 
-    const nomesSeries = [..._gradeSeriesNomes];
-    const numSeries = nomesSeries.length;
+    if (!disciplinas.length) { mostrarNotificacao('Adicione ao menos uma disciplina.', 'error'); return; }
 
-    // Mesclar todas as tabs em cargaHorariaPorSerie
-    const allNames = [];
-    const seen = new Set();
-    _gradeTabDiscs.forEach(tab => {
-        tab.forEach(d => { if (d.nome && !seen.has(d.nome)) { seen.add(d.nome); allNames.push(d.nome); } });
-    });
+    const matrizAtual = window._gradeMatrizAtual;
+    const seriesMatrizes = matrizAtual ? [{ serieIdx: 0, serieNome: serie, matrizId: matrizAtual.id }] : [];
 
-    if (!allNames.length) { mostrarNotificacao('Adicione ao menos uma disciplina em alguma série.', 'error'); return; }
-
-    const disciplinas = allNames.map(discNome => {
-        let categoria = 'formacao_geral';
-        const chPorSerie = _gradeTabDiscs.map(tab => {
-            const found = tab.find(d => d.nome === discNome);
-            if (found) { categoria = found.categoria; return found.ch || 0; }
-            return 0;
-        });
-        return { nome: discNome, categoria, cargaHorariaPorSerie: chPorSerie, cargaHorariaPadrao: Math.max(...chPorSerie) };
-    });
-
-    const seriesMatrizes = _gradeSeriesMatrizes
-        .map((m, i) => m ? { serieIdx: i, serieNome: nomesSeries[i] || '', matrizId: m.id } : null)
-        .filter(Boolean);
-
-    const body = { tipo, nome, disciplinas, numSeries, nomesSeries, seriesMatrizes };
+    const body = { tipo, nome, serie, disciplinas, numSeries: 1, nomesSeries: [serie], seriesMatrizes };
     const url = id ? `${API_URL}/historicos/grades/${id}` : `${API_URL}/historicos/grades`;
     const method = id ? 'PUT' : 'POST';
 
@@ -1051,65 +1106,102 @@ function limparSelecaoAlunoHistorico() {
 
 async function carregarGradesParaNotas() {
     const tipo = document.getElementById('histTipo').value;
-    const sel = document.getElementById('histGrade');
-    sel.innerHTML = '<option value="">Carregando...</option>';
+    const container = document.getElementById('histGradeSelectors');
     document.getElementById('formNotas').style.display = 'none';
-
-    // Recarregar a lista de históricos conforme o filtro de tipo
+    HIST_STATE.gradesAtual = [];
     carregarListaHistoricos();
 
     if (!tipo) {
-        sel.innerHTML = '<option value="">Selecione a modalidade primeiro...</option>';
+        if (container) container.innerHTML = '<span style="font-size:13px;color:#9ca3af;">Selecione a modalidade primeiro...</span>';
         return;
     }
 
+    const series = tipo === 'medio'
+        ? ['1ª Série', '2ª Série', '3ª Série']
+        : ['1º Ano','2º Ano','3º Ano','4º Ano','5º Ano','6º Ano','7º Ano','8º Ano','9º Ano'];
+
     const token = localStorage.getItem('token');
+    let grades = [];
     try {
-        const resp = await fetch(`${API_URL}/historicos/grades?tipo=${tipo}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
+        const resp = await fetch(`${API_URL}/historicos/grades?tipo=${tipo}`, { headers: { 'Authorization': `Bearer ${token}` } });
         const data = await resp.json();
-        if (data.success && data.grades.length) {
-            sel.innerHTML = '<option value="">Selecione a grade...</option>';
-            data.grades.forEach(g => {
-                sel.innerHTML += `<option value="${g._id}">${escapeHtml(g.nome)} (${g.disciplinas.length} disc.)</option>`;
-            });
-        } else {
-            sel.innerHTML = '<option value="">Nenhuma grade para esta modalidade</option>';
+        grades = data.success ? data.grades : [];
+    } catch(e) {}
+
+    HIST_STATE._allGradesForTipo = grades;
+
+    if (container) {
+        if (!grades.length) {
+            container.innerHTML = '<span style="font-size:13px;color:#ef4444;">Nenhuma grade criada para esta modalidade.</span>';
+            return;
         }
-    } catch (e) {
-        sel.innerHTML = '<option value="">Erro ao carregar</option>';
+        container.innerHTML = series.map((serie, i) => {
+            const gradesForSerie = grades.filter(g => g.serie === serie || g.nomesSeries?.[0] === serie);
+            return `<div style="min-width:155px;flex:1;">
+                <label style="font-size:11px;font-weight:600;color:#374151;display:block;margin-bottom:3px;">${escapeHtml(serie)}</label>
+                <select id="histGrade_${i}" class="form-control" style="font-size:12px;" onchange="carregarFormNotas()">
+                    <option value="">Nenhuma</option>
+                    ${gradesForSerie.map(g => `<option value="${g._id}">${escapeHtml(g.nome)}</option>`).join('')}
+                </select>
+            </div>`;
+        }).join('');
     }
 }
 
 async function carregarFormNotas() {
-    const gradeId = document.getElementById('histGrade').value;
     const container = document.getElementById('formNotas');
-    if (!gradeId) { container.style.display = 'none'; return; }
+    const selectorEls = [...document.querySelectorAll('[id^="histGrade_"]')];
+    const selectedIds = selectorEls.map(s => s.value).filter(Boolean);
+
+    if (!selectedIds.length) { container.style.display = 'none'; return; }
 
     const token = localStorage.getItem('token');
     try {
-        const resp = await fetch(`${API_URL}/historicos/grades/${gradeId}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await resp.json();
-        if (!data.success) return;
+        const grades = await Promise.all(selectedIds.map(async id => {
+            const resp = await fetch(`${API_URL}/historicos/grades/${id}`, { headers: { 'Authorization': `Bearer ${token}` } });
+            const data = await resp.json();
+            return data.success ? data.grade : null;
+        }));
 
-        HIST_STATE.gradeAtual = data.grade;
-        renderizarTabelaNotas(data.grade, {});
+        const validGrades = grades.filter(Boolean);
+        if (!validGrades.length) { container.style.display = 'none'; return; }
+
+        HIST_STATE.gradesAtual = validGrades;
+        HIST_STATE.gradeAtual = validGrades[0]; // backward compat
+        renderizarTabelaNotas(validGrades, {});
         container.style.display = 'block';
-
-        // Se já tem aluno selecionado, carregar notas existentes
         carregarHistoricoAluno();
     } catch (e) {
-        mostrarNotificacao('Erro ao carregar grade.', 'error');
+        mostrarNotificacao('Erro ao carregar grades.', 'error');
     }
 }
 
-function renderizarTabelaNotas(grade, notasExistentes) {
+function renderizarTabelaNotas(gradesOrGrade, notasExistentes) {
+    // Aceita array de grades (novo) ou grade única (backward compat)
+    const grades = Array.isArray(gradesOrGrade) ? gradesOrGrade : [gradesOrGrade];
     const container = document.getElementById('formNotas');
-    const series = grade.nomesSeries || [];
-    const discs = grade.disciplinas || [];
+    const series = grades.map((g, i) => g.nomesSeries?.[0] || g.serie || (g.nomesSeries?.[i]) || `Série ${i + 1}`);
+
+    // União de disciplinas de todas as grades
+    const discMap = new Map(); // nome -> { categoria, chPorSerie: [ch0, ch1, ...] }
+    grades.forEach((g, gradeIdx) => {
+        (g.disciplinas || []).forEach(d => {
+            if (!discMap.has(d.nome)) {
+                discMap.set(d.nome, { categoria: d.categoria, chPorSerie: new Array(grades.length).fill(0) });
+            }
+            const entry = discMap.get(d.nome);
+            // Aceita cargaHorariaPorSerie[0] ou cargaHorariaPadrao
+            const ch = d.cargaHorariaPorSerie?.[0] ?? d.cargaHorariaPadrao ?? 0;
+            entry.chPorSerie[gradeIdx] = ch;
+            if (!entry.categoria) entry.categoria = d.categoria;
+        });
+    });
+
+    const discs = [...discMap.entries()].map(([nome, v]) => ({
+        nome,
+        categoria: v.categoria,
+        cargaHorariaPorSerie: v.chPorSerie
+    }));
 
     // Agrupar por categoria
     const categorias = {};
@@ -1266,9 +1358,9 @@ function renderizarTabelaNotas(grade, notasExistentes) {
 
 async function carregarHistoricoAluno() {
     const alunoId = document.getElementById('histAluno').value;
-    const gradeId = document.getElementById('histGrade').value;
     const tipo = document.getElementById('histTipo').value;
-    if (!alunoId || !gradeId || !tipo) return;
+    const gradesAtual = HIST_STATE.gradesAtual || [];
+    if (!alunoId || !gradesAtual.length || !tipo) return;
 
     HIST_STATE.historicoAtual = null;
     const token = localStorage.getItem('token');
@@ -1280,7 +1372,6 @@ async function carregarHistoricoAluno() {
         const data = await resp.json();
 
         if (data.success && data.historicos.length) {
-            // Carregar o histórico completo
             const histId = data.historicos[0]._id;
             const resp2 = await fetch(`${API_URL}/historicos/${histId}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
@@ -1288,13 +1379,13 @@ async function carregarHistoricoAluno() {
             const data2 = await resp2.json();
             if (data2.success) {
                 HIST_STATE.historicoAtual = data2.historico;
-                renderizarTabelaNotas(HIST_STATE.gradeAtual, data2.historico.notas || {});
+                renderizarTabelaNotas(gradesAtual, data2.historico.notas || {});
                 return;
             }
         }
         // Sem histórico existente - manter tabela limpa
-        if (HIST_STATE.gradeAtual) {
-            renderizarTabelaNotas(HIST_STATE.gradeAtual, {});
+        if (gradesAtual.length) {
+            renderizarTabelaNotas(gradesAtual, {});
         }
     } catch (e) {
         console.error('Erro ao carregar histórico do aluno:', e);
@@ -1303,11 +1394,15 @@ async function carregarHistoricoAluno() {
 
 async function salvarNotasHistorico() {
     const alunoId = document.getElementById('histAluno').value;
-    const gradeId = document.getElementById('histGrade').value;
     const tipo = document.getElementById('histTipo').value;
+    const gradesAtual = HIST_STATE.gradesAtual || [];
 
     if (!alunoId) { mostrarNotificacao('Selecione um aluno.', 'error'); return; }
-    if (!gradeId) { mostrarNotificacao('Selecione uma grade.', 'error'); return; }
+    if (!gradesAtual.length) { mostrarNotificacao('Selecione ao menos uma grade.', 'error'); return; }
+
+    const gradeIds = [...document.querySelectorAll('[id^="histGrade_"]')].map(s => s.value).filter(Boolean);
+    const grade = gradeIds[0];
+    const grades = gradeIds;
 
     // Coletar notas
     const notas = {};
@@ -1344,7 +1439,7 @@ async function salvarNotasHistorico() {
         const resp = await fetch(`${API_URL}/historicos`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ aluno: alunoId, grade: gradeId, tipo, notas, seriesInfo, observacoes, registro, dataEmissao, fichaIndividual })
+            body: JSON.stringify({ aluno: alunoId, grade, grades, tipo, notas, seriesInfo, observacoes, registro, dataEmissao, fichaIndividual })
         });
         const data = await resp.json();
         if (data.success) {
@@ -1852,18 +1947,23 @@ async function editarHistorico(id) {
         const selTipo = document.getElementById('histTipo');
         if (selTipo) selTipo.value = hist.tipo;
 
-        // 2. Carregar grades e depois selecionar a grade correta
+        // 2. Carregar grades e depois selecionar as grades corretas
         await carregarGradesParaNotasAsync(hist.tipo);
 
-        const selGrade = document.getElementById('histGrade');
-        if (selGrade) selGrade.value = hist.grade?._id || hist.grade;
+        // Restaurar grades selecionadas (usa hist.grades array ou hist.grade como fallback)
+        const gradesIds = (hist.grades?.length ? hist.grades : (hist.grade ? [hist.grade] : []))
+            .map(g => g._id || g);
+        const selectorEls = [...document.querySelectorAll('[id^="histGrade_"]')];
+        selectorEls.forEach((sel, i) => {
+            if (gradesIds[i]) sel.value = gradesIds[i];
+        });
 
-        // 3. Carregar o form de notas com a grade selecionada
+        // 3. Carregar o form de notas com as grades selecionadas
         await carregarFormNotasAsync();
 
         // 4. Preencher notas existentes
-        if (HIST_STATE.gradeAtual) {
-            renderizarTabelaNotas(HIST_STATE.gradeAtual, hist.notas || {});
+        if (HIST_STATE.gradesAtual?.length) {
+            renderizarTabelaNotas(HIST_STATE.gradesAtual, hist.notas || {});
         }
 
         // 5. Restaurar campos extras
@@ -1903,50 +2003,22 @@ async function editarHistorico(id) {
     }
 }
 
-// Versão assíncrona de carregarGradesParaNotas que resolve quando termina
+// Versão assíncrona de carregarGradesParaNotas
 async function carregarGradesParaNotasAsync(tipo) {
-    const sel = document.getElementById('histGrade');
-    if (sel) sel.innerHTML = '<option value="">Carregando...</option>';
     document.getElementById('formNotas').style.display = 'none';
     carregarListaHistoricos();
-    if (!tipo) { if (sel) sel.innerHTML = '<option value="">Selecione a modalidade...</option>'; return; }
-    const token = localStorage.getItem('token');
-    try {
-        const resp = await fetch(`${API_URL}/historicos/grades?tipo=${tipo}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await resp.json();
-        if (data.success && data.grades.length) {
-            sel.innerHTML = '<option value="">Selecione a grade...</option>';
-            data.grades.forEach(g => {
-                sel.innerHTML += `<option value="${g._id}">${escapeHtml(g.nome)} (${g.disciplinas.length} disc.)</option>`;
-            });
-        } else {
-            sel.innerHTML = '<option value="">Nenhuma grade para esta modalidade</option>';
-        }
-    } catch (e) {
-        sel.innerHTML = '<option value="">Erro ao carregar</option>';
+    await carregarGradesParaNotas();
+    // Sobrescrever tipo se diferente
+    const selTipo = document.getElementById('histTipo');
+    if (selTipo && tipo && selTipo.value !== tipo) {
+        selTipo.value = tipo;
+        await carregarGradesParaNotas();
     }
 }
 
-// Versão assíncrona de carregarFormNotas que resolve quando termina
+// Versão assíncrona de carregarFormNotas
 async function carregarFormNotasAsync() {
-    const gradeId = document.getElementById('histGrade').value;
-    const container = document.getElementById('formNotas');
-    if (!gradeId) { container.style.display = 'none'; return; }
-    const token = localStorage.getItem('token');
-    try {
-        const resp = await fetch(`${API_URL}/historicos/grades/${gradeId}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await resp.json();
-        if (!data.success) return;
-        HIST_STATE.gradeAtual = data.grade;
-        renderizarTabelaNotas(data.grade, {});
-        container.style.display = 'block';
-    } catch (e) {
-        mostrarNotificacao('Erro ao carregar grade.', 'error');
-    }
+    await carregarFormNotas();
 }
 
 // ==================== GERAÇÃO DE PDF ====================

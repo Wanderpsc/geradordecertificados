@@ -34,6 +34,12 @@ const GradeHistoricoSchema = new mongoose.Schema({
         type: [String],
         default: []
     },
+    // Série específica que esta grade representa (ex: '1ª Série', '2º Ano')
+    serie: {
+        type: String,
+        trim: true,
+        default: ''
+    },
     // Matrizes curriculares por série
     // [{ serieIdx: 0, serieNome: '6º Ano', matrizId: ObjectId }]
     seriesMatrizes: {
