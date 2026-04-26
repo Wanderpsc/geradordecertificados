@@ -290,8 +290,7 @@ function adicionarDisciplinaMatriz(disc) {
             <select class="form-control mdisc-subcategoria" style="font-size:12px;padding:5px 7px;min-width:195px;">
                 <option value="" ${!disc || !disc.subcategoria ? 'selected' : ''}>(sem subcategoria)</option>
                 <option value="aprofundamento_linguagens" ${disc && disc.subcategoria === 'aprofundamento_linguagens' ? 'selected' : ''}>Aprofundamento de Linguagens e suas Tecnologias</option>
-                <option value="aprofundamento_matematica" ${disc && disc.subcategoria === 'aprofundamento_matematica' ? 'selected' : ''}>Aprofundamento de Matemática</option>
-                <option value="ciencias_natureza_linguagens" ${disc && disc.subcategoria === 'ciencias_natureza_linguagens' ? 'selected' : ''}>Ciências da Natureza e Linguagens e suas Tecnologias</option>
+                <option value="aprofundamento_matematica_ciencias" ${disc && disc.subcategoria === 'aprofundamento_matematica_ciencias' ? 'selected' : ''}>Aprofundamento de Matemática, Ciências da Natureza e Linguagens e suas Tecnologias</option>
                 <option value="atividades_integradoras" ${disc && disc.subcategoria === 'atividades_integradoras' ? 'selected' : ''}>Atividades Integradoras</option>
             </select>
         </td>
