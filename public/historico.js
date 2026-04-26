@@ -1357,10 +1357,6 @@ async function carregarGradesParaNotas() {
         return;
     }
 
-    const series = tipo === 'medio'
-        ? ['1ª Série', '2ª Série', '3ª Série']
-        : ['1º Ano','2º Ano','3º Ano','4º Ano','5º Ano','6º Ano','7º Ano','8º Ano','9º Ano'];
-
     const token = localStorage.getItem('token');
     let grades = [];
     try {
@@ -1376,16 +1372,12 @@ async function carregarGradesParaNotas() {
             container.innerHTML = '<span style="font-size:13px;color:#ef4444;">Nenhuma grade criada para esta modalidade.</span>';
             return;
         }
-        container.innerHTML = series.map((serie, i) => {
-            const gradesForSerie = grades.filter(g => g.serie === serie || g.nomesSeries?.[0] === serie);
-            return `<div style="min-width:155px;flex:1;">
-                <label style="font-size:11px;font-weight:600;color:#374151;display:block;margin-bottom:3px;">${escapeHtml(serie)}</label>
-                <select id="histGrade_${i}" class="form-control" style="font-size:12px;" onchange="carregarFormNotas()">
-                    <option value="">Nenhuma</option>
-                    ${gradesForSerie.map(g => `<option value="${g._id}">${escapeHtml(g.nome)}</option>`).join('')}
-                </select>
-            </div>`;
-        }).join('');
+        container.innerHTML = `<div style="min-width:220px;flex:1;max-width:480px;">
+            <select id="histGrade_0" class="form-control" style="font-size:13px;" onchange="carregarFormNotas()">
+                <option value="">-- Selecione uma grade --</option>
+                ${grades.map(g => `<option value="${g._id}">${escapeHtml(g.nome)}</option>`).join('')}
+            </select>
+        </div>`;
     }
 }
 
@@ -1418,25 +1410,40 @@ async function carregarFormNotas() {
 }
 
 function renderizarTabelaNotas(gradesOrGrade, notasExistentes) {
-    // Aceita array de grades (novo) ou grade única (backward compat)
+    // Aceita array de grades ou grade única
     const grades = Array.isArray(gradesOrGrade) ? gradesOrGrade : [gradesOrGrade];
     const container = document.getElementById('formNotas');
-    const series = grades.map((g, i) => g.nomesSeries?.[0] || g.serie || (g.nomesSeries?.[i]) || `Série ${i + 1}`);
 
-    // União de disciplinas de todas as grades
-    const discMap = new Map(); // nome -> { categoria, chPorSerie: [ch0, ch1, ...] }
-    grades.forEach((g, gradeIdx) => {
-        (g.disciplinas || []).forEach(d => {
+    // Se for uma única grade multi-série (Novo Histórico), expande as séries dela
+    const singleMulti = grades.length === 1 && (grades[0].numSeries > 1 || (grades[0].nomesSeries?.length ?? 0) > 1);
+    const series = singleMulti
+        ? (grades[0].nomesSeries?.length ? grades[0].nomesSeries : Array.from({length: grades[0].numSeries || 3}, (_, i) => `${i+1}ª Série`))
+        : grades.map((g, i) => g.nomesSeries?.[0] || g.serie || `Série ${i + 1}`);
+
+    // União de disciplinas
+    const discMap = new Map(); // nome -> { categoria, subcategoria, chPorSerie: [] }
+    if (singleMulti) {
+        (grades[0].disciplinas || []).forEach(d => {
             if (!discMap.has(d.nome)) {
-                discMap.set(d.nome, { categoria: d.categoria, chPorSerie: new Array(grades.length).fill(0) });
+                const chArr = d.cargaHorariaPorSerie?.length
+                    ? d.cargaHorariaPorSerie.slice(0, series.length)
+                    : new Array(series.length).fill(d.cargaHorariaPadrao ?? 0);
+                discMap.set(d.nome, { categoria: d.categoria, subcategoria: d.subcategoria, chPorSerie: chArr });
             }
-            const entry = discMap.get(d.nome);
-            // Aceita cargaHorariaPorSerie[0] ou cargaHorariaPadrao
-            const ch = d.cargaHorariaPorSerie?.[0] ?? d.cargaHorariaPadrao ?? 0;
-            entry.chPorSerie[gradeIdx] = ch;
-            if (!entry.categoria) entry.categoria = d.categoria;
         });
-    });
+    } else {
+        grades.forEach((g, gradeIdx) => {
+            (g.disciplinas || []).forEach(d => {
+                if (!discMap.has(d.nome)) {
+                    discMap.set(d.nome, { categoria: d.categoria, subcategoria: d.subcategoria, chPorSerie: new Array(grades.length).fill(0) });
+                }
+                const entry = discMap.get(d.nome);
+                const ch = d.cargaHorariaPorSerie?.[0] ?? d.cargaHorariaPadrao ?? 0;
+                entry.chPorSerie[gradeIdx] = ch;
+                if (!entry.categoria) entry.categoria = d.categoria;
+            });
+        });
+    }
 
     const discs = [...discMap.entries()].map(([nome, v]) => ({
         nome,
@@ -1463,7 +1470,7 @@ function renderizarTabelaNotas(gradesOrGrade, notasExistentes) {
         'ensino_religioso': 'Ensino Religioso'
     };
 
-    const isFundamental = grade.tipo === 'fundamental';
+    const isFundamental = grades[0]?.tipo === 'fundamental';
 
     let html = `
     <div style="overflow-x:auto;margin-top:12px;">
