@@ -403,7 +403,7 @@ async function carregarListaGrades() {
 
         if (!HIST_STATE.grades.length) {
             container.innerHTML = `<div style="text-align: center; color: #9ca3af; padding: 30px; grid-column: 1/-1;">
-                Nenhuma grade criada. Clique em "+ Nova Grade" para começar.
+                Nenhum histórico criado. Clique em "+ Novo Histórico" para começar.
             </div>`;
             return;
         }
@@ -436,7 +436,7 @@ async function carregarListaGrades() {
 }
 
 function abrirModalNovaGrade() {
-    abrirModalGrade(null);
+    abrirModalNovoHistorico(null);
 }
 
 function abrirModalGrade(gradeExistente) {
@@ -957,7 +957,12 @@ async function editarGrade(id) {
         });
         const data = await resp.json();
         if (data.success) {
-            abrirModalGrade(data.grade);
+            const g = data.grade;
+            if (g.numSeries > 1 || g.seriesMatrizes?.length > 1) {
+                abrirModalNovoHistorico(g);
+            } else {
+                abrirModalGrade(g);
+            }
         }
     } catch (e) {
         mostrarNotificacao('Erro ao carregar grade.', 'error');
@@ -965,7 +970,7 @@ async function editarGrade(id) {
 }
 
 async function excluirGrade(id, nome) {
-    if (!confirm(`Excluir a grade "${nome}"? Esta ação não pode ser desfeita.`)) return;
+    if (!confirm(`Excluir o histórico "${nome}"? Esta ação não pode ser desfeita.`)) return;
     const token = localStorage.getItem('token');
     try {
         const resp = await fetch(`${API_URL}/historicos/grades/${id}`, {
@@ -974,7 +979,7 @@ async function excluirGrade(id, nome) {
         });
         const data = await resp.json();
         if (data.success) {
-            mostrarNotificacao('Grade excluída!', 'success');
+            mostrarNotificacao('Histórico excluído!', 'success');
             carregarListaGrades();
         } else {
             mostrarNotificacao(data.message || 'Erro ao excluir.', 'error');
@@ -984,7 +989,214 @@ async function excluirGrade(id, nome) {
     }
 }
 
-// ==================== LANÇAR NOTAS ====================
+// ==================== NOVO HISTÓRICO (3 séries + matrizes) ====================
+
+function abrirModalNovoHistorico(gradeExistente) {
+    const isEdit = !!gradeExistente;
+    const g = gradeExistente || { tipo: 'medio', nome: '', numSeries: 3, nomesSeries: ['1ª Série', '2ª Série', '3ª Série'], seriesMatrizes: [] };
+    const tipo = g.tipo || 'medio';
+    const seriesMedio = ['1ª Série', '2ª Série', '3ª Série'];
+    const seriesFund = ['1º Ano','2º Ano','3º Ano','4º Ano','5º Ano','6º Ano','7º Ano','8º Ano','9º Ano'];
+    const series = tipo === 'medio' ? seriesMedio : seriesFund;
+
+    window._novoHistoricoMatrizes = series.map((serieNome, idx) => {
+        const sm = g.seriesMatrizes?.find(s => s.serieIdx === idx || s.serieNome === serieNome);
+        if (sm) {
+            const mId = sm.matrizId?._id || sm.matrizId;
+            return { serieIdx: idx, serieNome, matrizId: mId ? mId.toString() : null, matrizTitulo: sm.matrizId?.titulo || '' };
+        }
+        return { serieIdx: idx, serieNome, matrizId: null, matrizTitulo: '' };
+    });
+
+    const modal = document.createElement('div');
+    modal.className = 'overlay-modal';
+    modal.id = 'modalNovoHistorico';
+    modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;overflow-y:auto;padding:20px;';
+    modal.innerHTML = `
+    <div style="background:white;border-radius:16px;padding:28px;max-width:620px;width:95%;max-height:90vh;overflow-y:auto;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+            <h2 style="color:#1e3a8a;margin:0;">${isEdit ? '✏️ Editar' : '➕ Novo'} Histórico</h2>
+            <button onclick="this.closest('.overlay-modal').remove()" style="background:none;border:none;font-size:24px;cursor:pointer;">✕</button>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+            <div style="grid-column:1/-1;">
+                <label style="font-weight:600;font-size:13px;display:block;margin-bottom:4px;">Nome do Histórico</label>
+                <input type="text" id="novoHistNome" class="form-control" value="${escapeHtml(g.nome)}" placeholder="Ex: Ensino Médio — Turma A 2025">
+            </div>
+            <div>
+                <label style="font-weight:600;font-size:13px;display:block;margin-bottom:4px;">Modalidade</label>
+                <select id="novoHistTipo" class="form-control" onchange="_atualizarSeriesNovoHist()">
+                    <option value="medio" ${tipo === 'medio' ? 'selected' : ''}>Ensino Médio (3 Séries)</option>
+                    <option value="fundamental" ${tipo === 'fundamental' ? 'selected' : ''}>Ensino Fundamental (9 Anos)</option>
+                </select>
+            </div>
+        </div>
+        <div style="border-top:2px solid #e5e7eb;padding-top:16px;">
+            <h3 style="color:#1e3a8a;font-size:15px;margin:0 0 12px 0;">Matrizes por Série</h3>
+            <div id="novoHistSeriesContainer">${_renderSeriesNovoHist(window._novoHistoricoMatrizes)}</div>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;border-top:2px solid #e5e7eb;padding-top:16px;">
+            <button class="btn btn-secondary" onclick="this.closest('.overlay-modal').remove()">Cancelar</button>
+            <button class="btn btn-primary" onclick="salvarNovoHistorico('${isEdit ? g._id : ''}')">${isEdit ? '💾 Salvar Alterações' : '✅ Criar Histórico'}</button>
+        </div>
+    </div>`;
+
+    document.body.appendChild(modal);
+    modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+}
+
+function _renderSeriesNovoHist(seriesData) {
+    return seriesData.map((s, idx) => `
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:8px;background:#f8fafc;">
+        <span style="font-weight:700;font-size:13px;color:#1e3a8a;min-width:80px;">${escapeHtml(s.serieNome)}</span>
+        <span id="novoHistMatrizLabel_${idx}" style="flex:1;font-size:12px;font-weight:600;color:${s.matrizId ? '#1e3a8a' : '#9ca3af'};">
+            ${s.matrizId ? escapeHtml(s.matrizTitulo || 'Matriz selecionada') : 'Nenhuma matriz selecionada'}
+        </span>
+        <button onclick="selecionarMatrizNovoHist(${idx})" style="background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:11px;white-space:nowrap;">Selecionar Matriz</button>
+        ${s.matrizId ? `<button onclick="limparMatrizNovoHist(${idx})" style="background:#fef2f2;color:#991b1b;border:1px solid #fecaca;padding:4px 8px;border-radius:6px;cursor:pointer;font-size:11px;">✕</button>` : ''}
+    </div>`).join('');
+}
+
+function _atualizarSeriesNovoHist() {
+    const tipo = document.getElementById('novoHistTipo')?.value;
+    const series = tipo === 'medio'
+        ? ['1ª Série', '2ª Série', '3ª Série']
+        : ['1º Ano','2º Ano','3º Ano','4º Ano','5º Ano','6º Ano','7º Ano','8º Ano','9º Ano'];
+    window._novoHistoricoMatrizes = series.map((serieNome, idx) => ({
+        serieIdx: idx, serieNome, matrizId: null, matrizTitulo: ''
+    }));
+    const container = document.getElementById('novoHistSeriesContainer');
+    if (container) container.innerHTML = _renderSeriesNovoHist(window._novoHistoricoMatrizes);
+}
+
+async function selecionarMatrizNovoHist(serieIdx) {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    let matrizes = HIST_STATE.matrizes || [];
+    if (!matrizes.length) {
+        try {
+            const resp = await fetch(`${API_URL}/historicos/matrizes`, { headers: { 'Authorization': `Bearer ${token}` } });
+            const data = await resp.json();
+            if (data.success) { matrizes = data.matrizes; HIST_STATE.matrizes = matrizes; }
+        } catch(e) {}
+    }
+    if (!matrizes.length) { mostrarNotificacao('Nenhuma matriz cadastrada.', 'warning'); return; }
+
+    const serieNome = window._novoHistoricoMatrizes?.[serieIdx]?.serieNome || '';
+    const picker = document.createElement('div');
+    picker.id = 'modalMatrizPickerNH';
+    picker.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:10001;display:flex;align-items:center;justify-content:center;padding:20px;';
+    picker.innerHTML = `
+    <div style="background:white;border-radius:16px;padding:24px;max-width:460px;width:95%;max-height:80vh;overflow-y:auto;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+            <h3 style="color:#1e3a8a;margin:0;">Selecionar Matriz — ${escapeHtml(serieNome)}</h3>
+            <button onclick="document.getElementById('modalMatrizPickerNH').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;">✕</button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+            ${matrizes.map(m => `
+            <div onclick="aplicarMatrizNovoHist(${serieIdx}, '${m._id}', '${escapeHtml(m.titulo).replace(/'/g, '&#39;')}')"
+                 style="padding:12px 16px;border:2px solid #e5e7eb;border-radius:10px;cursor:pointer;"
+                 onmouseover="this.style.borderColor='#3b82f6';this.style.background='#eff6ff'"
+                 onmouseout="this.style.borderColor='#e5e7eb';this.style.background='white'">
+                <div style="font-weight:600;font-size:13px;color:#1e3a8a;">${escapeHtml(m.titulo)}</div>
+                <div style="font-size:11px;color:#6b7280;">${m.disciplinas?.length||0} disciplina(s)</div>
+            </div>`).join('')}
+        </div>
+    </div>`;
+    document.body.appendChild(picker);
+    picker.addEventListener('click', e => { if (e.target === picker) picker.remove(); });
+}
+
+function aplicarMatrizNovoHist(serieIdx, matrizId, matrizTitulo) {
+    if (window._novoHistoricoMatrizes?.[serieIdx]) {
+        window._novoHistoricoMatrizes[serieIdx].matrizId = matrizId;
+        window._novoHistoricoMatrizes[serieIdx].matrizTitulo = matrizTitulo;
+    }
+    document.getElementById('modalMatrizPickerNH')?.remove();
+    const container = document.getElementById('novoHistSeriesContainer');
+    if (container) container.innerHTML = _renderSeriesNovoHist(window._novoHistoricoMatrizes);
+}
+
+function limparMatrizNovoHist(serieIdx) {
+    if (window._novoHistoricoMatrizes?.[serieIdx]) {
+        window._novoHistoricoMatrizes[serieIdx].matrizId = null;
+        window._novoHistoricoMatrizes[serieIdx].matrizTitulo = '';
+    }
+    const container = document.getElementById('novoHistSeriesContainer');
+    if (container) container.innerHTML = _renderSeriesNovoHist(window._novoHistoricoMatrizes);
+}
+
+async function salvarNovoHistorico(id) {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    const nome = document.getElementById('novoHistNome')?.value.trim();
+    if (!nome) { mostrarNotificacao('Informe o nome do histórico.', 'error'); return; }
+    const tipo = document.getElementById('novoHistTipo')?.value || 'medio';
+    const seriesData = window._novoHistoricoMatrizes || [];
+    const seriesComMatriz = seriesData.filter(s => s.matrizId);
+    if (!seriesComMatriz.length) { mostrarNotificacao('Selecione ao menos uma matriz.', 'error'); return; }
+
+    let allMatrizes = {};
+    try {
+        await Promise.all(seriesComMatriz.map(async s => {
+            const resp = await fetch(`${API_URL}/historicos/matrizes/${s.matrizId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await resp.json();
+            if (data.success) allMatrizes[s.matrizId] = data.matriz;
+        }));
+    } catch(e) {
+        mostrarNotificacao('Erro ao carregar matrizes.', 'error');
+        return;
+    }
+
+    const numSeries = seriesData.length;
+    const nomesSeries = seriesData.map(s => s.serieNome);
+    const disciplinaMap = new Map();
+    seriesData.forEach((s, serieIdx) => {
+        if (!s.matrizId || !allMatrizes[s.matrizId]) return;
+        (allMatrizes[s.matrizId].disciplinas || []).forEach(d => {
+            const key = d.nome?.trim();
+            if (!key) return;
+            if (!disciplinaMap.has(key)) {
+                disciplinaMap.set(key, {
+                    nome: key,
+                    categoria: d.categoria || '',
+                    subcategoria: d.subcategoria || '',
+                    cargaHorariaPorSerie: Array(numSeries).fill(0),
+                    cargaHorariaPadrao: 0
+                });
+            }
+            const disc = disciplinaMap.get(key);
+            const ch = d.cargaHoraria ?? d.cargaHorariaPadrao ?? 0;
+            disc.cargaHorariaPorSerie[serieIdx] = ch;
+            if (ch > disc.cargaHorariaPadrao) disc.cargaHorariaPadrao = ch;
+        });
+    });
+
+    const disciplinas = [...disciplinaMap.values()];
+    const seriesMatrizes = seriesComMatriz.map(s => ({ serieIdx: s.serieIdx, serieNome: s.serieNome, matrizId: s.matrizId }));
+    const body = { tipo, nome, serie: nomesSeries[0] || '', disciplinas, numSeries, nomesSeries, seriesMatrizes };
+    const url = id ? `${API_URL}/historicos/grades/${id}` : `${API_URL}/historicos/grades`;
+    const method = id ? 'PUT' : 'POST';
+    try {
+        const resp = await fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+        if (data.success) {
+            document.getElementById('modalNovoHistorico')?.remove();
+            mostrarNotificacao(`Histórico "${nome}" ${id ? 'atualizado' : 'criado'} com sucesso!`, 'success');
+            carregarListaGrades();
+        } else {
+            mostrarNotificacao(data.message || 'Erro ao salvar histórico.', 'error');
+        }
+    } catch (e) {
+        mostrarNotificacao('Erro de conexão.', 'error');
+    }
+}
 
 function popularSelectAlunos() {
     popularFiltrosHistorico();
