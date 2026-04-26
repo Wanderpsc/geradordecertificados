@@ -237,6 +237,7 @@ function abrirModalMatriz(matrizExistente) {
                         <tr style="background:#e2e8f0;">
                             <th style="padding:7px 10px;text-align:left;border:1px solid #cbd5e1;font-size:12px;font-weight:600;min-width:200px;">Disciplina</th>
                             <th style="padding:7px 8px;text-align:left;border:1px solid #cbd5e1;font-size:12px;font-weight:600;min-width:180px;">Categoria</th>
+                            <th style="padding:7px 8px;text-align:left;border:1px solid #cbd5e1;font-size:12px;font-weight:600;min-width:200px;">Subcategoria</th>
                             <th style="padding:7px 8px;text-align:center;border:1px solid #cbd5e1;font-size:12px;font-weight:600;width:100px;">CH (horas)</th>
                             <th style="padding:4px;border:1px solid #cbd5e1;width:38px;"></th>
                         </tr>
@@ -285,6 +286,15 @@ function adicionarDisciplinaMatriz(disc) {
                 ${cats.map(c => `<option value="${c[0]}" ${disc && disc.categoria === c[0] ? 'selected' : ''}>${c[1]}</option>`).join('')}
             </select>
         </td>
+        <td style="padding:3px 6px;border:1px solid #e5e7eb;">
+            <select class="form-control mdisc-subcategoria" style="font-size:12px;padding:5px 7px;min-width:195px;">
+                <option value="" ${!disc || !disc.subcategoria ? 'selected' : ''}>(sem subcategoria)</option>
+                <option value="aprofundamento_linguagens" ${disc && disc.subcategoria === 'aprofundamento_linguagens' ? 'selected' : ''}>Aprofundamento de Linguagens e suas Tecnologias</option>
+                <option value="aprofundamento_matematica" ${disc && disc.subcategoria === 'aprofundamento_matematica' ? 'selected' : ''}>Aprofundamento de Matemática</option>
+                <option value="ciencias_natureza_linguagens" ${disc && disc.subcategoria === 'ciencias_natureza_linguagens' ? 'selected' : ''}>Ciências da Natureza e Linguagens e suas Tecnologias</option>
+                <option value="atividades_integradoras" ${disc && disc.subcategoria === 'atividades_integradoras' ? 'selected' : ''}>Atividades Integradoras</option>
+            </select>
+        </td>
         <td style="padding:3px 6px;border:1px solid #e5e7eb;text-align:center;">
             <input type="number" class="form-control mdisc-ch" min="0" value="${disc ? (disc.cargaHoraria !== undefined ? disc.cargaHoraria : (disc.cargaHorariaPadrao || '')) : ''}" placeholder="0" style="width:80px;font-size:12px;padding:4px 6px;text-align:center;">
         </td>
@@ -308,6 +318,7 @@ async function salvarMatriz(id) {
         disciplinas.push({
             nome: n,
             categoria: row.querySelector('.mdisc-categoria').value,
+            subcategoria: row.querySelector('.mdisc-subcategoria').value || '',
             cargaHoraria: parseInt(row.querySelector('.mdisc-ch').value) || 0
         });
     });
