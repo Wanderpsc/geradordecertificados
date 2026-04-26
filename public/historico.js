@@ -217,7 +217,7 @@ function abrirModalMatriz(matrizExistente) {
     modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;overflow-y:auto;padding:20px;';
 
     modal.innerHTML = `
-    <div style="background:white;border-radius:16px;padding:28px;max-width:780px;width:95%;max-height:90vh;overflow-y:auto;">
+    <div style="background:white;border-radius:16px;padding:28px;max-width:1100px;width:98%;max-height:92vh;overflow-y:auto;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
             <h2 style="color:#1e3a8a;margin:0;">${isEdit ? '✏️ Editar' : '➕ Nova'} Matriz Curricular</h2>
             <button onclick="this.closest('.overlay-modal').remove()" style="background:none;border:none;font-size:24px;cursor:pointer;">✕</button>
@@ -232,7 +232,7 @@ function abrirModalMatriz(matrizExistente) {
                 <button class="btn btn-primary btn-sm" onclick="adicionarDisciplinaMatriz()" style="font-size:12px;">+ Adicionar Disciplina</button>
             </div>
             <div style="overflow-x:auto;border:1px solid #e5e7eb;border-radius:8px;">
-                <table style="width:100%;border-collapse:collapse;min-width:400px;">
+                <table style="width:100%;border-collapse:collapse;min-width:800px;">
                     <thead>
                         <tr style="background:#e2e8f0;">
                             <th style="padding:7px 10px;text-align:left;border:1px solid #cbd5e1;font-size:12px;font-weight:600;min-width:200px;">Disciplina</th>
