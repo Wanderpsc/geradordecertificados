@@ -169,7 +169,10 @@ function handleUploadEmblemaHist(event) {
 
 // ==================== MATRIZES CURRICULARES ====================
 
-let _gradeSeriesMatrizes = []; // [{id, titulo}|null, ...] — estado temporário do modal de grade
+let _gradeSeriesMatrizes = []; // [{id, titulo}|null, ...] — por tab
+let _gradeTabDiscs = [];       // [[{nome,categoria,ch},...], ...] — disciplinas por tab
+let _gradeActiveTab = 0;       // tab ativa
+let _gradeSeriesNomes = [];    // nomes das séries/anos
 
 async function carregarListaMatrizes() {
     const token = localStorage.getItem('token');
@@ -406,15 +409,44 @@ function abrirModalNovaGrade() {
 
 function abrirModalGrade(gradeExistente) {
     const isEdit = !!gradeExistente;
-    const g = gradeExistente || {
-        tipo: 'medio',
-        nome: '',
-        disciplinas: [],
-        numSeries: 3,
-        nomesSeries: ['1ª Série', '2ª Série', '3ª Série']
-    };
+    const g = gradeExistente || { tipo: 'medio', nome: '', disciplinas: [], numSeries: 3, nomesSeries: ['1ª Série', '2ª Série', '3ª Série'] };
 
-    // Categorias não usadas diretamente no modal, apenas em adicionarDisciplinaGrade
+    const numSeriesTotal = g.nomesSeries?.length || (g.tipo === 'medio' ? 3 : 9);
+    const nomesPadrao = g.tipo === 'medio'
+        ? ['1ª Série', '2ª Série', '3ª Série']
+        : ['1º Ano', '2º Ano', '3º Ano', '4º Ano', '5º Ano', '6º Ano', '7º Ano', '8º Ano', '9º Ano'];
+
+    // Inicializar estado das tabs
+    _gradeActiveTab = 0;
+    _gradeSeriesNomes = g.nomesSeries?.length ? [...g.nomesSeries] : [...nomesPadrao];
+    _gradeSeriesMatrizes = new Array(numSeriesTotal).fill(null);
+    _gradeTabDiscs = Array.from({ length: numSeriesTotal }, () => []);
+
+    if (g.seriesMatrizes?.length) {
+        g.seriesMatrizes.forEach(sm => {
+            const idx = sm.serieIdx;
+            if (idx >= 0 && idx < numSeriesTotal) {
+                const mId = sm.matrizId?._id || sm.matrizId;
+                if (mId) _gradeSeriesMatrizes[idx] = { id: mId.toString(), titulo: sm.matrizId?.titulo || '' };
+            }
+        });
+    }
+
+    // Distribuir disciplinas por tab a partir de cargaHorariaPorSerie
+    if (g.disciplinas?.length) {
+        g.disciplinas.forEach(d => {
+            const chArr = d.cargaHorariaPorSerie;
+            if (chArr && chArr.length >= numSeriesTotal) {
+                for (let i = 0; i < numSeriesTotal; i++) {
+                    const ch = chArr[i] !== undefined ? chArr[i] : 0;
+                    if (ch > 0) _gradeTabDiscs[i].push({ nome: d.nome, categoria: d.categoria, ch });
+                }
+            } else {
+                const ch = d.cargaHorariaPadrao || 0;
+                for (let i = 0; i < numSeriesTotal; i++) _gradeTabDiscs[i].push({ nome: d.nome, categoria: d.categoria, ch });
+            }
+        });
+    }
 
     const modal = document.createElement('div');
     modal.className = 'overlay-modal';
@@ -422,13 +454,13 @@ function abrirModalGrade(gradeExistente) {
     modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;overflow-y:auto;padding:20px;';
 
     modal.innerHTML = `
-    <div style="background:white;border-radius:16px;padding:28px;max-width:800px;width:95%;max-height:90vh;overflow-y:auto;">
+    <div style="background:white;border-radius:16px;padding:28px;max-width:720px;width:95%;max-height:90vh;overflow-y:auto;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-            <h2 style="color:#1e3a8a;">${isEdit ? '✏️ Editar' : '➕ Nova'} Grade de Disciplinas</h2>
+            <h2 style="color:#1e3a8a;margin:0;">${isEdit ? '✏️ Editar' : '➕ Nova'} Grade de Disciplinas</h2>
             <button onclick="this.closest('.overlay-modal').remove()" style="background:none;border:none;font-size:24px;cursor:pointer;">✕</button>
         </div>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
             <div>
                 <label style="font-weight:600;font-size:13px;display:block;margin-bottom:4px;">Modalidade</label>
                 <select id="gradeTipo" class="form-control" onchange="atualizarSeriesGrade()">
@@ -443,20 +475,37 @@ function abrirModalGrade(gradeExistente) {
         </div>
 
         <div style="margin-bottom:16px;">
-            <label style="font-weight:600;font-size:13px;display:block;margin-bottom:4px;">Nomes das Séries/Anos</label>
-            <div id="gradeSeriesContainer" style="display:flex;gap:8px;flex-wrap:wrap;">
-                <!-- Preenchido dinamicamente -->
+            <label style="font-weight:600;font-size:13px;display:block;margin-bottom:8px;">Séries / Anos</label>
+            <div id="gradeSeriesTabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;"></div>
+            <div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;padding:10px 14px;">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+                    <label style="font-size:12px;font-weight:600;white-space:nowrap;color:#374151;">Nome desta série:</label>
+                    <input type="text" id="gradeSerieNomeInput" class="form-control" style="max-width:180px;font-size:12px;padding:5px 8px;" oninput="atualizarNomeSerieAtiva()">
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                    <span style="font-size:12px;color:#6b7280;white-space:nowrap;">Matriz curricular:</span>
+                    <span id="gradeSerieMatrizLabel" style="font-size:12px;font-weight:600;color:#9ca3af;flex:1;min-width:60px;">Nenhuma</span>
+                    <button onclick="selecionarMatrizParaSerie(_gradeActiveTab)" style="background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:11px;white-space:nowrap;">📋 Selecionar Matriz</button>
+                    <button onclick="limparMatrizSerie(_gradeActiveTab)" style="background:#fef2f2;color:#991b1b;border:1px solid #fecaca;padding:4px 8px;border-radius:6px;cursor:pointer;font-size:11px;" title="Remover matriz">✕</button>
+                </div>
             </div>
         </div>
 
         <div style="border-top:2px solid #e5e7eb;padding-top:16px;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-                <h3 style="color:#1e3a8a;font-size:15px;">Disciplinas</h3>
+                <h3 id="gradeDisciplinasTitle" style="color:#1e3a8a;font-size:15px;margin:0;">Disciplinas</h3>
                 <button class="btn btn-primary btn-sm" onclick="adicionarDisciplinaGrade()" style="font-size:12px;">+ Adicionar Disciplina</button>
             </div>
-            <div id="gradeDisciplinas" style="overflow-x:auto;max-height:420px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:8px;">
-                <table style="width:100%;border-collapse:collapse;min-width:400px;" id="gradeDisciplinasTable">
-                    <thead id="gradeDisciplinasHead"></thead>
+            <div style="overflow-x:auto;max-height:370px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:8px;">
+                <table style="width:100%;border-collapse:collapse;" id="gradeDisciplinasTable">
+                    <thead>
+                        <tr style="background:#e2e8f0;">
+                            <th style="padding:7px 10px;text-align:left;border:1px solid #cbd5e1;font-size:12px;font-weight:600;min-width:200px;">Disciplina</th>
+                            <th style="padding:7px 8px;text-align:left;border:1px solid #cbd5e1;font-size:12px;font-weight:600;min-width:155px;">Categoria</th>
+                            <th style="padding:7px 8px;text-align:center;border:1px solid #cbd5e1;font-size:12px;font-weight:600;width:110px;">CH (horas)</th>
+                            <th style="padding:4px;border:1px solid #cbd5e1;width:38px;"></th>
+                        </tr>
+                    </thead>
                     <tbody id="gradeDisciplinasTbody"></tbody>
                 </table>
             </div>
@@ -472,80 +521,94 @@ function abrirModalGrade(gradeExistente) {
     document.body.appendChild(modal);
     modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
 
-    // Inicializar _gradeSeriesMatrizes com dados existentes
-    const numSeriesTotal = g.nomesSeries?.length || (g.tipo === 'medio' ? 3 : 9);
-    _gradeSeriesMatrizes = new Array(numSeriesTotal).fill(null);
-    if (g.seriesMatrizes && g.seriesMatrizes.length) {
-        g.seriesMatrizes.forEach(sm => {
-            const idx = sm.serieIdx;
-            if (idx >= 0 && idx < numSeriesTotal) {
-                const mId = sm.matrizId?._id || sm.matrizId;
-                const mTitulo = sm.matrizId?.titulo || '';
-                if (mId) _gradeSeriesMatrizes[idx] = { id: mId.toString(), titulo: mTitulo };
-            }
-        });
-    }
+    renderGradeTabs();
+    renderGradeTabContent(0);
 
-    // Preencher séries
-    atualizarSeriesGrade(g.nomesSeries);
+    const btnPadrao = document.getElementById('btnCarregarPadrao');
+    if (btnPadrao) btnPadrao.textContent = g.tipo === 'medio' ? '📋 Carregar Padrão Médio' : '📋 Carregar Padrão Fundamental';
+}
 
-    // Preencher disciplinas existentes
-    if (g.disciplinas && g.disciplinas.length) {
-        g.disciplinas.forEach(d => adicionarDisciplinaGrade(d));
+// ==================== TABS DE SÉRIES NA GRADE ====================
+
+function renderGradeTabs() {
+    const container = document.getElementById('gradeSeriesTabs');
+    if (!container) return;
+    container.innerHTML = _gradeSeriesNomes.map((nome, i) => {
+        const mat = _gradeSeriesMatrizes[i];
+        const isActive = i === _gradeActiveTab;
+        return `<button class="grade-tab-btn" onclick="switchGradeTab(${i})"
+            style="padding:8px 18px;border-radius:8px;border:2px solid ${isActive ? '#1e3a8a' : '#e5e7eb'};
+            background:${isActive ? '#1e3a8a' : 'white'};color:${isActive ? 'white' : '#374151'};
+            cursor:pointer;font-size:13px;font-weight:600;position:relative;transition:all .15s;">
+            ${escapeHtml(nome)}
+            ${mat ? '<span style="position:absolute;top:-5px;right:-5px;background:#10b981;color:white;border-radius:50%;width:16px;height:16px;font-size:9px;line-height:16px;text-align:center;display:inline-block;">✓</span>' : ''}
+        </button>`;
+    }).join('');
+}
+
+function renderGradeTabContent(idx) {
+    const nomeInput = document.getElementById('gradeSerieNomeInput');
+    if (nomeInput) nomeInput.value = _gradeSeriesNomes[idx] || '';
+
+    const mat = _gradeSeriesMatrizes[idx];
+    const label = document.getElementById('gradeSerieMatrizLabel');
+    if (label) { label.textContent = mat ? mat.titulo : 'Nenhuma'; label.style.color = mat ? '#1e3a8a' : '#9ca3af'; }
+
+    const title = document.getElementById('gradeDisciplinasTitle');
+    if (title) title.textContent = `Disciplinas — ${_gradeSeriesNomes[idx] || 'Série ' + (idx + 1)}`;
+
+    const tbody = document.getElementById('gradeDisciplinasTbody');
+    if (tbody) {
+        tbody.innerHTML = '';
+        (_gradeTabDiscs[idx] || []).forEach(d => adicionarDisciplinaGrade(d));
     }
 }
 
-function atualizarSeriesGrade(seriesExistentes) {
-    const tipo = document.getElementById('gradeTipo').value;
-    const container = document.getElementById('gradeSeriesContainer');
-    const numSeries = tipo === 'medio' ? 3 : 9;
+function switchGradeTab(newIdx) {
+    saveCurrentTabDiscs();
+    _gradeActiveTab = newIdx;
+    renderGradeTabs();
+    renderGradeTabContent(newIdx);
+}
 
+function saveCurrentTabDiscs() {
+    const rows = [...document.querySelectorAll('#gradeDisciplinasTbody .grade-disc-row')];
+    _gradeTabDiscs[_gradeActiveTab] = rows.map(row => ({
+        nome: row.querySelector('.disc-nome').value.trim(),
+        categoria: row.querySelector('.disc-categoria').value,
+        ch: parseInt(row.querySelector('.disc-ch').value) || 0
+    })).filter(d => d.nome);
+    const nomeInput = document.getElementById('gradeSerieNomeInput');
+    if (nomeInput && nomeInput.value.trim()) _gradeSeriesNomes[_gradeActiveTab] = nomeInput.value.trim();
+}
+
+function atualizarNomeSerieAtiva() {
+    const nomeInput = document.getElementById('gradeSerieNomeInput');
+    if (!nomeInput) return;
+    _gradeSeriesNomes[_gradeActiveTab] = nomeInput.value;
+    const title = document.getElementById('gradeDisciplinasTitle');
+    if (title) title.textContent = `Disciplinas — ${nomeInput.value || 'Série ' + (_gradeActiveTab + 1)}`;
+    renderGradeTabs();
+}
+
+function atualizarSeriesGrade() {
+    const tipo = document.getElementById('gradeTipo').value;
+    const numSeries = tipo === 'medio' ? 3 : 9;
     const seriesPadrao = tipo === 'medio'
         ? ['1ª Série', '2ª Série', '3ª Série']
         : ['1º Ano', '2º Ano', '3º Ano', '4º Ano', '5º Ano', '6º Ano', '7º Ano', '8º Ano', '9º Ano'];
-
-    const series = seriesExistentes && seriesExistentes.length === numSeries ? seriesExistentes : seriesPadrao;
-
-    // Ajustar tamanho do array de matrizes por série
+    saveCurrentTabDiscs();
+    while (_gradeSeriesNomes.length < numSeries) _gradeSeriesNomes.push(seriesPadrao[_gradeSeriesNomes.length]);
     while (_gradeSeriesMatrizes.length < numSeries) _gradeSeriesMatrizes.push(null);
+    while (_gradeTabDiscs.length < numSeries) _gradeTabDiscs.push([]);
+    _gradeSeriesNomes = _gradeSeriesNomes.slice(0, numSeries);
     _gradeSeriesMatrizes = _gradeSeriesMatrizes.slice(0, numSeries);
-
-    // Coletar dados das disciplinas existentes antes de reconstruir (para preservar ao trocar tipo)
-    const existingRows = [...document.querySelectorAll('#gradeDisciplinasTbody .grade-disc-row')];
-    const existingDiscs = existingRows.map(row => {
-        const nome = row.querySelector('.disc-nome').value.trim();
-        const categoria = row.querySelector('.disc-categoria').value;
-        const chValues = [...row.querySelectorAll('.disc-ch-serie')].map(el => parseInt(el.value) || 0);
-        return { nome, categoria, cargaHorariaPorSerie: chValues };
-    }).filter(d => d.nome);
-
-    container.innerHTML = series.map((s, i) => {
-        const mat = _gradeSeriesMatrizes[i];
-        return `
-        <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;padding:6px 10px;background:#f8fafc;border-radius:8px;border:1px solid #e5e7eb;flex-wrap:wrap;">
-            <input type="text" class="form-control grade-serie-nome" value="${escapeHtml(s)}" style="width:110px;font-size:12px;padding:5px 7px;" data-index="${i}" oninput="atualizarHeaderSeriesGrade()">
-            <span style="font-size:11px;color:#6b7280;white-space:nowrap;">Matriz:</span>
-            <span class="grade-serie-matriz-label" data-serie-idx="${i}" style="font-size:12px;font-weight:600;color:${mat ? '#1e3a8a' : '#9ca3af'};flex:1;min-width:70px;">${mat ? escapeHtml(mat.titulo) : 'Nenhuma'}</span>
-            <button onclick="selecionarMatrizParaSerie(${i})" style="background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;padding:3px 8px;border-radius:6px;cursor:pointer;font-size:11px;white-space:nowrap;">📋 Selecionar</button>
-            <button onclick="limparMatrizSerie(${i})" style="background:#fef2f2;color:#991b1b;border:1px solid #fecaca;padding:3px 6px;border-radius:6px;cursor:pointer;font-size:11px;" title="Remover matriz desta série">✕</button>
-        </div>`;
-    }).join('');
-
-    // Atualizar o label do botão carregar padrão
+    _gradeTabDiscs = _gradeTabDiscs.slice(0, numSeries);
+    if (_gradeActiveTab >= numSeries) _gradeActiveTab = 0;
     const btnPadrao = document.getElementById('btnCarregarPadrao');
-    if (btnPadrao) {
-        btnPadrao.textContent = tipo === 'medio' ? '📋 Carregar Padrão Médio' : '📋 Carregar Padrão Fundamental';
-    }
-
-    // Atualizar cabeçalho da tabela de disciplinas
-    atualizarHeaderDisciplinas(series);
-
-    // Reconstruir linhas de disciplinas preservando nomes/categorias e CH por série
-    if (existingDiscs.length > 0) {
-        const tbody = document.getElementById('gradeDisciplinasTbody');
-        if (tbody) tbody.innerHTML = '';
-        existingDiscs.forEach(d => adicionarDisciplinaGrade(d));
-    }
+    if (btnPadrao) btnPadrao.textContent = tipo === 'medio' ? '📋 Carregar Padrão Médio' : '📋 Carregar Padrão Fundamental';
+    renderGradeTabs();
+    renderGradeTabContent(_gradeActiveTab);
 }
 
 async function selecionarMatrizParaSerie(serieIdx) {
@@ -569,7 +632,7 @@ async function selecionarMatrizParaSerie(serieIdx) {
     window._matrizPickerData = {};
     matrizes.forEach(m => { window._matrizPickerData[m._id] = m; });
 
-    const serieNome = document.querySelectorAll('.grade-serie-nome')[serieIdx]?.value || `Série ${serieIdx + 1}`;
+    const serieNome = _gradeSeriesNomes[serieIdx] || `Série ${serieIdx + 1}`;
     const picker = document.createElement('div');
     picker.id = 'modalMatrizPicker';
     picker.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px;';
@@ -598,50 +661,21 @@ function aplicarMatrizNaSerie(serieIdx, matrizId) {
     const matriz = window._matrizPickerData?.[matrizId];
     if (!matriz) return;
     _gradeSeriesMatrizes[serieIdx] = { id: matrizId, titulo: matriz.titulo };
-    // Atualizar label na UI
-    const labels = document.querySelectorAll('.grade-serie-matriz-label');
-    if (labels[serieIdx]) {
-        labels[serieIdx].textContent = matriz.titulo;
-        labels[serieIdx].style.color = '#1e3a8a';
-    }
-    // Aplicar disciplinas da matriz na coluna desta série
-    if (matriz.disciplinas && matriz.disciplinas.length) {
-        const numSeries = document.querySelectorAll('.grade-serie-nome').length;
-        matriz.disciplinas.forEach(disc => {
-            const rows = [...document.querySelectorAll('#gradeDisciplinasTbody .grade-disc-row')];
-            const existing = rows.find(r => r.querySelector('.disc-nome').value.trim().toLowerCase() === disc.nome.toLowerCase());
-            if (existing) {
-                const chInputs = existing.querySelectorAll('.disc-ch-serie');
-                if (chInputs[serieIdx]) chInputs[serieIdx].value = disc.cargaHoraria || 0;
-            } else {
-                const chPorSerie = Array.from({ length: numSeries }, (_, i) => i === serieIdx ? (disc.cargaHoraria || 0) : '');
-                adicionarDisciplinaGrade({ nome: disc.nome, categoria: disc.categoria, cargaHorariaPorSerie: chPorSerie });
-            }
-        });
-    }
+    _gradeTabDiscs[serieIdx] = (matriz.disciplinas || []).map(d => ({
+        nome: d.nome, categoria: d.categoria, ch: d.cargaHoraria || 0
+    }));
+    if (serieIdx === _gradeActiveTab) renderGradeTabContent(serieIdx);
+    renderGradeTabs();
     document.getElementById('modalMatrizPicker')?.remove();
 }
 
 function limparMatrizSerie(serieIdx) {
     _gradeSeriesMatrizes[serieIdx] = null;
-    const labels = document.querySelectorAll('.grade-serie-matriz-label');
-    if (labels[serieIdx]) { labels[serieIdx].textContent = 'Nenhuma'; labels[serieIdx].style.color = '#9ca3af'; }
-}
-
-function atualizarHeaderSeriesGrade() {
-    const series = [...document.querySelectorAll('.grade-serie-nome')].map(el => el.value.trim());
-    atualizarHeaderDisciplinas(series);
-}
-
-function atualizarHeaderDisciplinas(series) {
-    const thead = document.getElementById('gradeDisciplinasHead');
-    if (!thead) return;
-    thead.innerHTML = `<tr style="background:#e2e8f0;">
-        <th style="padding:7px 10px;text-align:left;border:1px solid #cbd5e1;font-size:12px;font-weight:600;min-width:185px;">Disciplina</th>
-        <th style="padding:7px 8px;text-align:left;border:1px solid #cbd5e1;font-size:12px;font-weight:600;min-width:155px;">Categoria</th>
-        ${series.map(s => `<th style="padding:7px 6px;text-align:center;border:1px solid #cbd5e1;font-size:11px;font-weight:600;min-width:68px;white-space:nowrap;">${escapeHtml(s)}<br><span style="font-weight:400;color:#64748b;font-size:10px;">CH (h)</span></th>`).join('')}
-        <th style="padding:4px;border:1px solid #cbd5e1;width:38px;"></th>
-    </tr>`;
+    if (serieIdx === _gradeActiveTab) {
+        const label = document.getElementById('gradeSerieMatrizLabel');
+        if (label) { label.textContent = 'Nenhuma'; label.style.color = '#9ca3af'; }
+    }
+    renderGradeTabs();
 }
 
 function obterCategoriasPorTipo(tipo) {
@@ -664,35 +698,25 @@ function obterCategoriasPorTipo(tipo) {
 
 function adicionarDisciplinaGrade(disc) {
     const tbody = document.getElementById('gradeDisciplinasTbody');
+    if (!tbody) return;
     const tipo = document.getElementById('gradeTipo').value;
     const categorias = obterCategoriasPorTipo(tipo);
-    const series = [...document.querySelectorAll('.grade-serie-nome')].map(el => el.value.trim());
-
-    // Suporte ao formato antigo (cargaHorariaPadrao) e ao novo (cargaHorariaPorSerie)
-    let chPorSerie = [];
-    if (disc) {
-        if (disc.cargaHorariaPorSerie && disc.cargaHorariaPorSerie.length) {
-            chPorSerie = disc.cargaHorariaPorSerie;
-        } else if (disc.cargaHorariaPadrao) {
-            chPorSerie = series.map(() => disc.cargaHorariaPadrao);
-        }
-    }
-
+    // Aceita ch, cargaHoraria ou cargaHorariaPadrao
+    const ch = disc ? (disc.ch !== undefined ? disc.ch : (disc.cargaHoraria !== undefined ? disc.cargaHoraria : (disc.cargaHorariaPadrao || ''))) : '';
     const row = document.createElement('tr');
     row.className = 'grade-disc-row';
     row.innerHTML = `
         <td style="padding:3px 6px;border:1px solid #e5e7eb;background:#f8fafc;">
-            <input type="text" class="form-control disc-nome" value="${disc ? escapeHtml(disc.nome) : ''}" placeholder="Nome da Disciplina" style="font-size:12px;padding:5px 7px;min-width:170px;">
+            <input type="text" class="form-control disc-nome" value="${disc ? escapeHtml(disc.nome) : ''}" placeholder="Nome da Disciplina" style="font-size:12px;padding:5px 7px;min-width:185px;">
         </td>
         <td style="padding:3px 6px;border:1px solid #e5e7eb;">
-            <select class="form-control disc-categoria" style="font-size:12px;padding:5px 7px;min-width:145px;">
+            <select class="form-control disc-categoria" style="font-size:12px;padding:5px 7px;min-width:155px;">
                 ${categorias.map(c => `<option value="${c[0]}" ${disc && disc.categoria === c[0] ? 'selected' : ''}>${c[1]}</option>`).join('')}
             </select>
         </td>
-        ${series.map((s, i) => `
-            <td style="padding:3px 4px;border:1px solid #e5e7eb;text-align:center;">
-                <input type="number" class="form-control disc-ch-serie" min="0" value="${chPorSerie[i] !== undefined ? chPorSerie[i] : ''}" placeholder="0" style="width:62px;font-size:12px;padding:4px 5px;text-align:center;" data-serie-idx="${i}" title="CH ${escapeHtml(s)}">
-            </td>`).join('')}
+        <td style="padding:3px 8px;border:1px solid #e5e7eb;text-align:center;">
+            <input type="number" class="form-control disc-ch" min="0" value="${ch}" placeholder="0" style="width:90px;font-size:12px;padding:4px 6px;text-align:center;">
+        </td>
         <td style="padding:3px 4px;border:1px solid #e5e7eb;text-align:center;">
             <button onclick="this.closest('tr').remove()" style="background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;padding:4px 8px;border-radius:6px;cursor:pointer;font-size:14px;" title="Remover">✕</button>
         </td>
@@ -788,28 +812,36 @@ async function salvarGrade(id) {
     const nome = document.getElementById('gradeNome').value.trim();
     if (!nome) { mostrarNotificacao('Informe o nome da grade.', 'error'); return; }
 
-    const nomesSeries = [...document.querySelectorAll('.grade-serie-nome')].map(el => el.value.trim());
-    const rows = document.querySelectorAll('.grade-disc-row');
-    const disciplinas = [];
-    rows.forEach(row => {
-        const n = row.querySelector('.disc-nome').value.trim();
-        if (!n) return;
-        const chPorSerie = [...row.querySelectorAll('.disc-ch-serie')].map(el => parseInt(el.value) || 0);
-        disciplinas.push({
-            nome: n,
-            categoria: row.querySelector('.disc-categoria').value,
-            cargaHorariaPorSerie: chPorSerie,
-            cargaHorariaPadrao: chPorSerie.reduce((a, b) => a + b, 0) // soma total (compatibilidade)
-        });
+    // Salvar tab ativa antes de mesclar
+    saveCurrentTabDiscs();
+
+    const nomesSeries = [..._gradeSeriesNomes];
+    const numSeries = nomesSeries.length;
+
+    // Mesclar todas as tabs em cargaHorariaPorSerie
+    const allNames = [];
+    const seen = new Set();
+    _gradeTabDiscs.forEach(tab => {
+        tab.forEach(d => { if (d.nome && !seen.has(d.nome)) { seen.add(d.nome); allNames.push(d.nome); } });
     });
 
-    if (!disciplinas.length) { mostrarNotificacao('Adicione ao menos uma disciplina.', 'error'); return; }
+    if (!allNames.length) { mostrarNotificacao('Adicione ao menos uma disciplina em alguma série.', 'error'); return; }
+
+    const disciplinas = allNames.map(discNome => {
+        let categoria = 'formacao_geral';
+        const chPorSerie = _gradeTabDiscs.map(tab => {
+            const found = tab.find(d => d.nome === discNome);
+            if (found) { categoria = found.categoria; return found.ch || 0; }
+            return 0;
+        });
+        return { nome: discNome, categoria, cargaHorariaPorSerie: chPorSerie, cargaHorariaPadrao: Math.max(...chPorSerie) };
+    });
 
     const seriesMatrizes = _gradeSeriesMatrizes
         .map((m, i) => m ? { serieIdx: i, serieNome: nomesSeries[i] || '', matrizId: m.id } : null)
         .filter(Boolean);
 
-    const body = { tipo, nome, disciplinas, numSeries: nomesSeries.length, nomesSeries, seriesMatrizes };
+    const body = { tipo, nome, disciplinas, numSeries, nomesSeries, seriesMatrizes };
     const url = id ? `${API_URL}/historicos/grades/${id}` : `${API_URL}/historicos/grades`;
     const method = id ? 'PUT' : 'POST';
 
