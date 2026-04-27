@@ -2803,8 +2803,7 @@ function _histVersoMedioPortrait(pdf, hist, cfg) {
     y+=verH+4;
 
     // OBSERVAÇÕES + RESULTADO PARA AUTENTICAÇÃO
-    const footerSpace=28;
-    const boxesH=Math.max(PH-y-ML-footerSpace,28);
+    const boxesH=50;
     const obsW=Math.round(UW*0.62);
     const resW=UW-obsW-2;
 
@@ -2833,10 +2832,12 @@ function _histVersoMedioPortrait(pdf, hist, cfg) {
     y+=9;
     const sig1=cfg?.frente?.assinatura1||'SECRETÁRIO(A)';
     const sig2=cfg?.frente?.assinatura2||'DIRETOR(A)';
+    // Assinaturas fixas acima do rodapé, deixando 22mm para carimbo
+    const sigY=PH-30;
     [{cx:ML+UW*0.25,sig:sig1},{cx:ML+UW*0.75,sig:sig2}].forEach(({cx,sig})=>{
         pdf.setLineWidth(0.4);pdf.setDrawColor(0,0,0);
-        pdf.line(cx-35,y,cx+35,y);
-        _hText(pdf,sig,cx,y+4,{size:6.5,align:'center',bold:true});
+        pdf.line(cx-35,sigY,cx+35,sigY);
+        _hText(pdf,sig,cx,sigY+4,{size:6.5,align:'center',bold:true});
     });
     const fyBot=PH-8;
     _hLine(pdf,ML,fyBot,PW-MR,fyBot,0.6,[0,40,120]);
