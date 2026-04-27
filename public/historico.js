@@ -2455,11 +2455,11 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     // CABEÇALHO
     _hLine(pdf,ML,y,PW-MR,y,0.6,[0,40,120]);
     _hLine(pdf,ML,y+1.3,PW-MR,y+1.3,0.2,[0,40,120]);
-    y+=4;
+    y+=3;
 
     const emb=cfg?.emblema||{};
     const tipoEmb=emb.tipo||'brasao-brasil';
-    const bW=22,bH=26;
+    const bW=17,bH=20;
     const hCfg=cfg?.cabecalho||{};
     const l1=hCfg.linha1||'REPÚBLICA FEDERATIVA DO BRASIL';
     const l2=hCfg.linha2||'ESTADO DO PIAUÍ';
@@ -2478,10 +2478,10 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
         }catch(_){}
     }
     // Textos centralizados abaixo do brasão — todos tamanho 8pt
-    y+=bH+2;
-    _hText(pdf,l1,PW/2,y,{bold:true,size:8,align:'center'});y+=4.5;
-    _hText(pdf,l2,PW/2,y,{bold:true,size:8,align:'center'});y+=4.5;
-    _hText(pdf,l3,PW/2,y,{size:8,align:'center'});y+=6;
+    y+=bH+1.5;
+    _hText(pdf,l1,PW/2,y,{bold:true,size:8,align:'center'});y+=4.0;
+    _hText(pdf,l2,PW/2,y,{bold:true,size:8,align:'center'});y+=4.0;
+    _hText(pdf,l3,PW/2,y,{size:8,align:'center'});y+=4.5;
 
     // Textos do cabeçalho — todos centralizados, mesmo tamanho
     const linhaCab=(txt,bold)=>{
@@ -2489,7 +2489,7 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
         pdf.setFont('helvetica',bold?'bold':'normal');
         pdf.setFontSize(8);pdf.setTextColor(0,0,0);
         pdf.text(txt,PW/2,y,{align:'center',maxWidth:UW-4});
-        y+=4.5;
+        y+=4.0;
     };
     linhaCab(inst,false);
     linhaCab(end_,false);
@@ -2499,22 +2499,22 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     const resolTxt='Autorização de Funcionamento pela Resolução CEE/PI Nº '+(resolNum||resol);
     pdf.setFont('helvetica','normal');pdf.setFontSize(8);pdf.setTextColor(0,0,0);
     pdf.text(resolTxt,PW/2,y,{align:'center',maxWidth:UW-4});
-    y+=8;
+    y+=5;
 
     // TÍTULO
     pdf.setFillColor(0,40,120);pdf.rect(ML,y,UW,7,'F');
     _hText(pdf,'HISTÓRICO ESCOLAR  –  ENSINO MÉDIO',PW/2,y+5,{bold:true,size:9,align:'center',color:[255,255,255]});
-    y+=9;
+    y+=8;
 
     // DADOS DO ALUNO
     const dN=aluno.dataNascimento||{};
     const nascStr=dN.dia?`${dN.dia} de ${dN.mes||''} de ${dN.ano||''}`:'';
     const natStr=[aluno.naturalidade?.cidade,aluno.naturalidade?.estado].filter(Boolean).join(' / ');
     const filStr=[aluno.filiacao?.mae,aluno.filiacao?.pai].filter(Boolean).join('  e  ');
-    const boxH=34;
+    const boxH=26;
     _hRect(pdf,ML,y,UW,boxH,null,[0,40,120]);
     pdf.setDrawColor(180,200,230);pdf.setLineWidth(0.15);
-    [6,12,17.5,23,28.5].forEach(off=>pdf.line(ML+0.5,y+off,ML+UW-0.5,y+off));
+    [4.5,9,13.5,18,22.5].forEach(off=>pdf.line(ML+0.5,y+off,ML+UW-0.5,y+off));
 
     const aFld=(by,lbl,lW,val,maxW)=>{
         pdf.setFont('helvetica','bold');pdf.setFontSize(6.5);pdf.setTextColor(0,30,100);
@@ -2522,16 +2522,16 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
         pdf.setFont('helvetica','normal');pdf.setTextColor(0,0,0);
         pdf.text(val||'',ML+lW,by,{maxWidth:maxW||(UW-lW-3)});
     };
-    aFld(y+4.5,'ESTUDANTE:',22,aluno.nome||'');
-    aFld(y+10,'NOME SOCIAL:',26,aluno.nomeSocial||'');
-    aFld(y+15.5,'RG:',8,aluno.rg||'',28);
-    aFld(y+15.5,'ÓRGÃO EMISSOR:',63,aluno.orgaoEmissor||'',22);
-    aFld(y+15.5,'CPF:',98,aluno.cpf||'',UW-100);
-    aFld(y+21,'DATA DE NASCIMENTO:',40,nascStr);
-    aFld(y+26.5,'NATURALIDADE:',28,natStr,78);
-    aFld(y+26.5,'NACIONALIDADE:',130,aluno.nacionalidade||'Brasileira',UW-132);
-    aFld(y+32,'FILIAÇÃO:',18,filStr);
-    y+=boxH+2;
+    aFld(y+3.5,'ESTUDANTE:',22,aluno.nome||'');
+    aFld(y+8,'NOME SOCIAL:',26,aluno.nomeSocial||'');
+    aFld(y+12.5,'RG:',8,aluno.rg||'',28);
+    aFld(y+12.5,'ÓRGÃO EMISSOR:',63,aluno.orgaoEmissor||'',22);
+    aFld(y+12.5,'CPF:',98,aluno.cpf||'',UW-100);
+    aFld(y+17,'DATA DE NASCIMENTO:',40,nascStr);
+    aFld(y+21.5,'NATURALIDADE:',28,natStr,78);
+    aFld(y+21.5,'NACIONALIDADE:',130,aluno.nacionalidade||'Brasileira',UW-132);
+    aFld(y+25.5,'FILIAÇÃO:',18,filStr);
+    y+=boxH+1;
 
     // TABELA PRINCIPAL
     const cNum=6,cDisc=60,cTot=17;
@@ -2540,7 +2540,7 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     const cNota=parseFloat((pairW*0.57).toFixed(2));
     const cCH=parseFloat((pairW-cNota).toFixed(2));
     const tblX=ML,tblStartY=y;
-    const hH=5.5;
+    const hH=4.8;
 
     // Header linha 1
     pdf.setFillColor(0,35,105);pdf.rect(tblX,y,UW,hH,'F');
@@ -2581,7 +2581,7 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     discs.forEach(dc=>{const k=dc.categoria||'outros';if(!catMap.has(k))catMap.set(k,[]);catMap.get(k).push(dc);});
     const catLabels={formacao_geral:'FORMAÇÃO GERAL BÁSICA',itinerarios:'ITINERÁRIOS FORMATIVOS',atividades_integradoras:'ATIVIDADES INTEGRADORAS',linguagens:'LINGUAGENS, CÓDIGOS E SUAS TECNOLOGIAS',ciencias_humanas:'CIÊNCIAS HUMANAS E SUAS TECNOLOGIAS',ciencias_natureza:'CIÊNCIAS DA NATUREZA E SUAS TECNOLOGIAS',matematica:'MATEMÁTICA E SUAS TECNOLOGIAS',parte_flexivel:'PARTE FLEXÍVEL (DIVERSIFICADA)',ensino_religioso:'ENSINO RELIGIOSO'};
     const subcatLabels={aprofundamento_linguagens:'Aprofundamento de Linguagens e suas Tecnologias',aprofundamento_matematica_ciencias:'Aprofundamento de Matemática, Ciências da Natureza e Linguagens e suas Tecnologias',atividades_integradoras:'Atividades Integradoras'};
-    const catH=4.0,rowH=3.6,subcatH=3.8;
+    const catH=3.2,rowH=2.8,subcatH=3.0;
     let romNum=1;
     const totalCHSerie=Array(numSeries).fill(0);
     let chTotalGeral=0;
@@ -2639,7 +2639,7 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     });
 
     // Linha CARGA HORÁRIA TOTAL
-    const totH=4.5;
+    const totH=4.0;
     pdf.setFillColor(200,215,245);pdf.rect(tblX,y,UW,totH,'F');
     pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.2);pdf.rect(tblX,y,UW,totH,'S');
     pdf.setFont('helvetica','bold');pdf.setFontSize(5.5);pdf.setTextColor(0,20,80);
@@ -2664,7 +2664,7 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
 
     pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.4);
     pdf.rect(tblX,tblStartY,UW,y-tblStartY,'S');
-    y+=4;
+    y+=2;
 
     // RODAPÉ — fixado no fim da página
     const sig1=cfg?.frente?.assinatura1||'SECRETÁRIO(A)';
