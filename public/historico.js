@@ -2782,18 +2782,77 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     const cNota=parseFloat((pairW*0.57).toFixed(2));
     const cCH=parseFloat((pairW-cNota).toFixed(2));
     const tblX=ML,tblStartY=y;
-    const hH=4.8;
+
+    // Dados por categoria → subcategoria → disciplina
+    const catMap=new Map();
+    discs.forEach(dc=>{const k=dc.categoria||'outros';if(!catMap.has(k))catMap.set(k,[]);catMap.get(k).push(dc);});
+    const catLabels={formacao_geral:'FORMAÇÃO GERAL BÁSICA',itinerarios:'ITINERÁRIOS FORMATIVOS',atividades_integradoras:'ATIVIDADES INTEGRADORAS',linguagens:'LINGUAGENS, CÓDIGOS E SUAS TECNOLOGIAS',ciencias_humanas:'CIÊNCIAS HUMANAS E SUAS TECNOLOGIAS',ciencias_natureza:'CIÊNCIAS DA NATUREZA E SUAS TECNOLOGIAS',matematica:'MATEMÁTICA E SUAS TECNOLOGIAS',parte_flexivel:'PARTE FLEXÍVEL (DIVERSIFICADA)',ensino_religioso:'ENSINO RELIGIOSO'};
+    const subcatLabels={aprofundamento_linguagens:'Aprofundamento de Linguagens e suas Tecnologias',aprofundamento_matematica_ciencias:'Aprofundamento de Matemática, Ciências da Natureza e Linguagens e suas Tecnologias',atividades_integradoras:'Atividades Integradoras'};
+
+    // ── ESCALA PROPORCIONAL ─────────────────────────────────────────────────
+    // Reserva espaço para rodapé (LOCAL/DATA + assinaturas + carimbo + margens)
+    const RODAPE_RESERVED=62;
+    const TABLE_BOTTOM_LIMIT=PH-RODAPE_RESERVED; // espaço disponível até antes do rodapé
+
+    // Estima altura total da tabela com configurações base
+    const BASE_HH=4.8;
+    const BASE_DISC_FONT=7,BASE_DISC_LINE_H=3.8,BASE_DISC_PAD=2.2;
+    const BASE_SUBCAT_FONT=6,BASE_SUBCAT_LINE_H=3.5,BASE_SUBCAT_PAD=2.0;
+    const BASE_TOT_H=4.0;
+
+    let estH = BASE_HH*2; // 2 linhas de header
+    catMap.forEach((catDiscs,catId)=>{
+        const subcatMap2=new Map();
+        catDiscs.forEach(dc=>{const sk=dc.subcategoria||'';if(!subcatMap2.has(sk))subcatMap2.set(sk,[]);subcatMap2.get(sk).push(dc);});
+        subcatMap2.forEach((subDiscs,subcatId)=>{
+            if(subcatId){
+                const subLabel=subcatLabels[subcatId]||subcatId;
+                pdf.setFont('helvetica','italic');pdf.setFontSize(BASE_SUBCAT_FONT);
+                const slines=pdf.splitTextToSize('  '+subLabel,cDisc+rem-6);
+                estH+=Math.max(BASE_SUBCAT_LINE_H+BASE_SUBCAT_PAD,slines.length*BASE_SUBCAT_LINE_H+BASE_SUBCAT_PAD);
+            }
+            subDiscs.forEach(disc=>{
+                pdf.setFont('helvetica','normal');pdf.setFontSize(BASE_DISC_FONT);
+                const dlines=pdf.splitTextToSize(disc.nome,cDisc-3);
+                estH+=Math.max(BASE_DISC_LINE_H+BASE_DISC_PAD,dlines.length*BASE_DISC_LINE_H+BASE_DISC_PAD);
+            });
+        });
+        if(catId==='formacao_geral') estH+=BASE_TOT_H; // linha TOTAL FGB
+    });
+    estH+=BASE_TOT_H*2; // CARGA TOTAL + RESULTADO FINAL
+
+    const AVAIL_TABLE_H=TABLE_BOTTOM_LIMIT-tblStartY;
+    const tableScale=Math.min(1.0, AVAIL_TABLE_H/estH);
+
+    // Aplica escala a todas as constantes da tabela
+    const hH=BASE_HH*tableScale;
+    const DISC_FONT=Math.max(5.5, BASE_DISC_FONT*tableScale);
+    const DISC_LINE_H=BASE_DISC_LINE_H*tableScale;
+    const DISC_PAD=BASE_DISC_PAD*tableScale;
+    const MIN_ROW_H=DISC_LINE_H+DISC_PAD;
+    const subcatFontSz=Math.max(5,BASE_SUBCAT_FONT*tableScale);
+    const subcatLineH=BASE_SUBCAT_LINE_H*tableScale;
+    const subcatPad=BASE_SUBCAT_PAD*tableScale;
+    const totH=BASE_TOT_H*tableScale;
+    // ────────────────────────────────────────────────────────────────────────
+
+    // Calcula altura da linha de disciplina considerando quebra de texto
+    const calcRowH=(nome)=>{
+        pdf.setFont('helvetica','normal');pdf.setFontSize(DISC_FONT);
+        const lines=pdf.splitTextToSize(nome,cDisc-3);
+        return Math.max(MIN_ROW_H, lines.length*DISC_LINE_H+DISC_PAD);
+    };
 
     // Header linha 1
     pdf.setFillColor(0,35,105);pdf.rect(tblX,y,UW,hH,'F');
     // Coluna cNum fica vazia no header (será usada para texto vertical da categoria)
-    _hText(pdf,'COMPONENTES CURRICULARES',tblX+cNum+cDisc/2,y+4,{bold:true,size:7,align:'center',color:[255,255,255]});
+    _hText(pdf,'COMPONENTES CURRICULARES',tblX+cNum+cDisc/2,y+hH*0.75,{bold:true,size:Math.max(5.5,7*tableScale),align:'center',color:[255,255,255]});
     let sx=tblX+cNum+cDisc;
     for(let i=0;i<numSeries;i++){
-        _hText(pdf,series[i]||`${i+1}ª SÉRIE`,sx+pairW/2,y+4,{bold:true,size:7,align:'center',color:[255,255,255]});
+        _hText(pdf,series[i]||`${i+1}ª SÉRIE`,sx+pairW/2,y+hH*0.75,{bold:true,size:Math.max(5.5,7*tableScale),align:'center',color:[255,255,255]});
         sx+=pairW;
     }
-    _hText(pdf,'CH\nTOTAL',tblX+UW-cTot/2,y+2.5,{bold:true,size:6,align:'center',color:[255,255,255]});
+    _hText(pdf,'CH\nTOTAL',tblX+UW-cTot/2,y+hH*0.45,{bold:true,size:Math.max(5,6*tableScale),align:'center',color:[255,255,255]});
     pdf.setDrawColor(80,120,200);pdf.setLineWidth(0.15);
     pdf.line(tblX+cNum,y,tblX+cNum,y+hH*2);
     pdf.line(tblX+cNum+cDisc,y,tblX+cNum+cDisc,y+hH*2);
@@ -2808,41 +2867,22 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     // Coluna cNum: sem texto (categoria vertical vai aqui)
     sx=tblX+cNum+cDisc;
     for(let i=0;i<numSeries;i++){
-        _hText(pdf,'NOTA',sx+cNota/2,y+4,{bold:true,size:6.5,align:'center',color:[255,255,255]});
+        _hText(pdf,'NOTA',sx+cNota/2,y+hH*0.75,{bold:true,size:Math.max(5.5,6.5*tableScale),align:'center',color:[255,255,255]});
         pdf.setDrawColor(80,120,200);pdf.setLineWidth(0.15);
         pdf.line(sx+cNota,y,sx+cNota,y+hH);
-        _hText(pdf,'CH',sx+cNota+cCH/2,y+4,{bold:true,size:6.5,align:'center',color:[255,255,255]});
+        _hText(pdf,'CH',sx+cNota+cCH/2,y+hH*0.75,{bold:true,size:Math.max(5.5,6.5*tableScale),align:'center',color:[255,255,255]});
         pdf.line(sx+pairW,y,sx+pairW,y+hH);
         sx+=pairW;
     }
     pdf.setDrawColor(80,120,200);pdf.setLineWidth(0.15);
     pdf.rect(tblX,y,UW,hH,'S');
     y+=hH;
-
-    // Dados por categoria → subcategoria → disciplina
-    const catMap=new Map();
-    discs.forEach(dc=>{const k=dc.categoria||'outros';if(!catMap.has(k))catMap.set(k,[]);catMap.get(k).push(dc);});
-    const catLabels={formacao_geral:'FORMAÇÃO GERAL BÁSICA',itinerarios:'ITINERÁRIOS FORMATIVOS',atividades_integradoras:'ATIVIDADES INTEGRADORAS',linguagens:'LINGUAGENS, CÓDIGOS E SUAS TECNOLOGIAS',ciencias_humanas:'CIÊNCIAS HUMANAS E SUAS TECNOLOGIAS',ciencias_natureza:'CIÊNCIAS DA NATUREZA E SUAS TECNOLOGIAS',matematica:'MATEMÁTICA E SUAS TECNOLOGIAS',parte_flexivel:'PARTE FLEXÍVEL (DIVERSIFICADA)',ensino_religioso:'ENSINO RELIGIOSO'};
-    const subcatLabels={aprofundamento_linguagens:'Aprofundamento de Linguagens e suas Tecnologias',aprofundamento_matematica_ciencias:'Aprofundamento de Matemática, Ciências da Natureza e Linguagens e suas Tecnologias',atividades_integradoras:'Atividades Integradoras'};
-    const DISC_FONT=7;          // fonte das disciplinas
-    const DISC_LINE_H=3.8;      // altura por linha de texto
-    const DISC_PAD=2.2;         // padding vertical (topo + base)
-    const MIN_ROW_H=DISC_LINE_H+DISC_PAD;
-    const subcatFontSz=6;
-    const subcatLineH=3.5;
-    const subcatPad=2.0;
-
-    // Calcula altura da linha de disciplina considerando quebra de texto
-    const calcRowH=(nome)=>{
-        pdf.setFont('helvetica','normal');pdf.setFontSize(DISC_FONT);
-        const lines=pdf.splitTextToSize(nome,cDisc-3);
-        return Math.max(MIN_ROW_H, lines.length*DISC_LINE_H+DISC_PAD);
-    };
     const calcSubcatH=(label)=>{
         pdf.setFont('helvetica','italic');pdf.setFontSize(subcatFontSz);
         const lines=pdf.splitTextToSize('  '+label,cDisc+rem-6);
         return Math.max(subcatLineH+subcatPad, lines.length*subcatLineH+subcatPad);
     };
+    // (catMap, catLabels, subcatLabels already declared above)
     let rowIdx=1;
     const totalCHSerie=Array(numSeries).fill(0);
     let chTotalGeral=0;
@@ -2906,7 +2946,7 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
 
         // Linha TOTAL GERAL DA FORMAÇÃO GERAL BÁSICA — só após a categoria formacao_geral
         if(catId==='formacao_geral'){
-            const fgbH=4.0;
+            const fgbH=totH;
             pdf.setFillColor(200,215,245);pdf.rect(tblX,y,UW,fgbH,'F');
             pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.2);pdf.rect(tblX,y,UW,fgbH,'S');
             pdf.setFont('helvetica','bold');pdf.setFontSize(7);pdf.setTextColor(0,20,80);
@@ -2967,42 +3007,29 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     pdf.rect(tblX,tblStartY,UW,y-tblStartY,'S');
     y+=2;
 
-    // RODAPÉ — em nova página se a tabela não deixar espaço suficiente
+    // RODAPÉ — sempre na mesma página (a escala proporcional garante que cabe)
     const sig1=cfg?.frente?.assinatura1||'SECRETÁRIO(A)';
     const sig2=cfg?.frente?.assinatura2||'DIRETOR(A)';
     const localData=cfg?.frente?.localData||hist.dataEmissao||'';
-    const rodapeH=50; // espaço mínimo necessário para rodapé (local/data + assinaturas + margem)
-    const rodapeY=PH-42;
-    if(y+rodapeH>PH-8){
-        // Tabela não cabe com rodapé na mesma página — adicionar nova página para o rodapé
-        pdf.addPage();
-        y=20;
-        const rodapeYNovaPag=y+rodapeH-10;
-        _drawLocalData(pdf,localData,rodapeYNovaPag,PW);
-        const sigYNP=rodapeYNovaPag+16;
-        const sigLineW=55;
-        [{cx:PW*0.28,sig:sig1},{cx:PW*0.72,sig:sig2}].forEach(({cx,sig})=>{
-            pdf.setLineWidth(0.5);pdf.setDrawColor(0,0,0);
-            pdf.line(cx-sigLineW/2,sigYNP,cx+sigLineW/2,sigYNP);
-            _hText(pdf,sig,cx,sigYNP+4.5,{size:7,align:'center',bold:true});
-        });
-        const fyBot=PH-8;
-        _hLine(pdf,ML,fyBot,PW-MR,fyBot,0.6,[0,40,120]);
-        _hLine(pdf,ML,fyBot+1.2,PW-MR,fyBot+1.2,0.2,[0,40,120]);
-    } else {
-        _drawLocalData(pdf,localData,rodapeY,PW);
-        // Assinaturas — centralizadas na página, linhas mais largas
-        const sigY=rodapeY+16;
-        const sigLineW=55;
-        [{cx:PW*0.28,sig:sig1},{cx:PW*0.72,sig:sig2}].forEach(({cx,sig})=>{
-            pdf.setLineWidth(0.5);pdf.setDrawColor(0,0,0);
-            pdf.line(cx-sigLineW/2,sigY,cx+sigLineW/2,sigY);
-            _hText(pdf,sig,cx,sigY+4.5,{size:7,align:'center',bold:true});
-        });
-        const fyBot=PH-8;
-        _hLine(pdf,ML,fyBot,PW-MR,fyBot,0.6,[0,40,120]);
-        _hLine(pdf,ML,fyBot+1.2,PW-MR,fyBot+1.2,0.2,[0,40,120]);
-    }
+    const rodapeY=PH-RODAPE_RESERVED+4;
+    _drawLocalData(pdf,localData,rodapeY,PW);
+    const sigY=rodapeY+14;
+    const sigLineW=60;
+    [{cx:PW*0.28,sig:sig1},{cx:PW*0.72,sig:sig2}].forEach(({cx,sig})=>{
+        pdf.setLineWidth(0.5);pdf.setDrawColor(0,0,0);
+        pdf.line(cx-sigLineW/2,sigY,cx+sigLineW/2,sigY);
+        _hText(pdf,sig,cx,sigY+4.5,{size:7,align:'center',bold:true});
+        // Espaço para carimbo
+        const carH=18,carW=sigLineW-4;
+        pdf.setDrawColor(180,180,180);pdf.setLineWidth(0.3);
+        pdf.rect(cx-carW/2,sigY+7,carW,carH,'S');
+        pdf.setFont('helvetica','normal');pdf.setFontSize(5.5);pdf.setTextColor(160,160,160);
+        pdf.text('CARIMBO',cx,sigY+7+carH/2,{align:'center'});
+        pdf.setTextColor(0,0,0);
+    });
+    const fyBot=PH-8;
+    _hLine(pdf,ML,fyBot,PW-MR,fyBot,0.6,[0,40,120]);
+    _hLine(pdf,ML,fyBot+1.2,PW-MR,fyBot+1.2,0.2,[0,40,120]);
 }
 
 function _histVersoMedioPortrait(pdf, hist, cfg) {
