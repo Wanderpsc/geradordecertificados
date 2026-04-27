@@ -2443,7 +2443,7 @@ function _romanos(n) {
 // Helper: desenha linha LOCAL/DATA centralizada na página
 function _drawLocalData(pdf, localData, rodapeY, PW) {
     // Larguras fixas (mm)
-    const localW=65, commaW=3, dayW=10, deW=7, monthW=30, yearW=14;
+    const localW=65, commaW=3, dayW=10, deW=7, monthW=32, yearW=20;
     const totalW=localW+commaW+dayW+deW+monthW+deW+yearW;
     let lx=PW/2-totalW/2;
 
@@ -2451,10 +2451,10 @@ function _drawLocalData(pdf, localData, rodapeY, PW) {
     const partes=localData.split(',');
     const localTxt=(partes[0]||'').trim();
     const dataTxt=partes.slice(1).join(',').trim();
-    const m=dataTxt.match(/^\s*(\d+)\s+de\s+(.+?)\s+de\s+(\d{4})\s*$/);
+    const m=dataTxt.match(/^\s*(\d+)\s+de\s+(.+?)\s+de\s+(\d+)/);
     const dayTxt=m?m[1]:'';
     const monthTxt=m?m[2]:'';
-    const yearTxt=m?m[3]:dataTxt;
+    const yearTxt=m?m[3]:'';
 
     pdf.setLineWidth(0.3);pdf.setDrawColor(0,0,0);
     pdf.setFont('helvetica','normal');pdf.setFontSize(7);pdf.setTextColor(0,0,0);
@@ -2635,12 +2635,13 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     const catLabels={formacao_geral:'FORMAÇÃO GERAL BÁSICA',itinerarios:'ITINERÁRIOS FORMATIVOS',atividades_integradoras:'ATIVIDADES INTEGRADORAS',linguagens:'LINGUAGENS, CÓDIGOS E SUAS TECNOLOGIAS',ciencias_humanas:'CIÊNCIAS HUMANAS E SUAS TECNOLOGIAS',ciencias_natureza:'CIÊNCIAS DA NATUREZA E SUAS TECNOLOGIAS',matematica:'MATEMÁTICA E SUAS TECNOLOGIAS',parte_flexivel:'PARTE FLEXÍVEL (DIVERSIFICADA)',ensino_religioso:'ENSINO RELIGIOSO'};
     const subcatLabels={aprofundamento_linguagens:'Aprofundamento de Linguagens e suas Tecnologias',aprofundamento_matematica_ciencias:'Aprofundamento de Matemática, Ciências da Natureza e Linguagens e suas Tecnologias',atividades_integradoras:'Atividades Integradoras'};
     const catH=3.2,rowH=3.3,subcatH=3.0;
-    let romNum=1;
+    let rowIdx=1;
     const totalCHSerie=Array(numSeries).fill(0);
     let chTotalGeral=0;
 
     catMap.forEach((catDiscs,catId)=>{
         const catNome=catLabels[catId]||catId.toUpperCase();
+        const catStartY=y;
         pdf.setFillColor(220,228,248);pdf.rect(tblX,y,UW,catH,'F');
         pdf.setDrawColor(150,170,220);pdf.setLineWidth(0.1);pdf.rect(tblX,y,UW,catH,'S');
         pdf.setFont('helvetica','bold');pdf.setFontSize(5.5);pdf.setTextColor(10,30,110);
@@ -2661,11 +2662,9 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
             }
             subDiscs.forEach(disc=>{
                 const notasDisc=notas[disc.nome]||{};
-                const bg=romNum%2===0?[248,252,255]:[255,255,255];
+                const bg=rowIdx%2===0?[248,252,255]:[255,255,255];
                 pdf.setFillColor(...bg);pdf.rect(tblX,y,UW,rowH,'F');
                 pdf.setDrawColor(205,220,240);pdf.setLineWidth(0.1);pdf.rect(tblX,y,UW,rowH,'S');
-                pdf.setFont('helvetica','bold');pdf.setFontSize(4.8);pdf.setTextColor(40,40,80);
-                pdf.text(_romanos(romNum)+'.',tblX+cNum/2,y+rowH-1,{align:'center'});
                 pdf.setDrawColor(185,205,235);pdf.line(tblX+cNum,y,tblX+cNum,y+rowH);
                 pdf.setFont('helvetica','normal');pdf.setFontSize(5.5);pdf.setTextColor(10,10,10);
                 pdf.text(disc.nome,tblX+cNum+1.5,y+rowH-1,{maxWidth:cDisc-3});
@@ -2686,9 +2685,16 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
                 }
                 pdf.setDrawColor(185,205,235);pdf.line(tblX+UW-cTot,y,tblX+UW-cTot,y+rowH);
                 if(discChTot)pdf.text(String(discChTot),tblX+UW-cTot+cTot/2,y+rowH-1,{align:'center'});
-                chTotalGeral+=discChTot;romNum++;y+=rowH;
+                chTotalGeral+=discChTot;rowIdx++;y+=rowH;
             });
         });
+        // Texto vertical da categoria na coluna Nº
+        const catEndY=y;
+        if(catEndY>catStartY+catH+0.1){
+            const catMidY=(catStartY+catEndY)/2;
+            pdf.setFont('helvetica','bold');pdf.setFontSize(5);pdf.setTextColor(10,30,110);
+            pdf.text(catNome,tblX+cNum/2,catMidY,{angle:90,align:'center'});
+        }
     });
 
     // Linha CARGA HORÁRIA TOTAL
@@ -2723,7 +2729,7 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     const sig1=cfg?.frente?.assinatura1||'SECRETÁRIO(A)';
     const sig2=cfg?.frente?.assinatura2||'DIRETOR(A)';
     const localData=cfg?.frente?.localData||hist.dataEmissao||'';
-    const rodapeY=PH-38;
+    const rodapeY=PH-42;
     _drawLocalData(pdf,localData,rodapeY,PW);
     // Assinaturas
     const sigY=rodapeY+14;
@@ -2766,7 +2772,7 @@ function _histVersoMedioPortrait(pdf, hist, cfg) {
         pdf.setFont('helvetica','normal');
         pdf.text(val||'',ML+lW,y+3.5,{maxWidth:UW-lW-1});
         pdf.setDrawColor(80,80,80);pdf.setLineWidth(0.2);
-        pdf.line(ML+lW,y+4,ML+UW,y+4);y+=6;
+        pdf.line(ML+lW,y+4,ML+UW,y+4);y+=5;
     };
     fLine('ESTABELECIMENTO DE ENSINO: ',inst,53);
     fLine('ENDEREÇO: ',end_,20);
@@ -2783,23 +2789,23 @@ function _histVersoMedioPortrait(pdf, hist, cfg) {
     pdf.line(ML+68,y+4,ML+92,y+4);
     pdf.setFont('helvetica','bold');pdf.text('CPF: ',ML+94,y+3.5);
     pdf.setFont('helvetica','normal');pdf.text(aluno.cpf||'',ML+104,y+3.5,{maxWidth:UW-106});
-    pdf.line(ML+104,y+4,ML+UW,y+4);y+=6;
+    pdf.line(ML+104,y+4,ML+UW,y+4);y+=5;
 
     pdf.setFont('helvetica','bold');pdf.setFontSize(6.5);
     pdf.text('DATA DE NASCIMENTO: ',ML,y+3.5);
     pdf.setFont('helvetica','normal');pdf.text(nascStr,ML+41,y+3.5);
-    pdf.line(ML+41,y+4,ML+UW,y+4);y+=6;
+    pdf.line(ML+41,y+4,ML+UW,y+4);y+=5;
 
     pdf.setFont('helvetica','bold');pdf.text('NATURALIDADE: ',ML,y+3.5);
     pdf.setFont('helvetica','normal');pdf.text(natStr,ML+30,y+3.5,{maxWidth:78});
     pdf.line(ML+30,y+4,ML+110,y+4);
     pdf.setFont('helvetica','bold');pdf.text('NACIONALIDADE: ',ML+112,y+3.5);
     pdf.setFont('helvetica','normal');pdf.text(aluno.nacionalidade||'Brasileira',ML+140,y+3.5,{maxWidth:UW-142});
-    pdf.line(ML+140,y+4,ML+UW,y+4);y+=6;
+    pdf.line(ML+140,y+4,ML+UW,y+4);y+=5;
 
     pdf.setFont('helvetica','bold');pdf.text('FILIAÇÃO: ',ML,y+3.5);
     pdf.setFont('helvetica','normal');pdf.text(filStr,ML+20,y+3.5,{maxWidth:UW-22});
-    pdf.line(ML+20,y+4,ML+UW,y+4);y+=8;
+    pdf.line(ML+20,y+4,ML+UW,y+4);y+=6;
 
     // TABELA DE SÉRIES
     const sColW=[22,18,96,30,28];
@@ -2889,7 +2895,7 @@ function _histVersoMedioPortrait(pdf, hist, cfg) {
     const sig1v=cfg?.frente?.assinatura1||'SECRETÁRIO(A)';
     const sig2v=cfg?.frente?.assinatura2||'DIRETOR(A)';
     const localDataV=cfg?.frente?.localData||hist.dataEmissao||'';
-    const rodapeYv=PH-38;
+    const rodapeYv=PH-42;
     _drawLocalData(pdf,localDataV,rodapeYv,PW);
     const sigYv=rodapeYv+14;
     [{cx:ML+UW*0.25,sig:sig1v},{cx:ML+UW*0.75,sig:sig2v}].forEach(({cx,sig})=>{
