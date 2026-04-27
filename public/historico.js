@@ -2803,7 +2803,7 @@ function _histVersoMedioPortrait(pdf, hist, cfg) {
     y+=verH+4;
 
     // OBSERVAÇÕES + RESULTADO PARA AUTENTICAÇÃO
-    const boxesH=50;
+    const boxesH=75;
     const obsW=Math.round(UW*0.62);
     const resW=UW-obsW-2;
 
