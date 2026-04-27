@@ -2967,23 +2967,42 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     pdf.rect(tblX,tblStartY,UW,y-tblStartY,'S');
     y+=2;
 
-    // RODAPÉ — fixado no fim da página
+    // RODAPÉ — em nova página se a tabela não deixar espaço suficiente
     const sig1=cfg?.frente?.assinatura1||'SECRETÁRIO(A)';
     const sig2=cfg?.frente?.assinatura2||'DIRETOR(A)';
     const localData=cfg?.frente?.localData||hist.dataEmissao||'';
+    const rodapeH=50; // espaço mínimo necessário para rodapé (local/data + assinaturas + margem)
     const rodapeY=PH-42;
-    _drawLocalData(pdf,localData,rodapeY,PW);
-    // Assinaturas — centralizadas na página, linhas mais largas
-    const sigY=rodapeY+16;
-    const sigLineW=55;
-    [{cx:PW*0.28,sig:sig1},{cx:PW*0.72,sig:sig2}].forEach(({cx,sig})=>{
-        pdf.setLineWidth(0.5);pdf.setDrawColor(0,0,0);
-        pdf.line(cx-sigLineW/2,sigY,cx+sigLineW/2,sigY);
-        _hText(pdf,sig,cx,sigY+4.5,{size:7,align:'center',bold:true});
-    });
-    const fyBot=PH-8;
-    _hLine(pdf,ML,fyBot,PW-MR,fyBot,0.6,[0,40,120]);
-    _hLine(pdf,ML,fyBot+1.2,PW-MR,fyBot+1.2,0.2,[0,40,120]);
+    if(y+rodapeH>PH-8){
+        // Tabela não cabe com rodapé na mesma página — adicionar nova página para o rodapé
+        pdf.addPage();
+        y=20;
+        const rodapeYNovaPag=y+rodapeH-10;
+        _drawLocalData(pdf,localData,rodapeYNovaPag,PW);
+        const sigYNP=rodapeYNovaPag+16;
+        const sigLineW=55;
+        [{cx:PW*0.28,sig:sig1},{cx:PW*0.72,sig:sig2}].forEach(({cx,sig})=>{
+            pdf.setLineWidth(0.5);pdf.setDrawColor(0,0,0);
+            pdf.line(cx-sigLineW/2,sigYNP,cx+sigLineW/2,sigYNP);
+            _hText(pdf,sig,cx,sigYNP+4.5,{size:7,align:'center',bold:true});
+        });
+        const fyBot=PH-8;
+        _hLine(pdf,ML,fyBot,PW-MR,fyBot,0.6,[0,40,120]);
+        _hLine(pdf,ML,fyBot+1.2,PW-MR,fyBot+1.2,0.2,[0,40,120]);
+    } else {
+        _drawLocalData(pdf,localData,rodapeY,PW);
+        // Assinaturas — centralizadas na página, linhas mais largas
+        const sigY=rodapeY+16;
+        const sigLineW=55;
+        [{cx:PW*0.28,sig:sig1},{cx:PW*0.72,sig:sig2}].forEach(({cx,sig})=>{
+            pdf.setLineWidth(0.5);pdf.setDrawColor(0,0,0);
+            pdf.line(cx-sigLineW/2,sigY,cx+sigLineW/2,sigY);
+            _hText(pdf,sig,cx,sigY+4.5,{size:7,align:'center',bold:true});
+        });
+        const fyBot=PH-8;
+        _hLine(pdf,ML,fyBot,PW-MR,fyBot,0.6,[0,40,120]);
+        _hLine(pdf,ML,fyBot+1.2,PW-MR,fyBot+1.2,0.2,[0,40,120]);
+    }
 }
 
 function _histVersoMedioPortrait(pdf, hist, cfg) {
