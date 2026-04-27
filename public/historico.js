@@ -2789,50 +2789,64 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     const catLabels={formacao_geral:'FORMAÇÃO GERAL BÁSICA',itinerarios:'ITINERÁRIOS FORMATIVOS',atividades_integradoras:'ATIVIDADES INTEGRADORAS',linguagens:'LINGUAGENS, CÓDIGOS E SUAS TECNOLOGIAS',ciencias_humanas:'CIÊNCIAS HUMANAS E SUAS TECNOLOGIAS',ciencias_natureza:'CIÊNCIAS DA NATUREZA E SUAS TECNOLOGIAS',matematica:'MATEMÁTICA E SUAS TECNOLOGIAS',parte_flexivel:'PARTE FLEXÍVEL (DIVERSIFICADA)',ensino_religioso:'ENSINO RELIGIOSO'};
     const subcatLabels={aprofundamento_linguagens:'Aprofundamento de Linguagens e suas Tecnologias',aprofundamento_matematica_ciencias:'Aprofundamento de Matemática, Ciências da Natureza e Linguagens e suas Tecnologias',atividades_integradoras:'Atividades Integradoras'};
 
-    // ── ESCALA PROPORCIONAL ─────────────────────────────────────────────────
-    // Reserva espaço para rodapé (LOCAL/DATA + assinaturas + carimbo + margens)
+    // ── ESCALA PROPORCIONAL (2 passes para lidar corretamente com clamp de fonte) ────
     const RODAPE_RESERVED=62;
-    const TABLE_BOTTOM_LIMIT=PH-RODAPE_RESERVED; // espaço disponível até antes do rodapé
+    const TABLE_BOTTOM_LIMIT=PH-RODAPE_RESERVED;
+    const AVAIL_TABLE_H=TABLE_BOTTOM_LIMIT-tblStartY;
 
-    // Estima altura total da tabela com configurações base
     const BASE_HH=4.8;
     const BASE_DISC_FONT=7,BASE_DISC_LINE_H=3.8,BASE_DISC_PAD=2.2;
     const BASE_SUBCAT_FONT=6,BASE_SUBCAT_LINE_H=3.5,BASE_SUBCAT_PAD=2.0;
     const BASE_TOT_H=4.0;
+    // Razões fixas: altura de linha e padding derivados do tamanho da fonte
+    const LH_PER_PT=BASE_DISC_LINE_H/BASE_DISC_FONT; // mm por pt de fonte
+    const PAD_PER_PT=BASE_DISC_PAD/BASE_DISC_FONT;
+    const SLH_PER_PT=BASE_SUBCAT_LINE_H/BASE_SUBCAT_FONT;
+    const SPAD_PER_PT=BASE_SUBCAT_PAD/BASE_SUBCAT_FONT;
 
-    let estH = BASE_HH*2; // 2 linhas de header
-    catMap.forEach((catDiscs,catId)=>{
-        const subcatMap2=new Map();
-        catDiscs.forEach(dc=>{const sk=dc.subcategoria||'';if(!subcatMap2.has(sk))subcatMap2.set(sk,[]);subcatMap2.get(sk).push(dc);});
-        subcatMap2.forEach((subDiscs,subcatId)=>{
-            if(subcatId){
-                const subLabel=subcatLabels[subcatId]||subcatId;
-                pdf.setFont('helvetica','italic');pdf.setFontSize(BASE_SUBCAT_FONT);
-                const slines=pdf.splitTextToSize('  '+subLabel,cDisc+rem-6);
-                estH+=Math.max(BASE_SUBCAT_LINE_H+BASE_SUBCAT_PAD,slines.length*BASE_SUBCAT_LINE_H+BASE_SUBCAT_PAD);
-            }
-            subDiscs.forEach(disc=>{
-                pdf.setFont('helvetica','normal');pdf.setFontSize(BASE_DISC_FONT);
-                const dlines=pdf.splitTextToSize(disc.nome,cDisc-3);
-                estH+=Math.max(BASE_DISC_LINE_H+BASE_DISC_PAD,dlines.length*BASE_DISC_LINE_H+BASE_DISC_PAD);
+    // Estimativa com escala s — usa fontes reais (com clamp) para height correta
+    const _estTblH=(s)=>{
+        const dF=Math.max(5.5,BASE_DISC_FONT*s);
+        const dLH=dF*LH_PER_PT, dPad=dF*PAD_PER_PT;
+        const sF=Math.max(5,BASE_SUBCAT_FONT*s);
+        const sLH=sF*SLH_PER_PT, sPad=sF*SPAD_PER_PT;
+        const _hH=BASE_HH*s, _tH=BASE_TOT_H*s;
+        let h=_hH*2;
+        catMap.forEach((catDiscs,catId)=>{
+            const sm=new Map();
+            catDiscs.forEach(dc=>{const sk=dc.subcategoria||'';if(!sm.has(sk))sm.set(sk,[]);sm.get(sk).push(dc);});
+            sm.forEach((sds,sid)=>{
+                if(sid){
+                    pdf.setFont('helvetica','italic');pdf.setFontSize(sF);
+                    const ls=pdf.splitTextToSize('  '+(subcatLabels[sid]||sid),cDisc+rem-6);
+                    h+=Math.max(sLH+sPad,ls.length*sLH+sPad);
+                }
+                sds.forEach(dc=>{
+                    pdf.setFont('helvetica','normal');pdf.setFontSize(dF);
+                    const ls=pdf.splitTextToSize(dc.nome,cDisc-3);
+                    h+=Math.max(dLH+dPad,ls.length*dLH+dPad);
+                });
             });
+            if(catId==='formacao_geral') h+=_tH;
         });
-        if(catId==='formacao_geral') estH+=BASE_TOT_H; // linha TOTAL FGB
-    });
-    estH+=BASE_TOT_H*2; // CARGA TOTAL + RESULTADO FINAL
+        return h+_tH*2;
+    };
 
-    const AVAIL_TABLE_H=TABLE_BOTTOM_LIMIT-tblStartY;
-    const tableScale=Math.min(1.0, AVAIL_TABLE_H/estH);
+    // Pass 1 — escala inicial
+    let tableScale=Math.min(1.0,AVAIL_TABLE_H/_estTblH(1.0));
+    // Pass 2 — corrige caso fontes clampadas tornem tabela mais alta que o estimado
+    const h1=_estTblH(tableScale);
+    if(h1>AVAIL_TABLE_H) tableScale=Math.min(tableScale,AVAIL_TABLE_H/h1);
 
-    // Aplica escala a todas as constantes da tabela
+    // Constantes finais — LINE_H sempre derivado da fonte real (evita embolamento)
     const hH=BASE_HH*tableScale;
-    const DISC_FONT=Math.max(5.5, BASE_DISC_FONT*tableScale);
-    const DISC_LINE_H=BASE_DISC_LINE_H*tableScale;
-    const DISC_PAD=BASE_DISC_PAD*tableScale;
+    const DISC_FONT=Math.max(5.5,BASE_DISC_FONT*tableScale);
+    const DISC_LINE_H=DISC_FONT*LH_PER_PT;
+    const DISC_PAD=DISC_FONT*PAD_PER_PT;
     const MIN_ROW_H=DISC_LINE_H+DISC_PAD;
     const subcatFontSz=Math.max(5,BASE_SUBCAT_FONT*tableScale);
-    const subcatLineH=BASE_SUBCAT_LINE_H*tableScale;
-    const subcatPad=BASE_SUBCAT_PAD*tableScale;
+    const subcatLineH=subcatFontSz*SLH_PER_PT;
+    const subcatPad=subcatFontSz*SPAD_PER_PT;
     const totH=BASE_TOT_H*tableScale;
     // ────────────────────────────────────────────────────────────────────────
 
@@ -2973,8 +2987,17 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
             pdf.setFillColor(220,228,248);pdf.rect(tblX,catStartY,cNum,catBodyH,'F');
             pdf.setDrawColor(150,170,220);pdf.setLineWidth(0.1);pdf.rect(tblX,catStartY,cNum,catBodyH,'S');
             pdf.saveGraphicsState();
-            pdf.setFont('helvetica','bold');pdf.setFontSize(5.5);pdf.setTextColor(10,30,110);
-            pdf.text(catNome,tblX+cNum/2,midY,{angle:90,align:'center',maxWidth:catBodyH-1});
+            pdf.setFont('helvetica','bold');
+            // Calcula tamanho de fonte para o texto caber na altura disponível (sem maxWidth)
+            let vtFs=5.5;
+            const vtMaxLen=catBodyH-2;
+            pdf.setFontSize(vtFs);
+            while(vtFs>3.5&&pdf.getStringUnitWidth(catNome)*vtFs/pdf.internal.scaleFactor>vtMaxLen){
+                vtFs-=0.3;pdf.setFontSize(vtFs);
+            }
+            pdf.setTextColor(10,30,110);
+            // angle:90 = rotação 90° anti-horário → texto de baixo para cima
+            pdf.text(catNome,tblX+cNum/2,midY,{angle:90,align:'center'});
             pdf.restoreGraphicsState();
         }
     });
@@ -3018,13 +3041,7 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
         pdf.setLineWidth(0.5);pdf.setDrawColor(0,0,0);
         pdf.line(cx-sigLineW/2,sigY,cx+sigLineW/2,sigY);
         _hText(pdf,sig,cx,sigY+4.5,{size:7,align:'center',bold:true});
-        // Espaço para carimbo
-        const carH=18,carW=sigLineW-4;
-        pdf.setDrawColor(180,180,180);pdf.setLineWidth(0.3);
-        pdf.rect(cx-carW/2,sigY+7,carW,carH,'S');
-        pdf.setFont('helvetica','normal');pdf.setFontSize(5.5);pdf.setTextColor(160,160,160);
-        pdf.text('CARIMBO',cx,sigY+7+carH/2,{align:'center'});
-        pdf.setTextColor(0,0,0);
+        // Espaço em branco para carimbo (sem caixa)
     });
     const fyBot=PH-8;
     _hLine(pdf,ML,fyBot,PW-MR,fyBot,0.6,[0,40,120]);
