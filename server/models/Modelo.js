@@ -27,6 +27,11 @@ const modeloSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.Mixed,
         default: {}
     },
+    tipo: {
+        type: String,
+        enum: ['certificado', 'historico'],
+        default: 'certificado'
+    },
     ativo: {
         type: Boolean,
         default: true

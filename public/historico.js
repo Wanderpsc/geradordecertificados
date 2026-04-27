@@ -20,6 +20,7 @@ const HIST_STATE = {
 
 function inicializarHistorico() {
     carregarConfigHist();
+    carregarModelosHist();
     carregarListaMatrizes();
     carregarListaGrades();
     popularSelectAlunos();
@@ -111,8 +112,9 @@ function _aplicarConfigHistNosInputs(cfg) {
 }
 
 function carregarConfigHist() {
-    // Tentar carregar do localStorage; se vazio, pré-preencher com valores do certificado (se existirem)
-    let cfg = JSON.parse(localStorage.getItem('histConfig') || 'null');
+    // Prioridade: modelo padrão definido > histConfig salvo > importar do certConfig > defaults
+    const padraoConfig = JSON.parse(localStorage.getItem('histModeloPadraoConfig') || 'null');
+    let cfg = padraoConfig || JSON.parse(localStorage.getItem('histConfig') || 'null');
     if (!cfg) {
         // Importar valores do editor de certificados como ponto de partida
         const certCfg = JSON.parse(localStorage.getItem('certConfig') || 'null');
@@ -134,6 +136,7 @@ function carregarConfigHist() {
         };
     }
     _aplicarConfigHistNosInputs(cfg);
+    _atualizarInfoHistModelo();
 }
 
 function salvarConfigHist() {
@@ -167,6 +170,191 @@ function handleUploadEmblemaHist(event) {
         mostrarNotificacao('Emblema personalizado carregado!', 'success');
     };
     reader.readAsDataURL(file);
+}
+
+// ==================== MODELOS DE CONFIGURAÇÃO DO HISTÓRICO ====================
+
+const HIST_MODELO_STATE = {
+    modeloAtualId: localStorage.getItem('histModeloAtualId') || null,
+    modeloAtualNome: localStorage.getItem('histModeloAtualNome') || null
+};
+
+function _atualizarInfoHistModelo() {
+    const info = document.getElementById('histModeloAtualInfo');
+    const nomeEl = document.getElementById('histModeloAtualNome');
+    if (!info || !nomeEl) return;
+    if (HIST_MODELO_STATE.modeloAtualId && HIST_MODELO_STATE.modeloAtualNome) {
+        info.style.display = 'flex';
+        nomeEl.textContent = HIST_MODELO_STATE.modeloAtualNome;
+    } else {
+        info.style.display = 'none';
+    }
+}
+
+async function salvarModeloHistNaNuvem() {
+    const token = localStorage.getItem('token');
+    if (!token) { mostrarNotificacao('Faça login para salvar modelos na nuvem.', 'error'); return; }
+    const config = obterConfigHist();
+
+    if (HIST_MODELO_STATE.modeloAtualId) {
+        // Atualizar modelo existente
+        try {
+            const resp = await fetch(`${API_URL}/modelos/${HIST_MODELO_STATE.modeloAtualId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ config, uploads: HIST_UPLOADS })
+            });
+            const data = await resp.json();
+            if (data.success) {
+                localStorage.setItem('histConfig', JSON.stringify(config));
+                mostrarNotificacao(`Modelo de histórico "${HIST_MODELO_STATE.modeloAtualNome}" atualizado!`, 'success');
+                carregarModelosHist();
+            } else {
+                mostrarNotificacao(data.message || 'Erro ao atualizar', 'error');
+            }
+        } catch(e) { mostrarNotificacao('Erro de conexão', 'error'); }
+        return;
+    }
+
+    const nome = prompt('Nome do modelo de histórico:');
+    if (!nome || !nome.trim()) return;
+    const descricao = prompt('Descrição (opcional):') || '';
+
+    try {
+        const resp = await fetch(`${API_URL}/modelos`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ nome: nome.trim(), descricao: descricao.trim(), config, uploads: HIST_UPLOADS, tipo: 'historico' })
+        });
+        const data = await resp.json();
+        if (data.success) {
+            HIST_MODELO_STATE.modeloAtualId = data.modelo._id;
+            HIST_MODELO_STATE.modeloAtualNome = data.modelo.nome;
+            localStorage.setItem('histModeloAtualId', data.modelo._id);
+            localStorage.setItem('histModeloAtualNome', data.modelo.nome);
+            localStorage.setItem('histConfig', JSON.stringify(config));
+            _atualizarInfoHistModelo();
+            mostrarNotificacao(`Modelo "${nome.trim()}" salvo!`, 'success');
+            carregarModelosHist();
+        } else {
+            mostrarNotificacao(data.message || 'Erro ao salvar', 'error');
+        }
+    } catch(e) { mostrarNotificacao('Erro de conexão', 'error'); }
+}
+
+async function carregarModelosHist() {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    const grid = document.getElementById('histModelosGrid');
+    if (!grid) return;
+
+    try {
+        const resp = await fetch(`${API_URL}/modelos?tipo=historico`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await resp.json();
+        if (!data.success || !data.modelos.length) {
+            grid.innerHTML = '<div style="text-align:center;color:#9ca3af;padding:20px;grid-column:1/-1;">Nenhum modelo salvo. Use "☁️ Salvar Modelo Atual" para criar.</div>';
+            return;
+        }
+        const padraoId = localStorage.getItem('histModeloPadraoId') || null;
+        grid.innerHTML = data.modelos.map(m => `
+            <div style="background:white;border:2px solid ${HIST_MODELO_STATE.modeloAtualId === m._id ? '#3b82f6' : (padraoId === m._id ? '#10b981' : '#e5e7eb')};border-radius:12px;padding:12px;transition:all 0.2s;">
+                <div style="font-weight:600;font-size:14px;margin-bottom:3px;color:#1e3a8a;">${escapeHtml(m.nome)}</div>
+                ${m.descricao ? `<div style="font-size:12px;color:#6b7280;margin-bottom:4px;">${escapeHtml(m.descricao)}</div>` : ''}
+                ${padraoId === m._id ? '<div style="font-size:11px;color:#10b981;font-weight:600;margin-bottom:4px;">★ Padrão</div>' : ''}
+                <div style="font-size:11px;color:#9ca3af;margin-bottom:8px;">${new Date(m.atualizadoEm).toLocaleDateString('pt-BR')}</div>
+                <div style="display:flex;gap:4px;flex-wrap:wrap;">
+                    <button class="btn btn-primary btn-sm" onclick="carregarModeloHistNuvem('${m._id}')" style="font-size:11px;padding:4px 8px;">📂 Carregar</button>
+                    <button class="btn btn-sm" onclick="definirPadraoHist('${m._id}', '${escapeHtml(m.nome)}')" style="font-size:11px;padding:4px 8px;background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;">★ Padrão</button>
+                    <button class="btn btn-danger btn-sm" onclick="excluirModeloHistNuvem('${m._id}', '${escapeHtml(m.nome)}')" style="font-size:11px;padding:4px 8px;">🗑️</button>
+                </div>
+            </div>
+        `).join('');
+    } catch(e) {
+        if (grid) grid.innerHTML = '<div style="text-align:center;color:#ef4444;padding:20px;grid-column:1/-1;">Erro ao carregar modelos.</div>';
+    }
+}
+
+async function carregarModeloHistNuvem(id) {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    try {
+        const resp = await fetch(`${API_URL}/modelos/${id}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await resp.json();
+        if (!data.success) { mostrarNotificacao(data.message || 'Erro', 'error'); return; }
+        const m = data.modelo;
+        HIST_UPLOADS = m.uploads || {};
+        localStorage.setItem('histUploads', JSON.stringify(HIST_UPLOADS));
+        HIST_MODELO_STATE.modeloAtualId = m._id;
+        HIST_MODELO_STATE.modeloAtualNome = m.nome;
+        localStorage.setItem('histModeloAtualId', m._id);
+        localStorage.setItem('histModeloAtualNome', m.nome);
+        localStorage.setItem('histConfig', JSON.stringify(m.config));
+        _aplicarConfigHistNosInputs(m.config);
+        _atualizarInfoHistModelo();
+        carregarModelosHist();
+        mostrarNotificacao(`Modelo "${m.nome}" carregado!`, 'success');
+    } catch(e) { mostrarNotificacao('Erro de conexão', 'error'); }
+}
+
+async function excluirModeloHistNuvem(id, nome) {
+    if (!confirm(`Excluir o modelo de histórico "${nome}" permanentemente?`)) return;
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    try {
+        const resp = await fetch(`${API_URL}/modelos/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await resp.json();
+        if (data.success) {
+            if (HIST_MODELO_STATE.modeloAtualId === id) {
+                HIST_MODELO_STATE.modeloAtualId = null;
+                HIST_MODELO_STATE.modeloAtualNome = null;
+                localStorage.removeItem('histModeloAtualId');
+                localStorage.removeItem('histModeloAtualNome');
+                _atualizarInfoHistModelo();
+            }
+            if (localStorage.getItem('histModeloPadraoId') === id) {
+                localStorage.removeItem('histModeloPadraoId');
+                localStorage.removeItem('histModeloPadraoNome');
+                localStorage.removeItem('histModeloPadraoConfig');
+            }
+            mostrarNotificacao('Modelo excluído', 'success');
+            carregarModelosHist();
+        } else { mostrarNotificacao(data.message || 'Erro', 'error'); }
+    } catch(e) { mostrarNotificacao('Erro de conexão', 'error'); }
+}
+
+async function definirPadraoHist(id, nome) {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    try {
+        const resp = await fetch(`${API_URL}/modelos/${id}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await resp.json();
+        if (!data.success) { mostrarNotificacao('Erro ao definir padrão', 'error'); return; }
+        const config = data.modelo.config;
+        localStorage.setItem('histModeloPadraoId', id);
+        localStorage.setItem('histModeloPadraoNome', nome);
+        localStorage.setItem('histModeloPadraoConfig', JSON.stringify(config));
+        mostrarNotificacao(`"${nome}" definido como padrão do histórico!`, 'success');
+        carregarModelosHist();
+    } catch(e) { mostrarNotificacao('Erro de conexão', 'error'); }
+}
+
+function descarregarModeloHist() {
+    HIST_MODELO_STATE.modeloAtualId = null;
+    HIST_MODELO_STATE.modeloAtualNome = null;
+    localStorage.removeItem('histModeloAtualId');
+    localStorage.removeItem('histModeloAtualNome');
+    _atualizarInfoHistModelo();
+    carregarModelosHist();
+    mostrarNotificacao('Modelo desvinculado. Editando configuração avulsa.', 'info');
 }
 
 // ==================== MATRIZES CURRICULARES ====================
@@ -2512,7 +2700,8 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
 
     const emb=cfg?.emblema||{};
     const tipoEmb=emb.tipo||'brasao-brasil';
-    const bW=17,bH=20;
+    const bW=parseFloat(emb.largura)||22;
+    const bH=parseFloat(emb.altura)||26;
     const hCfg=cfg?.cabecalho||{};
     const l1=hCfg.linha1||'REPÚBLICA FEDERATIVA DO BRASIL';
     const l2=hCfg.linha2||'ESTADO DO PIAUÍ';
@@ -2569,21 +2758,21 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     pdf.setDrawColor(180,200,230);pdf.setLineWidth(0.15);
     [4.5,9,13.5,18,22.5].forEach(off=>pdf.line(ML+0.5,y+off,ML+UW-0.5,y+off));
 
-    const aFld=(by,lbl,lW,val,maxW)=>{
+    const aFld=(by,lbl,lblX,lW,val,maxW)=>{
         pdf.setFont('helvetica','bold');pdf.setFontSize(6.5);pdf.setTextColor(0,30,100);
-        pdf.text(lbl,ML+2,by);
+        pdf.text(lbl,ML+lblX,by);
         pdf.setFont('helvetica','normal');pdf.setTextColor(0,0,0);
         pdf.text(val||'',ML+lW,by,{maxWidth:maxW||(UW-lW-3)});
     };
-    aFld(y+3.5,'ESTUDANTE:',22,aluno.nome||'');
-    aFld(y+8,'NOME SOCIAL:',26,aluno.nomeSocial||'');
-    aFld(y+12.5,'RG:',8,aluno.rg||'',28);
-    aFld(y+12.5,'ÓRGÃO EMISSOR:',63,aluno.orgaoEmissor||'',22);
-    aFld(y+12.5,'CPF:',98,aluno.cpf||'',UW-100);
-    aFld(y+17,'DATA DE NASCIMENTO:',40,nascStr);
-    aFld(y+21.5,'NATURALIDADE:',28,natStr,78);
-    aFld(y+21.5,'NACIONALIDADE:',130,aluno.nacionalidade||'Brasileira',UW-132);
-    aFld(y+25.5,'FILIAÇÃO:',18,filStr);
+    aFld(y+3.5,'ESTUDANTE:',2,22,aluno.nome||'');
+    aFld(y+8,'NOME SOCIAL:',2,26,aluno.nomeSocial||'');
+    aFld(y+12.5,'RG:',2,8,aluno.rg||'',28);
+    aFld(y+12.5,'ÓRGÃO EMISSOR:',41,63,aluno.orgaoEmissor||'',22);
+    aFld(y+12.5,'CPF:',90,98,aluno.cpf||'',UW-100);
+    aFld(y+17,'DATA DE NASCIMENTO:',2,40,nascStr);
+    aFld(y+21.5,'NATURALIDADE:',2,28,natStr,78);
+    aFld(y+21.5,'NACIONALIDADE:',108,130,aluno.nacionalidade||'Brasileira',UW-132);
+    aFld(y+25.5,'FILIAÇÃO:',2,18,filStr);
     y+=boxH+1;
 
     // TABELA PRINCIPAL
@@ -2598,13 +2787,13 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     // Header linha 1
     pdf.setFillColor(0,35,105);pdf.rect(tblX,y,UW,hH,'F');
     // Coluna cNum fica vazia no header (será usada para texto vertical da categoria)
-    _hText(pdf,'COMPONENTES CURRICULARES',tblX+cNum+cDisc/2,y+4,{bold:true,size:5.5,align:'center',color:[255,255,255]});
+    _hText(pdf,'COMPONENTES CURRICULARES',tblX+cNum+cDisc/2,y+4,{bold:true,size:7,align:'center',color:[255,255,255]});
     let sx=tblX+cNum+cDisc;
     for(let i=0;i<numSeries;i++){
-        _hText(pdf,series[i]||`${i+1}ª SÉRIE`,sx+pairW/2,y+4,{bold:true,size:6,align:'center',color:[255,255,255]});
+        _hText(pdf,series[i]||`${i+1}ª SÉRIE`,sx+pairW/2,y+4,{bold:true,size:7,align:'center',color:[255,255,255]});
         sx+=pairW;
     }
-    _hText(pdf,'CH\nTOTAL',tblX+UW-cTot/2,y+2.5,{bold:true,size:4.8,align:'center',color:[255,255,255]});
+    _hText(pdf,'CH\nTOTAL',tblX+UW-cTot/2,y+2.5,{bold:true,size:6,align:'center',color:[255,255,255]});
     pdf.setDrawColor(80,120,200);pdf.setLineWidth(0.15);
     pdf.line(tblX+cNum,y,tblX+cNum,y+hH*2);
     pdf.line(tblX+cNum+cDisc,y,tblX+cNum+cDisc,y+hH*2);
@@ -2619,10 +2808,10 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     // Coluna cNum: sem texto (categoria vertical vai aqui)
     sx=tblX+cNum+cDisc;
     for(let i=0;i<numSeries;i++){
-        _hText(pdf,'NOTA',sx+cNota/2,y+4,{bold:true,size:5,align:'center',color:[255,255,255]});
+        _hText(pdf,'NOTA',sx+cNota/2,y+4,{bold:true,size:6.5,align:'center',color:[255,255,255]});
         pdf.setDrawColor(80,120,200);pdf.setLineWidth(0.15);
         pdf.line(sx+cNota,y,sx+cNota,y+hH);
-        _hText(pdf,'CH',sx+cNota+cCH/2,y+4,{bold:true,size:5,align:'center',color:[255,255,255]});
+        _hText(pdf,'CH',sx+cNota+cCH/2,y+4,{bold:true,size:6.5,align:'center',color:[255,255,255]});
         pdf.line(sx+pairW,y,sx+pairW,y+hH);
         sx+=pairW;
     }
@@ -2635,7 +2824,25 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     discs.forEach(dc=>{const k=dc.categoria||'outros';if(!catMap.has(k))catMap.set(k,[]);catMap.get(k).push(dc);});
     const catLabels={formacao_geral:'FORMAÇÃO GERAL BÁSICA',itinerarios:'ITINERÁRIOS FORMATIVOS',atividades_integradoras:'ATIVIDADES INTEGRADORAS',linguagens:'LINGUAGENS, CÓDIGOS E SUAS TECNOLOGIAS',ciencias_humanas:'CIÊNCIAS HUMANAS E SUAS TECNOLOGIAS',ciencias_natureza:'CIÊNCIAS DA NATUREZA E SUAS TECNOLOGIAS',matematica:'MATEMÁTICA E SUAS TECNOLOGIAS',parte_flexivel:'PARTE FLEXÍVEL (DIVERSIFICADA)',ensino_religioso:'ENSINO RELIGIOSO'};
     const subcatLabels={aprofundamento_linguagens:'Aprofundamento de Linguagens e suas Tecnologias',aprofundamento_matematica_ciencias:'Aprofundamento de Matemática, Ciências da Natureza e Linguagens e suas Tecnologias',atividades_integradoras:'Atividades Integradoras'};
-    const catH=3.2,rowH=3.3,subcatH=3.0;
+    const DISC_FONT=7;          // fonte das disciplinas
+    const DISC_LINE_H=3.8;      // altura por linha de texto
+    const DISC_PAD=2.2;         // padding vertical (topo + base)
+    const MIN_ROW_H=DISC_LINE_H+DISC_PAD;
+    const subcatFontSz=6;
+    const subcatLineH=3.5;
+    const subcatPad=2.0;
+
+    // Calcula altura da linha de disciplina considerando quebra de texto
+    const calcRowH=(nome)=>{
+        pdf.setFont('helvetica','normal');pdf.setFontSize(DISC_FONT);
+        const lines=pdf.splitTextToSize(nome,cDisc-3);
+        return Math.max(MIN_ROW_H, lines.length*DISC_LINE_H+DISC_PAD);
+    };
+    const calcSubcatH=(label)=>{
+        pdf.setFont('helvetica','italic');pdf.setFontSize(subcatFontSz);
+        const lines=pdf.splitTextToSize('  '+label,cDisc+rem-6);
+        return Math.max(subcatLineH+subcatPad, lines.length*subcatLineH+subcatPad);
+    };
     let rowIdx=1;
     const totalCHSerie=Array(numSeries).fill(0);
     let chTotalGeral=0;
@@ -2646,12 +2853,6 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     catMap.forEach((catDiscs,catId)=>{
         const catNome=catLabels[catId]||catId.toUpperCase();
         const catStartY=y;
-        pdf.setFillColor(220,228,248);pdf.rect(tblX,y,UW,catH,'F');
-        pdf.setDrawColor(150,170,220);pdf.setLineWidth(0.1);pdf.rect(tblX,y,UW,catH,'S');
-        pdf.setFont('helvetica','bold');pdf.setFontSize(5.5);pdf.setTextColor(10,30,110);
-        // Nome da categoria no header (coluna disc em diante), coluna cNum reservada para vertical
-        pdf.text(catNome,tblX+cNum+2,y+catH-1.2,{maxWidth:cDisc+rem-3});
-        y+=catH;
 
         const subcatMap=new Map();
         catDiscs.forEach(dc=>{const sk=dc.subcategoria||'';if(!subcatMap.has(sk))subcatMap.set(sk,[]);subcatMap.get(sk).push(dc);});
@@ -2659,23 +2860,30 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
         subcatMap.forEach((subDiscs,subcatId)=>{
             if(subcatId){
                 const subLabel=subcatLabels[subcatId]||subcatId;
-                pdf.setFillColor(234,240,255);pdf.rect(tblX,y,UW,subcatH,'F');
-                pdf.setDrawColor(170,190,230);pdf.setLineWidth(0.1);pdf.rect(tblX,y,UW,subcatH,'S');
-                pdf.setFont('helvetica','italic');pdf.setFontSize(5);pdf.setTextColor(40,60,140);
-                pdf.text('  '+subLabel,tblX+cNum+4,y+subcatH-1,{maxWidth:cDisc+rem-6});
-                y+=subcatH;
+                const sh=calcSubcatH(subLabel);
+                pdf.setFillColor(234,240,255);pdf.rect(tblX,y,UW,sh,'F');
+                pdf.setDrawColor(170,190,230);pdf.setLineWidth(0.1);pdf.rect(tblX,y,UW,sh,'S');
+                pdf.setFont('helvetica','italic');pdf.setFontSize(subcatFontSz);pdf.setTextColor(40,60,140);
+                const subLines=pdf.splitTextToSize('  '+subLabel,cDisc+rem-6);
+                subLines.forEach((ln,li)=>pdf.text(ln,tblX+cNum+4,y+subcatPad/2+subcatLineH*(li+0.85)));
+                y+=sh;
             }
             subDiscs.forEach(disc=>{
+                const rh=calcRowH(disc.nome);
                 const notasDisc=notas[disc.nome]||{};
                 const bg=rowIdx%2===0?[248,252,255]:[255,255,255];
-                pdf.setFillColor(...bg);pdf.rect(tblX,y,UW,rowH,'F');
-                pdf.setDrawColor(205,220,240);pdf.setLineWidth(0.1);pdf.rect(tblX,y,UW,rowH,'S');
-                pdf.setDrawColor(185,205,235);pdf.line(tblX+cNum,y,tblX+cNum,y+rowH);
-                pdf.setFont('helvetica','normal');pdf.setFontSize(5.5);pdf.setTextColor(10,10,10);
-                pdf.text(disc.nome,tblX+cNum+1.5,y+rowH-1,{maxWidth:cDisc-3});
-                pdf.line(tblX+cNum+cDisc,y,tblX+cNum+cDisc,y+rowH);
+                pdf.setFillColor(...bg);pdf.rect(tblX,y,UW,rh,'F');
+                pdf.setDrawColor(205,220,240);pdf.setLineWidth(0.1);pdf.rect(tblX,y,UW,rh,'S');
+                pdf.setDrawColor(185,205,235);pdf.line(tblX+cNum,y,tblX+cNum,y+rh);
+                pdf.setFont('helvetica','normal');pdf.setFontSize(DISC_FONT);pdf.setTextColor(10,10,10);
+                const discLines=pdf.splitTextToSize(disc.nome,cDisc-3);
+                const textBlockH=discLines.length*DISC_LINE_H;
+                const textStartY=y+(rh-textBlockH)/2+DISC_LINE_H*0.75;
+                discLines.forEach((ln,li)=>pdf.text(ln,tblX+cNum+1.5,textStartY+li*DISC_LINE_H));
+                pdf.line(tblX+cNum+cDisc,y,tblX+cNum+cDisc,y+rh);
                 let nx=tblX+cNum+cDisc;
                 let discChTot=0;
+                const midY=y+rh/2+DISC_FONT*0.18;
                 for(let si=0;si<numSeries;si++){
                     const nd=notasDisc[String(si+1)]||{};
                     const nv=nd.nota!==undefined?Number(nd.nota).toFixed(1):'';
@@ -2683,16 +2891,16 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
                     const cv=ch?String(ch):'';
                     discChTot+=ch||0;totalCHSerie[si]+=ch||0;
                     if(catId==='formacao_geral'){fgbCHSerie[si]+=(ch||0);}
-                    pdf.setFont('helvetica','normal');pdf.setFontSize(5.5);pdf.setTextColor(0,0,0);
-                    pdf.text(nv,nx+cNota/2,y+rowH-1,{align:'center'});
-                    pdf.setDrawColor(185,205,235);pdf.line(nx+cNota,y,nx+cNota,y+rowH);
-                    pdf.text(cv,nx+cNota+cCH/2,y+rowH-1,{align:'center'});
-                    pdf.line(nx+pairW,y,nx+pairW,y+rowH);nx+=pairW;
+                    pdf.setFont('helvetica','normal');pdf.setFontSize(DISC_FONT);pdf.setTextColor(0,0,0);
+                    pdf.text(nv,nx+cNota/2,midY,{align:'center'});
+                    pdf.setDrawColor(185,205,235);pdf.line(nx+cNota,y,nx+cNota,y+rh);
+                    pdf.text(cv,nx+cNota+cCH/2,midY,{align:'center'});
+                    pdf.line(nx+pairW,y,nx+pairW,y+rh);nx+=pairW;
                 }
-                pdf.setDrawColor(185,205,235);pdf.line(tblX+UW-cTot,y,tblX+UW-cTot,y+rowH);
-                if(discChTot)pdf.text(String(discChTot),tblX+UW-cTot+cTot/2,y+rowH-1,{align:'center'});
+                pdf.setDrawColor(185,205,235);pdf.line(tblX+UW-cTot,y,tblX+UW-cTot,y+rh);
+                if(discChTot)pdf.text(String(discChTot),tblX+UW-cTot+cTot/2,midY,{align:'center'});
                 if(catId==='formacao_geral')fgbChTotal+=discChTot;
-                chTotalGeral+=discChTot;rowIdx++;y+=rowH;
+                chTotalGeral+=discChTot;rowIdx++;y+=rh;
             });
         });
 
@@ -2701,13 +2909,13 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
             const fgbH=4.0;
             pdf.setFillColor(200,215,245);pdf.rect(tblX,y,UW,fgbH,'F');
             pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.2);pdf.rect(tblX,y,UW,fgbH,'S');
-            pdf.setFont('helvetica','bold');pdf.setFontSize(5);pdf.setTextColor(0,20,80);
+            pdf.setFont('helvetica','bold');pdf.setFontSize(7);pdf.setTextColor(0,20,80);
             pdf.text('TOTAL GERAL DA CARGA HORÁRIA DA FORMAÇÃO GERAL BÁSICA',tblX+cNum+2,y+fgbH-1.3,{maxWidth:cDisc+rem-3});
             let nxf=tblX+cNum+cDisc;
             let fgbTot=0;
             for(let si=0;si<numSeries;si++){
                 pdf.setDrawColor(0,40,120);pdf.line(nxf+cNota,y,nxf+cNota,y+fgbH);
-                pdf.setFont('helvetica','bold');pdf.setFontSize(5.5);pdf.setTextColor(0,20,80);
+                pdf.setFont('helvetica','bold');pdf.setFontSize(7);pdf.setTextColor(0,20,80);
                 pdf.text(String(fgbCHSerie[si]||''),nxf+cNota+cCH/2,y+fgbH-1.3,{align:'center'});
                 pdf.line(nxf+pairW,y,nxf+pairW,y+fgbH);nxf+=pairW;fgbTot+=fgbCHSerie[si]||0;
             }
@@ -2716,15 +2924,17 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
             y+=fgbH;
         }
 
-        // Texto vertical da categoria na coluna cNum (de baixo para cima)
+        // Texto vertical da categoria na coluna cNum — abrange toda a altura da categoria
         const catEndY=y;
-        const catBodyH=catEndY-catStartY-catH; // altura só das linhas de disciplinas
+        const catBodyH=catEndY-catStartY; // altura total (sem linha de header removida)
         if(catBodyH>1){
-            const midY=catStartY+catH+catBodyH/2;
+            const midY=catStartY+catBodyH/2;
+            // Fundo levemente colorido na coluna cNum para toda a categoria
+            pdf.setFillColor(220,228,248);pdf.rect(tblX,catStartY,cNum,catBodyH,'F');
+            pdf.setDrawColor(150,170,220);pdf.setLineWidth(0.1);pdf.rect(tblX,catStartY,cNum,catBodyH,'S');
             pdf.saveGraphicsState();
-            pdf.setFont('helvetica','bold');pdf.setFontSize(4.5);pdf.setTextColor(10,30,110);
-            // Recortar na coluna cNum
-            pdf.text(catNome,tblX+cNum/2,midY,{angle:90,align:'center',maxWidth:catBodyH});
+            pdf.setFont('helvetica','bold');pdf.setFontSize(5.5);pdf.setTextColor(10,30,110);
+            pdf.text(catNome,tblX+cNum/2,midY,{angle:90,align:'center',maxWidth:catBodyH-1});
             pdf.restoreGraphicsState();
         }
     });
@@ -2733,7 +2943,7 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     const totH=4.0;
     pdf.setFillColor(200,215,245);pdf.rect(tblX,y,UW,totH,'F');
     pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.2);pdf.rect(tblX,y,UW,totH,'S');
-    pdf.setFont('helvetica','bold');pdf.setFontSize(5.5);pdf.setTextColor(0,20,80);
+    pdf.setFont('helvetica','bold');pdf.setFontSize(7);pdf.setTextColor(0,20,80);
     pdf.text('CARGA HORÁRIA TOTAL',tblX+cNum+2,y+totH-1.3,{maxWidth:cDisc-3});
     let nx2=tblX+cNum+cDisc;
     for(let si=0;si<numSeries;si++){
@@ -2747,10 +2957,10 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
 
     // Linha RESULTADO FINAL
     pdf.setFillColor(0,40,120);pdf.rect(tblX,y,UW,totH,'F');
-    pdf.setFont('helvetica','bold');pdf.setFontSize(6.5);pdf.setTextColor(255,255,255);
+    pdf.setFont('helvetica','bold');pdf.setFontSize(7.5);pdf.setTextColor(255,255,255);
     pdf.text('RESULTADO FINAL: ',tblX+cNum+2,y+totH-1.3);
     pdf.setFont('helvetica','normal');
-    pdf.text(hist.resultadoFinal||hist.resultado||'',tblX+cNum+37,y+totH-1.3,{maxWidth:UW-cNum-40});
+    pdf.text(hist.resultadoFinal||hist.resultado||'',tblX+cNum+40,y+totH-1.3,{maxWidth:UW-cNum-43});
     y+=totH;
 
     pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.4);
@@ -2763,12 +2973,13 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     const localData=cfg?.frente?.localData||hist.dataEmissao||'';
     const rodapeY=PH-42;
     _drawLocalData(pdf,localData,rodapeY,PW);
-    // Assinaturas
-    const sigY=rodapeY+14;
-    [{cx:ML+UW*0.25,sig:sig1},{cx:ML+UW*0.75,sig:sig2}].forEach(({cx,sig})=>{
-        pdf.setLineWidth(0.4);pdf.setDrawColor(0,0,0);
-        pdf.line(cx-35,sigY,cx+35,sigY);
-        _hText(pdf,sig,cx,sigY+4,{size:6.5,align:'center',bold:true});
+    // Assinaturas — centralizadas na página, linhas mais largas
+    const sigY=rodapeY+16;
+    const sigLineW=55;
+    [{cx:PW*0.28,sig:sig1},{cx:PW*0.72,sig:sig2}].forEach(({cx,sig})=>{
+        pdf.setLineWidth(0.5);pdf.setDrawColor(0,0,0);
+        pdf.line(cx-sigLineW/2,sigY,cx+sigLineW/2,sigY);
+        _hText(pdf,sig,cx,sigY+4.5,{size:7,align:'center',bold:true});
     });
     const fyBot=PH-8;
     _hLine(pdf,ML,fyBot,PW-MR,fyBot,0.6,[0,40,120]);

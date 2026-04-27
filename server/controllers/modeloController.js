@@ -23,8 +23,15 @@ exports.listarModelos = async (req, res) => {
         } else {
             filtro.arquivado = false;
         }
+        const tipo = req.query.tipo || 'certificado';
+        if (tipo === 'historico') {
+            filtro.tipo = 'historico';
+        } else {
+            // Certificados: inclui documentos antigos sem campo tipo
+            filtro.$or = [{ tipo: 'certificado' }, { tipo: { $exists: false } }];
+        }
         const modelos = await Modelo.find(filtro)
-            .select('nome descricao ativo arquivado criadoEm atualizadoEm')
+            .select('nome descricao tipo ativo arquivado criadoEm atualizadoEm')
             .sort('-atualizadoEm');
         res.json({ success: true, modelos });
     } catch (error) {
@@ -48,18 +55,20 @@ exports.obterModelo = async (req, res) => {
 // Salvar novo modelo
 exports.salvarModelo = async (req, res) => {
     try {
-        const { nome, descricao, config, uploads } = req.body;
+        const { nome, descricao, config, uploads, tipo } = req.body;
         if (!nome || !config) {
             return res.status(400).json({ success: false, message: 'Nome e configuração são obrigatórios.' });
         }
+        const tipoFinal = tipo === 'historico' ? 'historico' : 'certificado';
         const modelo = await Modelo.create({
             usuario: req.usuario._id,
             nome,
             descricao: descricao || '',
             config,
-            uploads: uploads || {}
+            uploads: uploads || {},
+            tipo: tipoFinal
         });
-        res.status(201).json({ success: true, modelo: { _id: modelo._id, nome: modelo.nome, descricao: modelo.descricao, criadoEm: modelo.criadoEm } });
+        res.status(201).json({ success: true, modelo: { _id: modelo._id, nome: modelo.nome, descricao: modelo.descricao, tipo: modelo.tipo, criadoEm: modelo.criadoEm } });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Erro ao salvar modelo.' });
     }
@@ -102,7 +111,8 @@ exports.copiarModelo = async (req, res) => {
             nome: original.nome + ' (Cópia)',
             descricao: original.descricao,
             config: original.config,
-            uploads: original.uploads
+            uploads: original.uploads,
+            tipo: original.tipo || 'certificado'
         });
         res.status(201).json({ success: true, modelo: { _id: copia._id, nome: copia.nome, descricao: copia.descricao, criadoEm: copia.criadoEm } });
     } catch (error) {
