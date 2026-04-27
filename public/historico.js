@@ -69,7 +69,8 @@ function obterConfigHist() {
         frente: {
             resolucao: el('histCfgResolucao').value.trim(),
             assinatura1: el('histCfgAssinatura1').value.trim() || HIST_CONFIG_DEFAULTS.frente.assinatura1,
-            assinatura2: el('histCfgAssinatura2').value.trim() || HIST_CONFIG_DEFAULTS.frente.assinatura2
+            assinatura2: el('histCfgAssinatura2').value.trim() || HIST_CONFIG_DEFAULTS.frente.assinatura2,
+            localData: el('histCfgLocalData')?.value.trim() || ''
         },
         emblema: {
             tipo: el('histCfgEmblema')?.value || 'brasao-brasil',
@@ -93,6 +94,7 @@ function _aplicarConfigHistNosInputs(cfg) {
     el('histCfgResolucao').value = cfg?.frente?.resolucao || '';
     el('histCfgAssinatura1').value = cfg?.frente?.assinatura1 || '';
     el('histCfgAssinatura2').value = cfg?.frente?.assinatura2 || '';
+    if(el('histCfgLocalData')) el('histCfgLocalData').value = cfg?.frente?.localData || '';
     // Emblema
     const emb = cfg?.emblema || HIST_CONFIG_DEFAULTS.emblema;
     if (el('histCfgEmblema')) el('histCfgEmblema').value = emb.tipo || 'brasao-brasil';
@@ -2664,15 +2666,36 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     pdf.rect(tblX,tblStartY,UW,y-tblStartY,'S');
     y+=4;
 
-    // RODAPÉ
-    _hText(pdf,hist.dataEmissao||'',PW/2,y+2,{size:7,align:'center'});
-    y+=10;
+    // RODAPÉ — fixado no fim da página
     const sig1=cfg?.frente?.assinatura1||'SECRETÁRIO(A)';
     const sig2=cfg?.frente?.assinatura2||'DIRETOR(A)';
+    const localData=cfg?.frente?.localData||hist.dataEmissao||'';
+    const rodapeY=PH-38;
+    // Linha LOCAL / DATA
+    const ldMid=PW/2;
+    pdf.setLineWidth(0.3);pdf.setDrawColor(0,0,0);
+    pdf.line(ML+10,rodapeY,ldMid-18,rodapeY);           // linha local
+    pdf.setFont('helvetica','normal');pdf.setFontSize(5.5);pdf.setTextColor(0,0,0);
+    // valor do local
+    const partes=(localData).split(',');
+    const localTxt=partes[0]?.trim()||'';
+    const dataTxt=partes.slice(1).join(',').trim();
+    pdf.text(localTxt,ML+10+(ldMid-18-ML-10)/2,rodapeY-1,{align:'center',maxWidth:ldMid-28-ML});
+    _hText(pdf,'LOCAL',ML+10+(ldMid-18-ML-10)/2,rodapeY+3.5,{size:5,align:'center'});
+    pdf.setFont('helvetica','normal');pdf.setFontSize(5.5);pdf.setTextColor(0,0,0);
+    pdf.text('de',ldMid-16,rodapeY-1,{align:'center'});
+    pdf.line(ldMid-12,rodapeY,ldMid+10,rodapeY);         // linha mês
+    if(dataTxt){const dtParts=dataTxt.split('de');pdf.text((dtParts[0]||'').trim(),ldMid-1,rodapeY-1,{align:'center',maxWidth:22});}
+    pdf.text('de',ldMid+12,rodapeY-1,{align:'center'});
+    pdf.line(ldMid+16,rodapeY,ldMid+38,rodapeY);         // linha ano
+    if(dataTxt){const dtParts=dataTxt.split('de');pdf.text((dtParts[dtParts.length-1]||'').trim(),ldMid+27,rodapeY-1,{align:'center',maxWidth:20});}
+    _hText(pdf,'DATA',ldMid+27,rodapeY+3.5,{size:5,align:'center'});
+    // Assinaturas
+    const sigY=rodapeY+14;
     [{cx:ML+UW*0.25,sig:sig1},{cx:ML+UW*0.75,sig:sig2}].forEach(({cx,sig})=>{
         pdf.setLineWidth(0.4);pdf.setDrawColor(0,0,0);
-        pdf.line(cx-35,y,cx+35,y);
-        _hText(pdf,sig,cx,y+4,{size:6.5,align:'center',bold:true});
+        pdf.line(cx-35,sigY,cx+35,sigY);
+        _hText(pdf,sig,cx,sigY+4,{size:6.5,align:'center',bold:true});
     });
     const fyBot=PH-8;
     _hLine(pdf,ML,fyBot,PW-MR,fyBot,0.6,[0,40,120]);
@@ -2826,18 +2849,34 @@ function _histVersoMedioPortrait(pdf, hist, cfg) {
     // Nota sobre rasuras
     pdf.setFont('helvetica','italic');pdf.setFontSize(5.8);pdf.setTextColor(60,60,60);
     pdf.text('Neste documento não deverão haver emendas e nem rasuras.',PW/2,y+2,{align:'center'});
-    y+=7;
 
-    _hText(pdf,hist.dataEmissao||'',PW/2,y,{size:7,align:'center'});
-    y+=9;
-    const sig1=cfg?.frente?.assinatura1||'SECRETÁRIO(A)';
-    const sig2=cfg?.frente?.assinatura2||'DIRETOR(A)';
-    // Assinaturas fixas acima do rodapé, deixando 22mm para carimbo
-    const sigY=PH-30;
-    [{cx:ML+UW*0.25,sig:sig1},{cx:ML+UW*0.75,sig:sig2}].forEach(({cx,sig})=>{
+    // RODAPÉ VERSO — fixado no fim da página
+    const sig1v=cfg?.frente?.assinatura1||'SECRETÁRIO(A)';
+    const sig2v=cfg?.frente?.assinatura2||'DIRETOR(A)';
+    const localDataV=cfg?.frente?.localData||hist.dataEmissao||'';
+    const rodapeYv=PH-38;
+    const ldMidV=PW/2;
+    pdf.setLineWidth(0.3);pdf.setDrawColor(0,0,0);
+    pdf.line(ML+10,rodapeYv,ldMidV-18,rodapeYv);
+    pdf.setFont('helvetica','normal');pdf.setFontSize(5.5);pdf.setTextColor(0,0,0);
+    const partesV=(localDataV).split(',');
+    const localTxtV=partesV[0]?.trim()||'';
+    const dataTxtV=partesV.slice(1).join(',').trim();
+    pdf.text(localTxtV,ML+10+(ldMidV-18-ML-10)/2,rodapeYv-1,{align:'center',maxWidth:ldMidV-28-ML});
+    _hText(pdf,'LOCAL',ML+10+(ldMidV-18-ML-10)/2,rodapeYv+3.5,{size:5,align:'center'});
+    pdf.setFont('helvetica','normal');pdf.setFontSize(5.5);pdf.setTextColor(0,0,0);
+    pdf.text('de',ldMidV-16,rodapeYv-1,{align:'center'});
+    pdf.line(ldMidV-12,rodapeYv,ldMidV+10,rodapeYv);
+    if(dataTxtV){const dtPV=dataTxtV.split('de');pdf.text((dtPV[0]||'').trim(),ldMidV-1,rodapeYv-1,{align:'center',maxWidth:22});}
+    pdf.text('de',ldMidV+12,rodapeYv-1,{align:'center'});
+    pdf.line(ldMidV+16,rodapeYv,ldMidV+38,rodapeYv);
+    if(dataTxtV){const dtPV=dataTxtV.split('de');pdf.text((dtPV[dtPV.length-1]||'').trim(),ldMidV+27,rodapeYv-1,{align:'center',maxWidth:20});}
+    _hText(pdf,'DATA',ldMidV+27,rodapeYv+3.5,{size:5,align:'center'});
+    const sigYv=rodapeYv+14;
+    [{cx:ML+UW*0.25,sig:sig1v},{cx:ML+UW*0.75,sig:sig2v}].forEach(({cx,sig})=>{
         pdf.setLineWidth(0.4);pdf.setDrawColor(0,0,0);
-        pdf.line(cx-35,sigY,cx+35,sigY);
-        _hText(pdf,sig,cx,sigY+4,{size:6.5,align:'center',bold:true});
+        pdf.line(cx-35,sigYv,cx+35,sigYv);
+        _hText(pdf,sig,cx,sigYv+4,{size:6.5,align:'center',bold:true});
     });
     const fyBot=PH-8;
     _hLine(pdf,ML,fyBot,PW-MR,fyBot,0.6,[0,40,120]);
