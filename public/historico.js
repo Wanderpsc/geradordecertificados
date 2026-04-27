@@ -2475,30 +2475,28 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
             if(src)pdf.addImage(src,fmt,PW/2-bW/2,y,bW,bH,undefined,'FAST');
         }catch(_){}
     }
-    // Textos centralizados abaixo do brasão
+    // Textos centralizados abaixo do brasão — todos tamanho 8pt
     y+=bH+2;
-    _hText(pdf,l1,PW/2,y,{bold:true,size:6.5,align:'center'});y+=4;
+    _hText(pdf,l1,PW/2,y,{bold:true,size:8,align:'center'});y+=4.5;
     _hText(pdf,l2,PW/2,y,{bold:true,size:8,align:'center'});y+=4.5;
-    _hText(pdf,l3,PW/2,y,{size:6,align:'center'});y+=6;
+    _hText(pdf,l3,PW/2,y,{size:8,align:'center'});y+=6;
 
-    // CAMPOS centralizados sem linhas — só valor + label
-    const fldCentro=(label,value)=>{
-        if(value){
-            pdf.setFont('helvetica','normal');pdf.setFontSize(7);pdf.setTextColor(0,0,0);
-            pdf.text(value,PW/2,y,{align:'center',maxWidth:UW-4});
-        }
-        pdf.setFont('helvetica','bold');pdf.setFontSize(5.8);pdf.setTextColor(0,0,0);
-        pdf.text(label,PW/2,y+3.5,{align:'center'});
-        y+=7;
+    // Textos do cabeçalho — todos centralizados, mesmo tamanho
+    const linhaCab=(txt,bold)=>{
+        if(!txt)return;
+        pdf.setFont('helvetica',bold?'bold':'normal');
+        pdf.setFontSize(8);pdf.setTextColor(0,0,0);
+        pdf.text(txt,PW/2,y,{align:'center',maxWidth:UW-4});
+        y+=4.5;
     };
-    fldCentro('ESTABELECIMENTO DE ENSINO',inst);
-    fldCentro('ENDEREÇO',end_);
+    linhaCab(inst,false);
+    linhaCab(end_,false);
 
     // Resolução — centralizada, sem repetir "Resolução CEE/PI"
     const resolNum=resol.replace(/^resolu[çc][aã]o\s+cee\/pi\s*/i,'').trim();
     const resolTxt='Autorização de Funcionamento pela Resolução CEE/PI Nº '+(resolNum||resol);
-    pdf.setFont('helvetica','normal');pdf.setFontSize(6);pdf.setTextColor(0,0,0);
-    pdf.text(resolTxt,PW/2,y+3,{align:'center',maxWidth:UW-4});
+    pdf.setFont('helvetica','normal');pdf.setFontSize(8);pdf.setTextColor(0,0,0);
+    pdf.text(resolTxt,PW/2,y,{align:'center',maxWidth:UW-4});
     y+=8;
 
     // TÍTULO
