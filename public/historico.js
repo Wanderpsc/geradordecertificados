@@ -2980,7 +2980,6 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     });
 
     // Linha CARGA HORÁRIA TOTAL
-    const totH=4.0;
     pdf.setFillColor(200,215,245);pdf.rect(tblX,y,UW,totH,'F');
     pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.2);pdf.rect(tblX,y,UW,totH,'S');
     pdf.setFont('helvetica','bold');pdf.setFontSize(7);pdf.setTextColor(0,20,80);
