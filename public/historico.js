@@ -2587,7 +2587,7 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     y+=boxH+1;
 
     // TABELA PRINCIPAL
-    const cNum=6,cDisc=60,cTot=17;
+    const cNum=8,cDisc=58,cTot=17;
     const rem=UW-cNum-cDisc-cTot;
     const pairW=rem/numSeries;
     const cNota=parseFloat((pairW*0.57).toFixed(2));
@@ -2597,6 +2597,7 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
 
     // Header linha 1
     pdf.setFillColor(0,35,105);pdf.rect(tblX,y,UW,hH,'F');
+    // Coluna cNum fica vazia no header (será usada para texto vertical da categoria)
     _hText(pdf,'COMPONENTES CURRICULARES',tblX+cNum+cDisc/2,y+4,{bold:true,size:5.5,align:'center',color:[255,255,255]});
     let sx=tblX+cNum+cDisc;
     for(let i=0;i<numSeries;i++){
@@ -2615,7 +2616,7 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
 
     // Header linha 2
     pdf.setFillColor(15,55,150);pdf.rect(tblX,y,UW,hH,'F');
-    _hText(pdf,'Nº',tblX+cNum/2,y+4,{bold:true,size:5,align:'center',color:[255,255,255]});
+    // Coluna cNum: sem texto (categoria vertical vai aqui)
     sx=tblX+cNum+cDisc;
     for(let i=0;i<numSeries;i++){
         _hText(pdf,'NOTA',sx+cNota/2,y+4,{bold:true,size:5,align:'center',color:[255,255,255]});
@@ -2638,6 +2639,9 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     let rowIdx=1;
     const totalCHSerie=Array(numSeries).fill(0);
     let chTotalGeral=0;
+    // CH por categoria formacao_geral
+    const fgbCHSerie=Array(numSeries).fill(0);
+    let fgbChTotal=0;
 
     catMap.forEach((catDiscs,catId)=>{
         const catNome=catLabels[catId]||catId.toUpperCase();
@@ -2645,6 +2649,7 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
         pdf.setFillColor(220,228,248);pdf.rect(tblX,y,UW,catH,'F');
         pdf.setDrawColor(150,170,220);pdf.setLineWidth(0.1);pdf.rect(tblX,y,UW,catH,'S');
         pdf.setFont('helvetica','bold');pdf.setFontSize(5.5);pdf.setTextColor(10,30,110);
+        // Nome da categoria no header (coluna disc em diante), coluna cNum reservada para vertical
         pdf.text(catNome,tblX+cNum+2,y+catH-1.2,{maxWidth:cDisc+rem-3});
         y+=catH;
 
@@ -2677,6 +2682,7 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
                     const ch=disc.cargaHorariaPorSerie?.[si]??disc.cargaHorariaPadrao??0;
                     const cv=ch?String(ch):'';
                     discChTot+=ch||0;totalCHSerie[si]+=ch||0;
+                    if(catId==='formacao_geral'){fgbCHSerie[si]+=(ch||0);}
                     pdf.setFont('helvetica','normal');pdf.setFontSize(5.5);pdf.setTextColor(0,0,0);
                     pdf.text(nv,nx+cNota/2,y+rowH-1,{align:'center'});
                     pdf.setDrawColor(185,205,235);pdf.line(nx+cNota,y,nx+cNota,y+rowH);
@@ -2685,15 +2691,41 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
                 }
                 pdf.setDrawColor(185,205,235);pdf.line(tblX+UW-cTot,y,tblX+UW-cTot,y+rowH);
                 if(discChTot)pdf.text(String(discChTot),tblX+UW-cTot+cTot/2,y+rowH-1,{align:'center'});
+                if(catId==='formacao_geral')fgbChTotal+=discChTot;
                 chTotalGeral+=discChTot;rowIdx++;y+=rowH;
             });
         });
-        // Texto vertical da categoria na coluna Nº
+
+        // Linha TOTAL GERAL DA FORMAÇÃO GERAL BÁSICA — só após a categoria formacao_geral
+        if(catId==='formacao_geral'){
+            const fgbH=4.0;
+            pdf.setFillColor(200,215,245);pdf.rect(tblX,y,UW,fgbH,'F');
+            pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.2);pdf.rect(tblX,y,UW,fgbH,'S');
+            pdf.setFont('helvetica','bold');pdf.setFontSize(5);pdf.setTextColor(0,20,80);
+            pdf.text('TOTAL GERAL DA CARGA HORÁRIA DA FORMAÇÃO GERAL BÁSICA',tblX+cNum+2,y+fgbH-1.3,{maxWidth:cDisc+rem-3});
+            let nxf=tblX+cNum+cDisc;
+            let fgbTot=0;
+            for(let si=0;si<numSeries;si++){
+                pdf.setDrawColor(0,40,120);pdf.line(nxf+cNota,y,nxf+cNota,y+fgbH);
+                pdf.setFont('helvetica','bold');pdf.setFontSize(5.5);pdf.setTextColor(0,20,80);
+                pdf.text(String(fgbCHSerie[si]||''),nxf+cNota+cCH/2,y+fgbH-1.3,{align:'center'});
+                pdf.line(nxf+pairW,y,nxf+pairW,y+fgbH);nxf+=pairW;fgbTot+=fgbCHSerie[si]||0;
+            }
+            pdf.line(tblX+UW-cTot,y,tblX+UW-cTot,y+fgbH);
+            pdf.text(String(fgbTot||''),tblX+UW-cTot+cTot/2,y+fgbH-1.3,{align:'center'});
+            y+=fgbH;
+        }
+
+        // Texto vertical da categoria na coluna cNum (de baixo para cima)
         const catEndY=y;
-        if(catEndY>catStartY+catH+0.1){
-            const catMidY=(catStartY+catEndY)/2;
-            pdf.setFont('helvetica','bold');pdf.setFontSize(5);pdf.setTextColor(10,30,110);
-            pdf.text(catNome,tblX+cNum/2,catMidY,{angle:90,align:'center'});
+        const catBodyH=catEndY-catStartY-catH; // altura só das linhas de disciplinas
+        if(catBodyH>1){
+            const midY=catStartY+catH+catBodyH/2;
+            pdf.saveGraphicsState();
+            pdf.setFont('helvetica','bold');pdf.setFontSize(4.5);pdf.setTextColor(10,30,110);
+            // Recortar na coluna cNum
+            pdf.text(catNome,tblX+cNum/2,midY,{angle:90,align:'center',maxWidth:catBodyH});
+            pdf.restoreGraphicsState();
         }
     });
 
@@ -2779,17 +2811,17 @@ function _histVersoMedioPortrait(pdf, hist, cfg) {
     fLine('ESTUDANTE: ',aluno.nome||'',20);
     fLine('NOME SOCIAL: ',aluno.nomeSocial||'',25);
 
-    // RG / ÓRGÃO / CPF
+    // RG / ÓRGÃO / CPF  — larguras ajustadas para não embolar
     pdf.setFont('helvetica','bold');pdf.setFontSize(6.5);pdf.setTextColor(0,0,0);
     pdf.text('RG: ',ML,y+3.5);pdf.setFont('helvetica','normal');
-    pdf.text(aluno.rg||'',ML+8,y+3.5,{maxWidth:26});
-    pdf.setDrawColor(80,80,80);pdf.setLineWidth(0.2);pdf.line(ML+8,y+4,ML+36,y+4);
-    pdf.setFont('helvetica','bold');pdf.text('ÓRGÃO EMISSOR: ',ML+38,y+3.5);
-    pdf.setFont('helvetica','normal');pdf.text(aluno.orgaoEmissor||'',ML+68,y+3.5,{maxWidth:20});
-    pdf.line(ML+68,y+4,ML+92,y+4);
-    pdf.setFont('helvetica','bold');pdf.text('CPF: ',ML+94,y+3.5);
-    pdf.setFont('helvetica','normal');pdf.text(aluno.cpf||'',ML+104,y+3.5,{maxWidth:UW-106});
-    pdf.line(ML+104,y+4,ML+UW,y+4);y+=5;
+    pdf.text(aluno.rg||'',ML+7,y+3.5,{maxWidth:28});
+    pdf.setDrawColor(80,80,80);pdf.setLineWidth(0.2);pdf.line(ML+7,y+4,ML+37,y+4);
+    pdf.setFont('helvetica','bold');pdf.text('ÓRGÃO EMISSOR: ',ML+39,y+3.5);
+    pdf.setFont('helvetica','normal');pdf.text(aluno.orgaoEmissor||'',ML+65,y+3.5,{maxWidth:24});
+    pdf.line(ML+65,y+4,ML+91,y+4);
+    pdf.setFont('helvetica','bold');pdf.text('CPF: ',ML+93,y+3.5);
+    pdf.setFont('helvetica','normal');pdf.text(aluno.cpf||'',ML+102,y+3.5,{maxWidth:UW-103});
+    pdf.line(ML+102,y+4,ML+UW,y+4);y+=5;
 
     pdf.setFont('helvetica','bold');pdf.setFontSize(6.5);
     pdf.text('DATA DE NASCIMENTO: ',ML,y+3.5);
@@ -2797,11 +2829,11 @@ function _histVersoMedioPortrait(pdf, hist, cfg) {
     pdf.line(ML+41,y+4,ML+UW,y+4);y+=5;
 
     pdf.setFont('helvetica','bold');pdf.text('NATURALIDADE: ',ML,y+3.5);
-    pdf.setFont('helvetica','normal');pdf.text(natStr,ML+30,y+3.5,{maxWidth:78});
-    pdf.line(ML+30,y+4,ML+110,y+4);
-    pdf.setFont('helvetica','bold');pdf.text('NACIONALIDADE: ',ML+112,y+3.5);
-    pdf.setFont('helvetica','normal');pdf.text(aluno.nacionalidade||'Brasileira',ML+140,y+3.5,{maxWidth:UW-142});
-    pdf.line(ML+140,y+4,ML+UW,y+4);y+=5;
+    pdf.setFont('helvetica','normal');pdf.text(natStr,ML+28,y+3.5,{maxWidth:68});
+    pdf.line(ML+28,y+4,ML+98,y+4);
+    pdf.setFont('helvetica','bold');pdf.text('NACIONALIDADE: ',ML+100,y+3.5);
+    pdf.setFont('helvetica','normal');pdf.text(aluno.nacionalidade||'Brasileira',ML+128,y+3.5,{maxWidth:UW-130});
+    pdf.line(ML+128,y+4,ML+UW,y+4);y+=5;
 
     pdf.setFont('helvetica','bold');pdf.text('FILIAÇÃO: ',ML,y+3.5);
     pdf.setFont('helvetica','normal');pdf.text(filStr,ML+20,y+3.5,{maxWidth:UW-22});
