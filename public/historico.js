@@ -2440,6 +2440,59 @@ function _romanos(n) {
     let r='';for(let i=0;i<vals.length;i++)while(n>=vals[i]){r+=syms[i];n-=vals[i];}return r;
 }
 
+// Helper: desenha linha LOCAL/DATA centralizada na página
+function _drawLocalData(pdf, localData, rodapeY, PW) {
+    // Larguras fixas (mm)
+    const localW=65, commaW=3, dayW=10, deW=7, monthW=30, yearW=14;
+    const totalW=localW+commaW+dayW+deW+monthW+deW+yearW;
+    let lx=PW/2-totalW/2;
+
+    // Parse: "Cidade - PI, 22 de dezembro de 2025"
+    const partes=localData.split(',');
+    const localTxt=(partes[0]||'').trim();
+    const dataTxt=partes.slice(1).join(',').trim();
+    const m=dataTxt.match(/^\s*(\d+)\s+de\s+(.+?)\s+de\s+(\d{4})\s*$/);
+    const dayTxt=m?m[1]:'';
+    const monthTxt=m?m[2]:'';
+    const yearTxt=m?m[3]:dataTxt;
+
+    pdf.setLineWidth(0.3);pdf.setDrawColor(0,0,0);
+    pdf.setFont('helvetica','normal');pdf.setFontSize(7);pdf.setTextColor(0,0,0);
+
+    // Linha local
+    pdf.line(lx,rodapeY,lx+localW,rodapeY);
+    pdf.text(localTxt,lx+localW/2,rodapeY-1,{align:'center',maxWidth:localW-2});
+    pdf.setFont('helvetica','bold');pdf.setFontSize(5.5);
+    pdf.text('LOCAL',lx+localW/2,rodapeY+3.5,{align:'center'});
+    lx+=localW;
+
+    // Vírgula
+    pdf.setFont('helvetica','normal');pdf.setFontSize(7);
+    pdf.text(',',lx+0.5,rodapeY-1);lx+=commaW;
+
+    // Linha dia
+    pdf.line(lx,rodapeY,lx+dayW,rodapeY);
+    pdf.text(dayTxt,lx+dayW/2,rodapeY-1,{align:'center',maxWidth:dayW});
+    lx+=dayW;
+
+    // " de "
+    pdf.text(' de ',lx+deW/2,rodapeY-1,{align:'center'});lx+=deW;
+
+    // Linha mês
+    pdf.line(lx,rodapeY,lx+monthW,rodapeY);
+    pdf.text(monthTxt,lx+monthW/2,rodapeY-1,{align:'center',maxWidth:monthW-2});
+    lx+=monthW;
+
+    // " de "
+    pdf.text(' de ',lx+deW/2,rodapeY-1,{align:'center'});lx+=deW;
+
+    // Linha ano
+    pdf.line(lx,rodapeY,lx+yearW,rodapeY);
+    pdf.text(yearTxt,lx+yearW/2,rodapeY-1,{align:'center',maxWidth:yearW});
+    pdf.setFont('helvetica','bold');pdf.setFontSize(5.5);
+    pdf.text('DATA',lx+yearW/2,rodapeY+3.5,{align:'center'});
+}
+
 function _histFrenteMedioPortrait(pdf, hist, cfg) {
     const aluno=hist.aluno||{};
     const grade=hist.grade||{};
@@ -2448,7 +2501,7 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     const numSeries=Math.min(series.length,3);
     const discs=grade.disciplinas||[];
 
-    const PW=210,PH=297,ML=8,MR=8,MT=7;
+    const PW=210,PH=297,ML=8,MR=8,MT=3;
     const UW=PW-ML-MR;
     let y=MT;
 
@@ -2581,7 +2634,7 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     discs.forEach(dc=>{const k=dc.categoria||'outros';if(!catMap.has(k))catMap.set(k,[]);catMap.get(k).push(dc);});
     const catLabels={formacao_geral:'FORMAÇÃO GERAL BÁSICA',itinerarios:'ITINERÁRIOS FORMATIVOS',atividades_integradoras:'ATIVIDADES INTEGRADORAS',linguagens:'LINGUAGENS, CÓDIGOS E SUAS TECNOLOGIAS',ciencias_humanas:'CIÊNCIAS HUMANAS E SUAS TECNOLOGIAS',ciencias_natureza:'CIÊNCIAS DA NATUREZA E SUAS TECNOLOGIAS',matematica:'MATEMÁTICA E SUAS TECNOLOGIAS',parte_flexivel:'PARTE FLEXÍVEL (DIVERSIFICADA)',ensino_religioso:'ENSINO RELIGIOSO'};
     const subcatLabels={aprofundamento_linguagens:'Aprofundamento de Linguagens e suas Tecnologias',aprofundamento_matematica_ciencias:'Aprofundamento de Matemática, Ciências da Natureza e Linguagens e suas Tecnologias',atividades_integradoras:'Atividades Integradoras'};
-    const catH=3.2,rowH=2.8,subcatH=3.0;
+    const catH=3.2,rowH=3.3,subcatH=3.0;
     let romNum=1;
     const totalCHSerie=Array(numSeries).fill(0);
     let chTotalGeral=0;
@@ -2671,25 +2724,7 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     const sig2=cfg?.frente?.assinatura2||'DIRETOR(A)';
     const localData=cfg?.frente?.localData||hist.dataEmissao||'';
     const rodapeY=PH-38;
-    // Linha LOCAL / DATA
-    const ldMid=PW/2;
-    pdf.setLineWidth(0.3);pdf.setDrawColor(0,0,0);
-    pdf.line(ML+10,rodapeY,ldMid-18,rodapeY);           // linha local
-    pdf.setFont('helvetica','normal');pdf.setFontSize(5.5);pdf.setTextColor(0,0,0);
-    // valor do local
-    const partes=(localData).split(',');
-    const localTxt=partes[0]?.trim()||'';
-    const dataTxt=partes.slice(1).join(',').trim();
-    pdf.text(localTxt,ML+10+(ldMid-18-ML-10)/2,rodapeY-1,{align:'center',maxWidth:ldMid-28-ML});
-    _hText(pdf,'LOCAL',ML+10+(ldMid-18-ML-10)/2,rodapeY+3.5,{size:5,align:'center'});
-    pdf.setFont('helvetica','normal');pdf.setFontSize(5.5);pdf.setTextColor(0,0,0);
-    pdf.text('de',ldMid-16,rodapeY-1,{align:'center'});
-    pdf.line(ldMid-12,rodapeY,ldMid+10,rodapeY);         // linha mês
-    if(dataTxt){const dtParts=dataTxt.split('de');pdf.text((dtParts[0]||'').trim(),ldMid-1,rodapeY-1,{align:'center',maxWidth:22});}
-    pdf.text('de',ldMid+12,rodapeY-1,{align:'center'});
-    pdf.line(ldMid+16,rodapeY,ldMid+38,rodapeY);         // linha ano
-    if(dataTxt){const dtParts=dataTxt.split('de');pdf.text((dtParts[dtParts.length-1]||'').trim(),ldMid+27,rodapeY-1,{align:'center',maxWidth:20});}
-    _hText(pdf,'DATA',ldMid+27,rodapeY+3.5,{size:5,align:'center'});
+    _drawLocalData(pdf,localData,rodapeY,PW);
     // Assinaturas
     const sigY=rodapeY+14;
     [{cx:ML+UW*0.25,sig:sig1},{cx:ML+UW*0.75,sig:sig2}].forEach(({cx,sig})=>{
@@ -2855,23 +2890,7 @@ function _histVersoMedioPortrait(pdf, hist, cfg) {
     const sig2v=cfg?.frente?.assinatura2||'DIRETOR(A)';
     const localDataV=cfg?.frente?.localData||hist.dataEmissao||'';
     const rodapeYv=PH-38;
-    const ldMidV=PW/2;
-    pdf.setLineWidth(0.3);pdf.setDrawColor(0,0,0);
-    pdf.line(ML+10,rodapeYv,ldMidV-18,rodapeYv);
-    pdf.setFont('helvetica','normal');pdf.setFontSize(5.5);pdf.setTextColor(0,0,0);
-    const partesV=(localDataV).split(',');
-    const localTxtV=partesV[0]?.trim()||'';
-    const dataTxtV=partesV.slice(1).join(',').trim();
-    pdf.text(localTxtV,ML+10+(ldMidV-18-ML-10)/2,rodapeYv-1,{align:'center',maxWidth:ldMidV-28-ML});
-    _hText(pdf,'LOCAL',ML+10+(ldMidV-18-ML-10)/2,rodapeYv+3.5,{size:5,align:'center'});
-    pdf.setFont('helvetica','normal');pdf.setFontSize(5.5);pdf.setTextColor(0,0,0);
-    pdf.text('de',ldMidV-16,rodapeYv-1,{align:'center'});
-    pdf.line(ldMidV-12,rodapeYv,ldMidV+10,rodapeYv);
-    if(dataTxtV){const dtPV=dataTxtV.split('de');pdf.text((dtPV[0]||'').trim(),ldMidV-1,rodapeYv-1,{align:'center',maxWidth:22});}
-    pdf.text('de',ldMidV+12,rodapeYv-1,{align:'center'});
-    pdf.line(ldMidV+16,rodapeYv,ldMidV+38,rodapeYv);
-    if(dataTxtV){const dtPV=dataTxtV.split('de');pdf.text((dtPV[dtPV.length-1]||'').trim(),ldMidV+27,rodapeYv-1,{align:'center',maxWidth:20});}
-    _hText(pdf,'DATA',ldMidV+27,rodapeYv+3.5,{size:5,align:'center'});
+    _drawLocalData(pdf,localDataV,rodapeYv,PW);
     const sigYv=rodapeYv+14;
     [{cx:ML+UW*0.25,sig:sig1v},{cx:ML+UW*0.75,sig:sig2v}].forEach(({cx,sig})=>{
         pdf.setLineWidth(0.4);pdf.setDrawColor(0,0,0);
