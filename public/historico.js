@@ -2825,7 +2825,7 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
                 }
                 sds.forEach(dc=>{
                     pdf.setFont('helvetica','normal');pdf.setFontSize(dF);
-                    const ls=pdf.splitTextToSize(dc.nome,cDisc-3);
+                    const ls=pdf.splitTextToSize(dc.nome.toUpperCase(),cDisc-3);
                     h+=Math.max(dLH+dPad,ls.length*dLH+dPad);
                 });
             });
@@ -2855,7 +2855,7 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     // Calcula altura da linha de disciplina considerando quebra de texto
     const calcRowH=(nome)=>{
         pdf.setFont('helvetica','normal');pdf.setFontSize(DISC_FONT);
-        const lines=pdf.splitTextToSize(nome,cDisc-3);
+        const lines=pdf.splitTextToSize(nome.toUpperCase(),cDisc-3);
         return Math.max(MIN_ROW_H, lines.length*DISC_LINE_H+DISC_PAD);
     };
 
@@ -2868,7 +2868,11 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
         _hText(pdf,series[i]||`${i+1}ª SÉRIE`,sx+pairW/2,y+hH*0.75,{bold:true,size:Math.max(5.5,7*tableScale),align:'center',color:[255,255,255]});
         sx+=pairW;
     }
-    _hText(pdf,'CH\nTOTAL',tblX+UW-cTot/2,y+hH*0.45,{bold:true,size:Math.max(5,6*tableScale),align:'center',color:[255,255,255]});
+    // "CARGA HORÁRIA TOTAL" em 3 linhas na última coluna
+    {const chFs=Math.max(4.5,5.5*tableScale);pdf.setFont('helvetica','bold');pdf.setFontSize(chFs);pdf.setTextColor(255,255,255);
+    const chLns=['CARGA','HORÁRIA','TOTAL'];const chLH=chFs*0.44;
+    const chY0=y+(hH-chLH*chLns.length)/2+chLH*0.85;
+    chLns.forEach((l,i)=>pdf.text(l,tblX+UW-cTot/2,chY0+i*chLH,{align:'center'}));}
     pdf.setDrawColor(80,120,200);pdf.setLineWidth(0.15);
     pdf.line(tblX+cNum,y,tblX+cNum,y+hH*2);
     pdf.line(tblX+cNum+cDisc,y,tblX+cNum+cDisc,y+hH*2);
@@ -2932,7 +2936,7 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
                 pdf.setDrawColor(205,220,240);pdf.setLineWidth(0.1);pdf.rect(tblX,y,UW,rh,'S');
                 pdf.setDrawColor(185,205,235);pdf.line(tblX+cNum,y,tblX+cNum,y+rh);
                 pdf.setFont('helvetica','normal');pdf.setFontSize(DISC_FONT);pdf.setTextColor(10,10,10);
-                const discLines=pdf.splitTextToSize(disc.nome,cDisc-3);
+                const discLines=pdf.splitTextToSize(disc.nome.toUpperCase(),cDisc-3);
                 const textBlockH=discLines.length*DISC_LINE_H;
                 const textStartY=y+(rh-textBlockH)/2+DISC_LINE_H*0.75;
                 discLines.forEach((ln,li)=>pdf.text(ln,tblX+cNum+1.5,textStartY+li*DISC_LINE_H));
@@ -2989,19 +2993,9 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
             // Fundo levemente colorido na coluna cNum para toda a categoria
             pdf.setFillColor(220,228,248);pdf.rect(tblX,catStartY,cNum,catBodyH,'F');
             pdf.setDrawColor(150,170,220);pdf.setLineWidth(0.1);pdf.rect(tblX,catStartY,cNum,catBodyH,'S');
-            pdf.saveGraphicsState();
-            pdf.setFont('helvetica','bold');
-            // Calcula tamanho de fonte para o texto caber na altura disponível (sem maxWidth)
-            let vtFs=5.5;
-            const vtMaxLen=catBodyH-2;
-            pdf.setFontSize(vtFs);
-            while(vtFs>3.5&&pdf.getStringUnitWidth(catNome)*vtFs/pdf.internal.scaleFactor>vtMaxLen){
-                vtFs-=0.3;pdf.setFontSize(vtFs);
-            }
-            pdf.setTextColor(10,30,110);
-            // angle:90 = rotação 90° anti-horário → texto de baixo para cima
+            // Texto vertical de baixo para cima (angle:90 = 90° anti-horário)
+            pdf.setFont('helvetica','bold');pdf.setFontSize(6);pdf.setTextColor(10,30,110);
             pdf.text(catNome,tblX+cNum/2,midY,{angle:90,align:'center'});
-            pdf.restoreGraphicsState();
         }
     });
 
