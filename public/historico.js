@@ -2689,19 +2689,19 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     const numSeries=Math.min(series.length,3);
     const discs=grade.disciplinas||[];
 
-    const PW=210,PH=297,ML=8,MR=8,MT=3;
+    const PW=210,PH=297,ML=6,MR=6,MT=2;
     const UW=PW-ML-MR;
     let y=MT;
 
     // CABEÇALHO
     _hLine(pdf,ML,y,PW-MR,y,0.6,[0,40,120]);
     _hLine(pdf,ML,y+1.3,PW-MR,y+1.3,0.2,[0,40,120]);
-    y+=3;
+    y+=2;
 
     const emb=cfg?.emblema||{};
     const tipoEmb=emb.tipo||'brasao-brasil';
-    const bW=parseFloat(emb.largura)||22;
-    const bH=parseFloat(emb.altura)||26;
+    const bW=parseFloat(emb.largura)||16;
+    const bH=parseFloat(emb.altura)||19;
     const hCfg=cfg?.cabecalho||{};
     const l1=hCfg.linha1||'REPÚBLICA FEDERATIVA DO BRASIL';
     const l2=hCfg.linha2||'ESTADO DO PIAUÍ';
@@ -2719,20 +2719,20 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
             if(src)pdf.addImage(src,fmt,PW/2-bW/2,y,bW,bH,undefined,'FAST');
         }catch(_){}
     }
-    // Textos centralizados abaixo do brasão — todos tamanho 8pt
-    y+=bH+1.5;
-    _hText(pdf,l1,PW/2,y,{bold:true,size:8,align:'center'});y+=4.0;
-    _hText(pdf,l2,PW/2,y,{bold:true,size:8,align:'center'});y+=4.0;
-    _hText(pdf,l3,PW/2,y,{size:8,align:'center'});y+=4.5;
+    // Textos centralizados abaixo do brasão — 7pt, espaçamento comprimido
+    y+=bH+0.5;
+    _hText(pdf,l1,PW/2,y,{bold:true,size:7,align:'center'});y+=3.0;
+    _hText(pdf,l2,PW/2,y,{bold:true,size:7,align:'center'});y+=3.0;
+    _hText(pdf,l3,PW/2,y,{size:7,align:'center'});y+=3.0;
 
-    // Textos do cabeçalho — todos centralizados, mesmo tamanho
+    // Textos do cabeçalho — todos centralizados, 7pt
     const linhaCab=(txt,bold)=>{
         if(!txt)return;
         pdf.setFont('helvetica',bold?'bold':'normal');
-        pdf.setFontSize(8);pdf.setTextColor(0,0,0);
+        pdf.setFontSize(7);pdf.setTextColor(0,0,0);
         const ls=pdf.splitTextToSize(txt,UW-4);
         pdf.text(ls,PW/2,y,{align:'center'});
-        y+=ls.length*4.0;
+        y+=ls.length*3.0;
     };
     linhaCab(inst,false);
     linhaCab(end_,false);
@@ -2740,42 +2740,42 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     // Resolução — centralizada, sem repetir "Resolução CEE/PI"
     const resolNum=resol.replace(/^resolu[çc][aã]o\s+cee\/pi\s*/i,'').trim();
     const resolTxt='Autorização de Funcionamento pela Resolução CEE/PI Nº '+(resolNum||resol);
-    pdf.setFont('helvetica','normal');pdf.setFontSize(8);pdf.setTextColor(0,0,0);
+    pdf.setFont('helvetica','normal');pdf.setFontSize(7);pdf.setTextColor(0,0,0);
     const resolLines=pdf.splitTextToSize(resolTxt,UW-4);
     pdf.text(resolLines,PW/2,y,{align:'center'});
-    y+=resolLines.length*4.0+1;
+    y+=resolLines.length*3.0+0.5;
 
     // TÍTULO
-    pdf.setFillColor(0,40,120);pdf.rect(ML,y,UW,7,'F');
-    _hText(pdf,'HISTÓRICO ESCOLAR  –  ENSINO MÉDIO',PW/2,y+5,{bold:true,size:9,align:'center',color:[255,255,255]});
-    y+=8;
+    pdf.setFillColor(0,40,120);pdf.rect(ML,y,UW,5.5,'F');
+    _hText(pdf,'HISTÓRICO ESCOLAR  –  ENSINO MÉDIO',PW/2,y+3.8,{bold:true,size:8,align:'center',color:[255,255,255]});
+    y+=6;
 
     // DADOS DO ALUNO
     const dN=aluno.dataNascimento||{};
     const nascStr=dN.dia?`${dN.dia} de ${dN.mes||''} de ${dN.ano||''}`:'';
     const natStr=[aluno.naturalidade?.cidade,aluno.naturalidade?.estado].filter(Boolean).join(' / ');
     const filStr=[aluno.filiacao?.mae,aluno.filiacao?.pai].filter(Boolean).join('  e  ');
-    const boxH=26;
+    const boxH=20;
     _hRect(pdf,ML,y,UW,boxH,null,[0,40,120]);
     pdf.setDrawColor(180,200,230);pdf.setLineWidth(0.15);
-    [4.5,9,13.5,18,22.5].forEach(off=>pdf.line(ML+0.5,y+off,ML+UW-0.5,y+off));
+    [3.4,6.8,10.2,13.6,17.0].forEach(off=>pdf.line(ML+0.5,y+off,ML+UW-0.5,y+off));
 
     const aFld=(by,lbl,lblX,lW,val,maxW)=>{
-        pdf.setFont('helvetica','bold');pdf.setFontSize(6.5);pdf.setTextColor(0,30,100);
+        pdf.setFont('helvetica','bold');pdf.setFontSize(6);pdf.setTextColor(0,30,100);
         pdf.text(lbl,ML+lblX,by);
         pdf.setFont('helvetica','normal');pdf.setTextColor(0,0,0);
-        pdf.text(val||'',ML+lW,by,{maxWidth:maxW||(UW-lW-3)});
+        pdf.text(val||'',ML+lW,by,{maxWidth:maxW||(UW-lW-2)});
     };
-    aFld(y+3.5,'ESTUDANTE:',2,22,aluno.nome||'');
-    aFld(y+8,'NOME SOCIAL:',2,26,aluno.nomeSocial||'');
-    aFld(y+12.5,'RG:',2,8,aluno.rg||'',28);
-    aFld(y+12.5,'ÓRGÃO EMISSOR:',41,63,aluno.orgaoEmissor||'',22);
-    aFld(y+12.5,'CPF:',90,98,aluno.cpf||'',UW-100);
-    aFld(y+17,'DATA DE NASCIMENTO:',2,40,nascStr);
-    aFld(y+21.5,'NATURALIDADE:',2,28,natStr,78);
-    aFld(y+21.5,'NACIONALIDADE:',108,130,aluno.nacionalidade||'Brasileira',UW-132);
-    aFld(y+25.5,'FILIAÇÃO:',2,18,filStr);
-    y+=boxH+1;
+    aFld(y+2.8,'ESTUDANTE:',1,19,aluno.nome||'');
+    aFld(y+6.2,'NOME SOCIAL:',1,22,aluno.nomeSocial||'');
+    aFld(y+9.6,'RG:',1,7,aluno.rg||'',30);
+    aFld(y+9.6,'ÓRGÃO EMISSOR:',38,58,aluno.orgaoEmissor||'',28);
+    aFld(y+9.6,'CPF:',92,102,aluno.cpf||'',UW-104);
+    aFld(y+13.0,'DATA DE NASCIMENTO:',1,38,nascStr);
+    aFld(y+16.4,'NATURALIDADE:',1,25,natStr,78);
+    aFld(y+16.4,'NACIONALIDADE:',109,126,aluno.nacionalidade||'Brasileira',UW-128);
+    aFld(y+19.4,'FILIAÇÃO:',1,16,filStr);
+    y+=boxH+0.5;
 
     // TABELA PRINCIPAL
     const cNum=8,cDisc=58,cTot=17;
@@ -2791,16 +2791,15 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     const catLabels={formacao_geral:'FORMAÇÃO GERAL BÁSICA',itinerarios:'ITINERÁRIOS FORMATIVOS',atividades_integradoras:'ATIVIDADES INTEGRADORAS',linguagens:'LINGUAGENS, CÓDIGOS E SUAS TECNOLOGIAS',ciencias_humanas:'CIÊNCIAS HUMANAS E SUAS TECNOLOGIAS',ciencias_natureza:'CIÊNCIAS DA NATUREZA E SUAS TECNOLOGIAS',matematica:'MATEMÁTICA E SUAS TECNOLOGIAS',parte_flexivel:'PARTE FLEXÍVEL (DIVERSIFICADA)',ensino_religioso:'ENSINO RELIGIOSO'};
     const subcatLabels={aprofundamento_linguagens:'Aprofundamento de Linguagens e suas Tecnologias',aprofundamento_matematica_ciencias:'Aprofundamento de Matemática, Ciências da Natureza e Linguagens e suas Tecnologias',atividades_integradoras:'Atividades Integradoras'};
 
-    // ── ESCALA PROPORCIONAL (2 passes para lidar corretamente com clamp de fonte) ────
-    const RODAPE_RESERVED=62;       // espaço para rodapé quando cabe na mesma página (inclui área carimbo)
-    const RODAPE_MIN_H=30;          // altura mínima necessária para rodapé (LOCAL/DATA + assinaturas)
-    const TABLE_BOTTOM_LIMIT=PH-12; // tabela usa quase a página inteira; rodapé vai p/ pág.2 se não couber
+    // ── ESCALA PROPORCIONAL — a tabela deve caber dentro de TABLE_BOTTOM_LIMIT ────
+    const RODAPE_H=42;              // altura reservada para rodapé (LOCAL/DATA+assinaturas+carimbo)
+    const TABLE_BOTTOM_LIMIT=PH-RODAPE_H-2; // última linha possível da tabela (≈253mm)
     const AVAIL_TABLE_H=TABLE_BOTTOM_LIMIT-tblStartY;
 
-    const BASE_HH=4.8;
-    const BASE_DISC_FONT=7,BASE_DISC_LINE_H=3.8,BASE_DISC_PAD=2.2;
-    const BASE_SUBCAT_FONT=6,BASE_SUBCAT_LINE_H=3.5,BASE_SUBCAT_PAD=2.0;
-    const BASE_TOT_H=4.0;
+    const BASE_HH=4.0;
+    const BASE_DISC_FONT=6.0,BASE_DISC_LINE_H=2.8,BASE_DISC_PAD=1.4;
+    const BASE_SUBCAT_FONT=5.5,BASE_SUBCAT_LINE_H=2.5,BASE_SUBCAT_PAD=1.3;
+    const BASE_TOT_H=3.5;
     // Razões fixas: altura de linha e padding derivados do tamanho da fonte
     const LH_PER_PT=BASE_DISC_LINE_H/BASE_DISC_FONT; // mm por pt de fonte
     const PAD_PER_PT=BASE_DISC_PAD/BASE_DISC_FONT;
@@ -2809,9 +2808,9 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
 
     // Estimativa com escala s — usa fontes reais (com clamp) para height correta
     const _estTblH=(s)=>{
-        const dF=Math.max(5.5,BASE_DISC_FONT*s);
+        const dF=Math.max(4.5,BASE_DISC_FONT*s);
         const dLH=dF*LH_PER_PT, dPad=dF*PAD_PER_PT;
-        const sF=Math.max(5,BASE_SUBCAT_FONT*s);
+        const sF=Math.max(4.5,BASE_SUBCAT_FONT*s);
         const sLH=sF*SLH_PER_PT, sPad=sF*SPAD_PER_PT;
         const _hH=BASE_HH*s, _tH=BASE_TOT_H*s;
         let h=_hH*2;
@@ -2844,11 +2843,11 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
 
     // Constantes finais — LINE_H sempre derivado da fonte real (evita embolamento)
     const hH=BASE_HH*tableScale;
-    const DISC_FONT=Math.max(5.5,BASE_DISC_FONT*tableScale);
+    const DISC_FONT=Math.max(4.5,BASE_DISC_FONT*tableScale);
     const DISC_LINE_H=DISC_FONT*LH_PER_PT;
     const DISC_PAD=DISC_FONT*PAD_PER_PT;
     const MIN_ROW_H=DISC_LINE_H+DISC_PAD;
-    const subcatFontSz=Math.max(5,BASE_SUBCAT_FONT*tableScale);
+    const subcatFontSz=Math.max(4.5,BASE_SUBCAT_FONT*tableScale);
     const subcatLineH=subcatFontSz*SLH_PER_PT;
     const subcatPad=subcatFontSz*SPAD_PER_PT;
     const totH=BASE_TOT_H*tableScale;
@@ -3040,31 +3039,28 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     pdf.rect(tblX,tblStartY,UW,y-tblStartY,'S');
     y+=2;
 
-    // RODAPÉ — mesma página se sobrar ≥RODAPE_MIN_H mm; senão nova página
+    // RODAPÉ — posição fixa próxima ao fim da página; nova página só se tabela ultrapassar TABLE_BOTTOM_LIMIT
     const sig1=cfg?.frente?.assinatura1||'SECRETÁRIO(A)';
     const sig2=cfg?.frente?.assinatura2||'DIRETOR(A)';
     const localData=cfg?.frente?.localData||hist.dataEmissao||'';
     let rodapeY;
-    if(y+RODAPE_MIN_H+3>PH-8){
-        // sem espaço → rodapé em nova página
+    if(y>TABLE_BOTTOM_LIMIT+4){
+        // tabela ultrapassou o limite → rodapé em nova página
         pdf.addPage();
-        rodapeY=30;
-    } else if(y<PH-RODAPE_RESERVED){
-        // espaço suficiente → posição padrão (inclui área carimbo)
-        rodapeY=PH-RODAPE_RESERVED+4;
+        rodapeY=25;
     } else {
-        // espaço compacto → 3mm abaixo da tabela
-        rodapeY=y+3;
+        // posição fixa: início da área reservada para o rodapé
+        rodapeY=PH-RODAPE_H+4;
     }
     _drawLocalData(pdf,localData,rodapeY,PW);
-    const sigY=rodapeY+14;
-    const sigLineW=60;
+    const sigY=rodapeY+13;
+    const sigLineW=58;
     [{cx:PW*0.28,sig:sig1},{cx:PW*0.72,sig:sig2}].forEach(({cx,sig})=>{
         pdf.setLineWidth(0.5);pdf.setDrawColor(0,0,0);
         pdf.line(cx-sigLineW/2,sigY,cx+sigLineW/2,sigY);
-        _hText(pdf,sig,cx,sigY+4.5,{size:7,align:'center',bold:true});
+        _hText(pdf,sig,cx,sigY+4,{size:7,align:'center',bold:true});
     });
-    const fyBot=PH-8;
+    const fyBot=PH-6;
     _hLine(pdf,ML,fyBot,PW-MR,fyBot,0.6,[0,40,120]);
     _hLine(pdf,ML,fyBot+1.2,PW-MR,fyBot+1.2,0.2,[0,40,120]);
 }
