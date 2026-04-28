@@ -2857,41 +2857,39 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
         return Math.max(MIN_ROW_H, lines.length*DISC_LINE_H+DISC_PAD);
     };
 
-    // Header linha 1 — cNum+cSub+cDisc mesclados como "COMPONENTES CURRICULARES" — fundo branco
-    pdf.setFillColor(255,255,255);pdf.rect(tblX,y,UW,hH,'F');
-    _hText(pdf,'COMPONENTES CURRICULARES',tblX+(cNum+cSub+cDisc)/2,y+hH*0.75,{bold:true,size:Math.max(5.5,7*tableScale),align:'center',color:[0,0,0]});
+    // Header — "COMPONENTES CURRICULARES" mescla as duas linhas (altura 2×hH)
+    pdf.setFillColor(255,255,255);pdf.rect(tblX,y,UW,hH*2,'F');
+    // Célula mesclada esquerda: cNum+cSub+cDisc, altura 2×hH
+    _hText(pdf,'COMPONENTES CURRICULARES',tblX+(cNum+cSub+cDisc)/2,y+hH,{bold:true,size:Math.max(5.5,7*tableScale),align:'center',color:[0,0,0]});
+    // Colunas de séries: linha 1 = nome da série; linha 2 = NOTA / CH
     let sx=tblX+cNum+cSub+cDisc;
     for(let i=0;i<numSeries;i++){
         _hText(pdf,series[i]||`${i+1}ª SÉRIE`,sx+pairW/2,y+hH*0.75,{bold:true,size:Math.max(5.5,7*tableScale),align:'center',color:[0,0,0]});
         sx+=pairW;
     }
-    // "CARGA HORÁRIA TOTAL" em 3 linhas na última coluna
+    // "CARGA HORÁRIA TOTAL" mesclada nas duas linhas, à direita
     {const chFs=Math.max(4.5,5.5*tableScale);pdf.setFont('helvetica','bold');pdf.setFontSize(chFs);pdf.setTextColor(0,0,0);
     const chLns=['CARGA','HORÁRIA','TOTAL'];const chLH=chFs*0.44;
-    const chY0=y+(hH-chLH*chLns.length)/2+chLH*0.85;
+    const chY0=y+(hH*2-chLH*chLns.length)/2+chLH*0.85;
     chLns.forEach((l,i)=>pdf.text(l,tblX+UW-cTot/2,chY0+i*chLH,{align:'center'}));}
+    // Linha divisória horizontal entre linha 1 e 2 — apenas nas colunas de séries
     pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);
-    pdf.line(tblX+cNum+cSub+cDisc,y,tblX+cNum+cSub+cDisc,y+hH*2);
-    sx=tblX+cNum+cSub+cDisc;
-    for(let i=0;i<numSeries;i++){pdf.line(sx+pairW,y,sx+pairW,y+hH*2);sx+=pairW;}
-    pdf.line(tblX+UW-cTot,y,tblX+UW-cTot,y+hH*2);
-    pdf.rect(tblX,y,UW,hH,'S');
-    y+=hH;
-
-    // Header linha 2 — cNum+cSub+cDisc mesclados (sem sub-rótulo) — fundo branco
-    pdf.setFillColor(255,255,255);pdf.rect(tblX,y,UW,hH,'F');
+    pdf.line(tblX+cNum+cSub+cDisc,y+hH,tblX+UW-cTot,y+hH);
+    // NOTA / CH na segunda linha
     sx=tblX+cNum+cSub+cDisc;
     for(let i=0;i<numSeries;i++){
-        _hText(pdf,'NOTA',sx+cNota/2,y+hH*0.75,{bold:true,size:Math.max(5.5,6.5*tableScale),align:'center',color:[0,0,0]});
-        pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);
-        pdf.line(sx+cNota,y,sx+cNota,y+hH);
-        _hText(pdf,'CH',sx+cNota+cCH/2,y+hH*0.75,{bold:true,size:Math.max(5.5,6.5*tableScale),align:'center',color:[0,0,0]});
-        pdf.line(sx+pairW,y,sx+pairW,y+hH);
+        _hText(pdf,'NOTA',sx+cNota/2,y+hH*1.75,{bold:true,size:Math.max(5.5,6.5*tableScale),align:'center',color:[0,0,0]});
+        pdf.line(sx+cNota,y+hH,sx+cNota,y+hH*2);
+        _hText(pdf,'CH',sx+cNota+cCH/2,y+hH*1.75,{bold:true,size:Math.max(5.5,6.5*tableScale),align:'center',color:[0,0,0]});
+        pdf.line(sx+pairW,y,sx+pairW,y+hH*2);
         sx+=pairW;
     }
-    pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);
-    pdf.rect(tblX,y,UW,hH,'S');
-    y+=hH;
+    // Linhas verticais que percorrem ambas as linhas do header
+    pdf.line(tblX+cNum+cSub+cDisc,y,tblX+cNum+cSub+cDisc,y+hH*2);
+    pdf.line(tblX+UW-cTot,y,tblX+UW-cTot,y+hH*2);
+    // Borda externa do header duplo
+    pdf.rect(tblX,y,UW,hH*2,'S');
+    y+=hH*2;
     const calcSubcatH=(label)=>{
         pdf.setFont('helvetica','italic');pdf.setFontSize(subcatFontSz);
         const lines=pdf.splitTextToSize('  '+label,cDisc+rem-6);
