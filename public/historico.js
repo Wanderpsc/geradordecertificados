@@ -2730,8 +2730,9 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
         if(!txt)return;
         pdf.setFont('helvetica',bold?'bold':'normal');
         pdf.setFontSize(8);pdf.setTextColor(0,0,0);
-        pdf.text(txt,PW/2,y,{align:'center',maxWidth:UW-4});
-        y+=4.0;
+        const ls=pdf.splitTextToSize(txt,UW-4);
+        pdf.text(ls,PW/2,y,{align:'center'});
+        y+=ls.length*4.0;
     };
     linhaCab(inst,false);
     linhaCab(end_,false);
@@ -2740,8 +2741,9 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     const resolNum=resol.replace(/^resolu[çc][aã]o\s+cee\/pi\s*/i,'').trim();
     const resolTxt='Autorização de Funcionamento pela Resolução CEE/PI Nº '+(resolNum||resol);
     pdf.setFont('helvetica','normal');pdf.setFontSize(8);pdf.setTextColor(0,0,0);
-    pdf.text(resolTxt,PW/2,y,{align:'center',maxWidth:UW-4});
-    y+=5;
+    const resolLines=pdf.splitTextToSize(resolTxt,UW-4);
+    pdf.text(resolLines,PW/2,y,{align:'center'});
+    y+=resolLines.length*4.0+1;
 
     // TÍTULO
     pdf.setFillColor(0,40,120);pdf.rect(ML,y,UW,7,'F');
@@ -2963,18 +2965,19 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
             const fgbH=totH;
             pdf.setFillColor(200,215,245);pdf.rect(tblX,y,UW,fgbH,'F');
             pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.2);pdf.rect(tblX,y,UW,fgbH,'S');
-            pdf.setFont('helvetica','bold');pdf.setFontSize(7);pdf.setTextColor(0,20,80);
-            pdf.text('TOTAL GERAL DA CARGA HORÁRIA DA FORMAÇÃO GERAL BÁSICA',tblX+cNum+2,y+fgbH-1.3,{maxWidth:cDisc+rem-3});
+            pdf.setFont('helvetica','bold');pdf.setFontSize(DISC_FONT);pdf.setTextColor(0,20,80);
+            const fgbTY=y+fgbH*0.72;
+            pdf.text('TOTAL GERAL DA CARGA HORÁRIA DA FORMAÇÃO GERAL BÁSICA',tblX+cNum+2,fgbTY,{maxWidth:cDisc+rem-3});
             let nxf=tblX+cNum+cDisc;
             let fgbTot=0;
             for(let si=0;si<numSeries;si++){
                 pdf.setDrawColor(0,40,120);pdf.line(nxf+cNota,y,nxf+cNota,y+fgbH);
-                pdf.setFont('helvetica','bold');pdf.setFontSize(7);pdf.setTextColor(0,20,80);
-                pdf.text(String(fgbCHSerie[si]||''),nxf+cNota+cCH/2,y+fgbH-1.3,{align:'center'});
+                pdf.setFont('helvetica','bold');pdf.setFontSize(DISC_FONT);pdf.setTextColor(0,20,80);
+                pdf.text(String(fgbCHSerie[si]||''),nxf+cNota+cCH/2,fgbTY,{align:'center'});
                 pdf.line(nxf+pairW,y,nxf+pairW,y+fgbH);nxf+=pairW;fgbTot+=fgbCHSerie[si]||0;
             }
             pdf.line(tblX+UW-cTot,y,tblX+UW-cTot,y+fgbH);
-            pdf.text(String(fgbTot||''),tblX+UW-cTot+cTot/2,y+fgbH-1.3,{align:'center'});
+            pdf.text(String(fgbTot||''),tblX+UW-cTot+cTot/2,fgbTY,{align:'center'});
             y+=fgbH;
         }
 
@@ -3003,26 +3006,28 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     });
 
     // Linha CARGA HORÁRIA TOTAL
+    const totTY=y+totH*0.72;
     pdf.setFillColor(200,215,245);pdf.rect(tblX,y,UW,totH,'F');
     pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.2);pdf.rect(tblX,y,UW,totH,'S');
-    pdf.setFont('helvetica','bold');pdf.setFontSize(7);pdf.setTextColor(0,20,80);
-    pdf.text('CARGA HORÁRIA TOTAL',tblX+cNum+2,y+totH-1.3,{maxWidth:cDisc-3});
+    pdf.setFont('helvetica','bold');pdf.setFontSize(DISC_FONT);pdf.setTextColor(0,20,80);
+    pdf.text('CARGA HORÁRIA TOTAL',tblX+cNum+2,totTY,{maxWidth:cDisc-3});
     let nx2=tblX+cNum+cDisc;
     for(let si=0;si<numSeries;si++){
         pdf.setDrawColor(0,40,120);pdf.line(nx2+cNota,y,nx2+cNota,y+totH);
-        pdf.text(String(totalCHSerie[si]||''),nx2+cNota+cCH/2,y+totH-1.3,{align:'center'});
+        pdf.text(String(totalCHSerie[si]||''),nx2+cNota+cCH/2,totTY,{align:'center'});
         pdf.line(nx2+pairW,y,nx2+pairW,y+totH);nx2+=pairW;
     }
     pdf.line(tblX+UW-cTot,y,tblX+UW-cTot,y+totH);
-    pdf.text(String(chTotalGeral||''),tblX+UW-cTot+cTot/2,y+totH-1.3,{align:'center'});
+    pdf.text(String(chTotalGeral||''),tblX+UW-cTot+cTot/2,totTY,{align:'center'});
     y+=totH;
 
     // Linha RESULTADO FINAL
+    const rfTY=y+totH*0.72;
     pdf.setFillColor(0,40,120);pdf.rect(tblX,y,UW,totH,'F');
-    pdf.setFont('helvetica','bold');pdf.setFontSize(7.5);pdf.setTextColor(255,255,255);
-    pdf.text('RESULTADO FINAL: ',tblX+cNum+2,y+totH-1.3);
+    pdf.setFont('helvetica','bold');pdf.setFontSize(DISC_FONT);pdf.setTextColor(255,255,255);
+    pdf.text('RESULTADO FINAL: ',tblX+cNum+2,rfTY);
     pdf.setFont('helvetica','normal');
-    pdf.text(hist.resultadoFinal||hist.resultado||'',tblX+cNum+40,y+totH-1.3,{maxWidth:UW-cNum-43});
+    pdf.text(hist.resultadoFinal||hist.resultado||'',tblX+cNum+40,rfTY,{maxWidth:UW-cNum-43});
     y+=totH;
 
     pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.4);
@@ -3173,8 +3178,8 @@ function _histVersoMedioPortrait(pdf, hist, cfg) {
 
     // OBSERVAÇÕES + RESULTADO PARA AUTENTICAÇÃO
     const boxesH=75;
-    const obsW=Math.round(UW*0.62);
-    const resW=UW-obsW-2;
+    const obsW=Math.floor((UW-2)/2);
+    const resW=obsW;
 
     pdf.setFillColor(255,255,255);pdf.rect(ML,y,obsW,boxesH,'F');
     pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.3);pdf.rect(ML,y,obsW,boxesH,'S');
