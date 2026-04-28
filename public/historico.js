@@ -2778,10 +2778,10 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     y+=boxH+0.5;
 
     // TABELA PRINCIPAL
-    const cNum=8,cDisc=58,cTot=17;
-    const rem=UW-cNum-cDisc-cTot;
+    const cNum=8,cSub=18,cDisc=40,cTot=15;
+    const rem=UW-cNum-cSub-cDisc-cTot;
     const pairW=rem/numSeries;
-    const cNota=parseFloat((pairW*0.57).toFixed(2));
+    const cNota=parseFloat((pairW*0.50).toFixed(2));
     const cCH=parseFloat((pairW-cNota).toFixed(2));
     const tblX=ML,tblStartY=y;
 
@@ -2818,14 +2818,11 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
             const sm=new Map();
             catDiscs.forEach(dc=>{const sk=dc.subcategoria||'';if(!sm.has(sk))sm.set(sk,[]);sm.get(sk).push(dc);});
             sm.forEach((sds,sid)=>{
-                if(sid){
-                    pdf.setFont('helvetica','italic');pdf.setFontSize(sF);
-                    const ls=pdf.splitTextToSize('  '+(subcatLabels[sid]||sid),cDisc+rem-6);
-                    h+=Math.max(sLH+sPad,ls.length*sLH+sPad);
-                }
+                // subcategorias são células mescladas — sem banda extra de altura
                 sds.forEach(dc=>{
                     pdf.setFont('helvetica','normal');pdf.setFontSize(dF);
-                    const ls=pdf.splitTextToSize(dc.nome.toUpperCase(),cDisc-3);
+                    const w=sid?cDisc-3:cSub+cDisc-3;
+                    const ls=pdf.splitTextToSize(dc.nome.toUpperCase(),w);
                     h+=Math.max(dLH+dPad,ls.length*dLH+dPad);
                 });
             });
@@ -2854,17 +2851,16 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     // ────────────────────────────────────────────────────────────────────────
 
     // Calcula altura da linha de disciplina considerando quebra de texto
-    const calcRowH=(nome)=>{
+    const calcRowH=(nome,w)=>{
         pdf.setFont('helvetica','normal');pdf.setFontSize(DISC_FONT);
-        const lines=pdf.splitTextToSize(nome.toUpperCase(),cDisc-3);
+        const lines=pdf.splitTextToSize(nome.toUpperCase(),w??cDisc-3);
         return Math.max(MIN_ROW_H, lines.length*DISC_LINE_H+DISC_PAD);
     };
 
-    // Header linha 1
+    // Header linha 1 — cNum+cSub+cDisc mesclados como "COMPONENTES CURRICULARES"
     pdf.setFillColor(0,35,105);pdf.rect(tblX,y,UW,hH,'F');
-    // Coluna cNum fica vazia no header (será usada para texto vertical da categoria)
-    _hText(pdf,'COMPONENTES CURRICULARES',tblX+cNum+cDisc/2,y+hH*0.75,{bold:true,size:Math.max(5.5,7*tableScale),align:'center',color:[255,255,255]});
-    let sx=tblX+cNum+cDisc;
+    _hText(pdf,'COMPONENTES CURRICULARES',tblX+(cNum+cSub+cDisc)/2,y+hH*0.75,{bold:true,size:Math.max(5.5,7*tableScale),align:'center',color:[255,255,255]});
+    let sx=tblX+cNum+cSub+cDisc;
     for(let i=0;i<numSeries;i++){
         _hText(pdf,series[i]||`${i+1}ª SÉRIE`,sx+pairW/2,y+hH*0.75,{bold:true,size:Math.max(5.5,7*tableScale),align:'center',color:[255,255,255]});
         sx+=pairW;
@@ -2875,18 +2871,17 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     const chY0=y+(hH-chLH*chLns.length)/2+chLH*0.85;
     chLns.forEach((l,i)=>pdf.text(l,tblX+UW-cTot/2,chY0+i*chLH,{align:'center'}));}
     pdf.setDrawColor(80,120,200);pdf.setLineWidth(0.15);
-    pdf.line(tblX+cNum,y,tblX+cNum,y+hH*2);
-    pdf.line(tblX+cNum+cDisc,y,tblX+cNum+cDisc,y+hH*2);
-    sx=tblX+cNum+cDisc;
+    // Sem divisória interna no bloco cNum+cSub+cDisc (células mescladas no header)
+    pdf.line(tblX+cNum+cSub+cDisc,y,tblX+cNum+cSub+cDisc,y+hH*2);
+    sx=tblX+cNum+cSub+cDisc;
     for(let i=0;i<numSeries;i++){pdf.line(sx+pairW,y,sx+pairW,y+hH*2);sx+=pairW;}
     pdf.line(tblX+UW-cTot,y,tblX+UW-cTot,y+hH*2);
     pdf.rect(tblX,y,UW,hH,'S');
     y+=hH;
 
-    // Header linha 2
+    // Header linha 2 — cNum+cSub+cDisc mesclados (sem sub-rótulo)
     pdf.setFillColor(15,55,150);pdf.rect(tblX,y,UW,hH,'F');
-    // Coluna cNum: sem texto (categoria vertical vai aqui)
-    sx=tblX+cNum+cDisc;
+    sx=tblX+cNum+cSub+cDisc;
     for(let i=0;i<numSeries;i++){
         _hText(pdf,'NOTA',sx+cNota/2,y+hH*0.75,{bold:true,size:Math.max(5.5,6.5*tableScale),align:'center',color:[255,255,255]});
         pdf.setDrawColor(80,120,200);pdf.setLineWidth(0.15);
@@ -2921,30 +2916,24 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
         catDiscs.forEach(dc=>{const sk=dc.subcategoria||'';if(!subcatMap.has(sk))subcatMap.set(sk,[]);subcatMap.get(sk).push(dc);});
 
         subcatMap.forEach((subDiscs,subcatId)=>{
-            if(subcatId){
-                const subLabel=subcatLabels[subcatId]||subcatId;
-                const sh=calcSubcatH(subLabel);
-                pdf.setFillColor(234,240,255);pdf.rect(tblX,y,UW,sh,'F');
-                pdf.setDrawColor(170,190,230);pdf.setLineWidth(0.1);pdf.rect(tblX,y,UW,sh,'S');
-                pdf.setFont('helvetica','italic');pdf.setFontSize(subcatFontSz);pdf.setTextColor(40,60,140);
-                const subLines=pdf.splitTextToSize('  '+subLabel,cDisc+rem-6);
-                subLines.forEach((ln,li)=>pdf.text(ln,tblX+cNum+4,y+subcatPad/2+subcatLineH*(li+0.85)));
-                y+=sh;
-            }
+            const subcatStartY=y; // marca início para célula mesclada da subcategoria
             subDiscs.forEach(disc=>{
-                const rh=calcRowH(disc.nome);
+                const discW=subcatId?cDisc-3:cSub+cDisc-3;
+                const rh=calcRowH(disc.nome,discW);
                 const notasDisc=notas[disc.nome]||{};
                 const bg=rowIdx%2===0?[248,252,255]:[255,255,255];
                 pdf.setFillColor(...bg);pdf.rect(tblX,y,UW,rh,'F');
                 pdf.setDrawColor(205,220,240);pdf.setLineWidth(0.1);pdf.rect(tblX,y,UW,rh,'S');
-                pdf.setDrawColor(185,205,235);pdf.line(tblX+cNum,y,tblX+cNum,y+rh);
                 pdf.setFont('helvetica','normal');pdf.setFontSize(DISC_FONT);pdf.setTextColor(10,10,10);
-                const discLines=pdf.splitTextToSize(disc.nome.toUpperCase(),cDisc-3);
+                const discTextX=subcatId?tblX+cNum+cSub+1.5:tblX+cNum+1.5;
+                const discLines=pdf.splitTextToSize(disc.nome.toUpperCase(),discW);
                 const textBlockH=discLines.length*DISC_LINE_H;
                 const textStartY=y+(rh-textBlockH)/2+DISC_LINE_H*0.75;
-                discLines.forEach((ln,li)=>pdf.text(ln,tblX+cNum+1.5,textStartY+li*DISC_LINE_H));
-                pdf.line(tblX+cNum+cDisc,y,tblX+cNum+cDisc,y+rh);
-                let nx=tblX+cNum+cDisc;
+                discLines.forEach((ln,li)=>pdf.text(ln,discTextX,textStartY+li*DISC_LINE_H));
+                pdf.setDrawColor(185,205,235);
+                if(subcatId)pdf.line(tblX+cNum+cSub,y,tblX+cNum+cSub,y+rh);
+                pdf.line(tblX+cNum+cSub+cDisc,y,tblX+cNum+cSub+cDisc,y+rh);
+                let nx=tblX+cNum+cSub+cDisc;
                 let discChTot=0;
                 const midY=y+rh/2+DISC_FONT*0.18;
                 for(let si=0;si<numSeries;si++){
@@ -2967,6 +2956,16 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
                 if(catId==='itinerarios')itinChTotal+=discChTot;
                 chTotalGeral+=discChTot;rowIdx++;y+=rh;
             });
+            // Célula mesclada da subcategoria na coluna cSub (overlay sobre as linhas renderizadas)
+            if(subcatId){
+                const subLabel=(subcatLabels[subcatId]||subcatId).toUpperCase();
+                const subcatBodyH=y-subcatStartY;
+                const midSubY=subcatStartY+subcatBodyH/2;
+                pdf.setFillColor(220,228,248);pdf.rect(tblX+cNum,subcatStartY,cSub,subcatBodyH,'F');
+                pdf.setDrawColor(150,170,220);pdf.setLineWidth(0.1);pdf.rect(tblX+cNum,subcatStartY,cSub,subcatBodyH,'S');
+                pdf.setFont('helvetica','bold');pdf.setFontSize(Math.max(3.5,Math.min(5,subcatBodyH*0.09)));pdf.setTextColor(10,30,110);
+                pdf.text(subLabel,tblX+cNum+cSub/2,midSubY,{angle:90,align:'center'});
+            }
         });
 
         // Linha TOTAL após cada categoria
@@ -2982,8 +2981,8 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
             pdf.setFillColor(200,215,245);pdf.rect(tblX,y,UW,fgbH,'F');
             pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.2);pdf.rect(tblX,y,UW,fgbH,'S');
             pdf.setFont('helvetica','bold');pdf.setFontSize(DISC_FONT);pdf.setTextColor(0,20,80);
-            pdf.text(rowLabel,tblX+cNum+2,fgbTY,{maxWidth:cDisc+rem-3});
-            let nxf=tblX+cNum+cDisc;
+            pdf.text(rowLabel,tblX+cNum+2,fgbTY,{maxWidth:cSub+cDisc+rem-3});
+            let nxf=tblX+cNum+cSub+cDisc;
             for(let si=0;si<numSeries;si++){
                 pdf.setDrawColor(0,40,120);pdf.line(nxf+cNota,y,nxf+cNota,y+fgbH);
                 pdf.setFont('helvetica','bold');pdf.setFontSize(DISC_FONT);pdf.setTextColor(0,20,80);
@@ -3014,8 +3013,8 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     pdf.setFillColor(200,215,245);pdf.rect(tblX,y,UW,totH,'F');
     pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.2);pdf.rect(tblX,y,UW,totH,'S');
     pdf.setFont('helvetica','bold');pdf.setFontSize(DISC_FONT);pdf.setTextColor(0,20,80);
-    pdf.text('CARGA HORÁRIA TOTAL (FORMAÇÃO GERAL BÁSICA E ITINÉRÁRIOS FORMATIVOS)',tblX+cNum+2,totTY,{maxWidth:cDisc+rem-3});
-    let nx2=tblX+cNum+cDisc;
+    pdf.text('CARGA HORÁRIA TOTAL (FORMAÇÃO GERAL BÁSICA E ITINÉRÁRIOS FORMATIVOS)',tblX+cNum+2,totTY,{maxWidth:cSub+cDisc+rem-3});
+    let nx2=tblX+cNum+cSub+cDisc;
     for(let si=0;si<numSeries;si++){
         pdf.setDrawColor(0,40,120);pdf.line(nx2+cNota,y,nx2+cNota,y+totH);
         pdf.text(String(totalCHSerie[si]||''),nx2+cNota+cCH/2,totTY,{align:'center'});
@@ -3031,7 +3030,7 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     pdf.setFont('helvetica','bold');pdf.setFontSize(DISC_FONT);pdf.setTextColor(255,255,255);
     pdf.text('RESULTADO FINAL: ',tblX+cNum+2,rfTY);
     pdf.setFont('helvetica','normal');
-    pdf.text(hist.resultadoFinal||hist.resultado||'',tblX+cNum+40,rfTY,{maxWidth:UW-cNum-43});
+    pdf.text(hist.resultadoFinal||hist.resultado||'',tblX+cNum+42,rfTY,{maxWidth:cSub+cDisc+rem-42});
     y+=totH;
 
     // Borda externa da tabela
