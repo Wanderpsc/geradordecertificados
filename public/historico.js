@@ -3004,10 +3004,9 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
             // Fundo branco na coluna cNum
             pdf.setFillColor(255,255,255);pdf.rect(tblX,catStartY,cNum,catBodyH,'F');
             pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);pdf.rect(tblX,catStartY,cNum,catBodyH,'S');
-            // Texto vertical de baixo para cima (angle:90 = 90° anti-horário)
-            const catFs=Math.max(5.5,Math.min(7,catBodyH*0.07));
-            pdf.setFont('helvetica','bold');pdf.setFontSize(catFs);pdf.setTextColor(0,0,0);
-            pdf.text(catNome,tblX+cNum/2,midY,{angle:90,align:'center',maxWidth:catBodyH-2});
+            // Texto vertical de baixo para cima — angle:90 = CCW = sobe da base
+            pdf.setFont('helvetica','bold');pdf.setFontSize(6);pdf.setTextColor(0,0,0);
+            pdf.text(catNome,tblX+cNum/2,midY,{angle:90,align:'center'});
         }
     });
 
