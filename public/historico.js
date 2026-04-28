@@ -2806,12 +2806,26 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     const SLH_PER_PT=BASE_SUBCAT_LINE_H/BASE_SUBCAT_FONT;
     const SPAD_PER_PT=BASE_SUBCAT_PAD/BASE_SUBCAT_FONT;
 
-    // Estimativa com escala s — usa fontes reais (com clamp) para height correta
+    // Estimativa com escala s — usa fontes reais (com clamp) e altura uniforme real
     const _estTblH=(s)=>{
         const dF=Math.max(4.5,BASE_DISC_FONT*s);
         const dLH=dF*LH_PER_PT, dPad=dF*PAD_PER_PT;
         const _hH=BASE_HH*s, _tH=BASE_TOT_H*s;
-        const rowH=dLH+dPad; // altura fixa por linha
+        // Altura uniforme: máx linhas necessárias em qualquer disciplina nesta escala
+        pdf.setFont('helvetica','normal');pdf.setFontSize(dF);
+        let mxL=1;
+        catMap.forEach(catDiscs=>{
+            const sm=new Map();
+            catDiscs.forEach(dc=>{const sk=dc.subcategoria||'';if(!sm.has(sk))sm.set(sk,[]);sm.get(sk).push(dc);});
+            sm.forEach((sds,sid)=>{
+                sds.forEach(dc=>{
+                    const w=sid?cDisc-3:cSub+cDisc-3;
+                    const ls=pdf.splitTextToSize(dc.nome.toUpperCase(),w);
+                    mxL=Math.max(mxL,ls.length);
+                });
+            });
+        });
+        const rowH=Math.max(dLH+dPad, mxL*dLH+dPad);
         let h=_hH*2;
         catMap.forEach((catDiscs,catId)=>{
             let nRows=0;
@@ -2841,8 +2855,22 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     const totH=BASE_TOT_H*tableScale;
     // ────────────────────────────────────────────────────────────────────────
 
-    // Altura fixa para todas as linhas — garante uniformidade e que o rodapé não saia da página
-    const calcRowH=()=>MIN_ROW_H;
+    // Altura uniforme: máx linhas necessárias para qualquer disciplina (sem cortar texto)
+    pdf.setFont('helvetica','normal');pdf.setFontSize(DISC_FONT);
+    let _mxL=1;
+    catMap.forEach(catDiscs=>{
+        const sm=new Map();
+        catDiscs.forEach(dc=>{const sk=dc.subcategoria||'';if(!sm.has(sk))sm.set(sk,[]);sm.get(sk).push(dc);});
+        sm.forEach((sds,sid)=>{
+            sds.forEach(dc=>{
+                const w=sid?cDisc-3:cSub+cDisc-3;
+                const ls=pdf.splitTextToSize(dc.nome.toUpperCase(),w);
+                _mxL=Math.max(_mxL,ls.length);
+            });
+        });
+    });
+    const UNIFORM_ROW_H=Math.max(MIN_ROW_H, _mxL*DISC_LINE_H+DISC_PAD);
+    const calcRowH=()=>UNIFORM_ROW_H;
 
     // Header — "COMPONENTES CURRICULARES" mescla as duas linhas (altura 2×hH)
     pdf.setFillColor(255,255,255);pdf.rect(tblX,y,UW,hH*2,'F');
