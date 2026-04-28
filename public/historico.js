@@ -2829,9 +2829,10 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
                     h+=Math.max(dLH+dPad,ls.length*dLH+dPad);
                 });
             });
-            if(catId==='formacao_geral') h+=_tH;
+            if(catId==='formacao_geral') h+=_tH; // total FGB
+            if(catId==='itinerarios') h+=_tH;    // total Itin.
         });
-        return h+_tH*2;
+        return h+_tH*2; // CARGA TOTAL + RESULTADO FINAL
     };
 
     // Pass 1 — escala inicial
@@ -2906,9 +2907,11 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     let rowIdx=1;
     const totalCHSerie=Array(numSeries).fill(0);
     let chTotalGeral=0;
-    // CH por categoria formacao_geral
+    // CH acumulado por categoria
     const fgbCHSerie=Array(numSeries).fill(0);
     let fgbChTotal=0;
+    const itinCHSerie=Array(numSeries).fill(0);
+    let itinChTotal=0;
 
     catMap.forEach((catDiscs,catId)=>{
         const catNome=catLabels[catId]||catId.toUpperCase();
@@ -2951,6 +2954,7 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
                     const cv=ch?String(ch):'';
                     discChTot+=ch||0;totalCHSerie[si]+=ch||0;
                     if(catId==='formacao_geral'){fgbCHSerie[si]+=(ch||0);}
+                    if(catId==='itinerarios'){itinCHSerie[si]+=(ch||0);}
                     pdf.setFont('helvetica','normal');pdf.setFontSize(DISC_FONT);pdf.setTextColor(0,0,0);
                     pdf.text(nv,nx+cNota/2,midY,{align:'center'});
                     pdf.setDrawColor(185,205,235);pdf.line(nx+cNota,y,nx+cNota,y+rh);
@@ -2960,28 +2964,34 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
                 pdf.setDrawColor(185,205,235);pdf.line(tblX+UW-cTot,y,tblX+UW-cTot,y+rh);
                 if(discChTot)pdf.text(String(discChTot),tblX+UW-cTot+cTot/2,midY,{align:'center'});
                 if(catId==='formacao_geral')fgbChTotal+=discChTot;
+                if(catId==='itinerarios')itinChTotal+=discChTot;
                 chTotalGeral+=discChTot;rowIdx++;y+=rh;
             });
         });
 
-        // Linha TOTAL GERAL DA FORMAÇÃO GERAL BÁSICA — só após a categoria formacao_geral
-        if(catId==='formacao_geral'){
+        // Linha TOTAL após cada categoria
+        if(catId==='formacao_geral'||catId==='itinerarios'){
+            const isFgb=catId==='formacao_geral';
+            const rowCHSerie=isFgb?fgbCHSerie:itinCHSerie;
+            const rowLabel=isFgb
+                ?'TOTAL GERAL DA CARGA HORÁRIA DA FORMAÇÃO GERAL BÁSICA'
+                :'TOTAL GERAL DA CARGA HORÁRIA DOS ITINÉRÁRIOS FORMATIVOS';
+            const rowTot=isFgb?fgbChTotal:itinChTotal;
             const fgbH=totH;
+            const fgbTY=y+fgbH*0.72;
             pdf.setFillColor(200,215,245);pdf.rect(tblX,y,UW,fgbH,'F');
             pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.2);pdf.rect(tblX,y,UW,fgbH,'S');
             pdf.setFont('helvetica','bold');pdf.setFontSize(DISC_FONT);pdf.setTextColor(0,20,80);
-            const fgbTY=y+fgbH*0.72;
-            pdf.text('TOTAL GERAL DA CARGA HORÁRIA DA FORMAÇÃO GERAL BÁSICA',tblX+cNum+2,fgbTY,{maxWidth:cDisc+rem-3});
+            pdf.text(rowLabel,tblX+cNum+2,fgbTY,{maxWidth:cDisc+rem-3});
             let nxf=tblX+cNum+cDisc;
-            let fgbTot=0;
             for(let si=0;si<numSeries;si++){
                 pdf.setDrawColor(0,40,120);pdf.line(nxf+cNota,y,nxf+cNota,y+fgbH);
                 pdf.setFont('helvetica','bold');pdf.setFontSize(DISC_FONT);pdf.setTextColor(0,20,80);
-                pdf.text(String(fgbCHSerie[si]||''),nxf+cNota+cCH/2,fgbTY,{align:'center'});
-                pdf.line(nxf+pairW,y,nxf+pairW,y+fgbH);nxf+=pairW;fgbTot+=fgbCHSerie[si]||0;
+                pdf.text(String(rowCHSerie[si]||''),nxf+cNota+cCH/2,fgbTY,{align:'center'});
+                pdf.line(nxf+pairW,y,nxf+pairW,y+fgbH);nxf+=pairW;
             }
             pdf.line(tblX+UW-cTot,y,tblX+UW-cTot,y+fgbH);
-            pdf.text(String(fgbTot||''),tblX+UW-cTot+cTot/2,fgbTY,{align:'center'});
+            pdf.text(String(rowTot||''),tblX+UW-cTot+cTot/2,fgbTY,{align:'center'});
             y+=fgbH;
         }
 
@@ -2999,12 +3009,12 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
         }
     });
 
-    // Linha CARGA HORÁRIA TOTAL
+    // Linha CARGA HORÁRIA TOTAL (FGB + Itinérários)
     const totTY=y+totH*0.72;
     pdf.setFillColor(200,215,245);pdf.rect(tblX,y,UW,totH,'F');
     pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.2);pdf.rect(tblX,y,UW,totH,'S');
     pdf.setFont('helvetica','bold');pdf.setFontSize(DISC_FONT);pdf.setTextColor(0,20,80);
-    pdf.text('CARGA HORÁRIA TOTAL',tblX+cNum+2,totTY,{maxWidth:cDisc-3});
+    pdf.text('CARGA HORÁRIA TOTAL (FORMAÇÃO GERAL BÁSICA E ITINÉRÁRIOS FORMATIVOS)',tblX+cNum+2,totTY,{maxWidth:cDisc+rem-3});
     let nx2=tblX+cNum+cDisc;
     for(let si=0;si<numSeries;si++){
         pdf.setDrawColor(0,40,120);pdf.line(nx2+cNota,y,nx2+cNota,y+totH);
