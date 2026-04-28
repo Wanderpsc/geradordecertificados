@@ -3034,15 +3034,24 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     pdf.text(hist.resultadoFinal||hist.resultado||'',tblX+cNum+40,rfTY,{maxWidth:UW-cNum-43});
     y+=totH;
 
+    // Borda externa da tabela — limitada ao fim da página
+    const tblRectH=Math.min(y,TABLE_BOTTOM_LIMIT)-tblStartY;
     pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.4);
-    pdf.rect(tblX,tblStartY,UW,y-tblStartY,'S');
+    pdf.rect(tblX,tblStartY,UW,tblRectH,'S');
     y+=2;
 
-    // RODAPÉ — sempre na mesma página (a escala proporcional garante que cabe)
+    // RODAPÉ — na mesma página se couber, senão em nova página
     const sig1=cfg?.frente?.assinatura1||'SECRETÁRIO(A)';
     const sig2=cfg?.frente?.assinatura2||'DIRETOR(A)';
     const localData=cfg?.frente?.localData||hist.dataEmissao||'';
-    const rodapeY=PH-RODAPE_RESERVED+4;
+    let rodapeY;
+    if(y>TABLE_BOTTOM_LIMIT-8){
+        // tabela ultrapassou limite: rodapé em nova página
+        pdf.addPage();
+        rodapeY=30;
+    } else {
+        rodapeY=PH-RODAPE_RESERVED+4;
+    }
     _drawLocalData(pdf,localData,rodapeY,PW);
     const sigY=rodapeY+14;
     const sigLineW=60;
@@ -3050,7 +3059,6 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
         pdf.setLineWidth(0.5);pdf.setDrawColor(0,0,0);
         pdf.line(cx-sigLineW/2,sigY,cx+sigLineW/2,sigY);
         _hText(pdf,sig,cx,sigY+4.5,{size:7,align:'center',bold:true});
-        // Espaço em branco para carimbo (sem caixa)
     });
     const fyBot=PH-8;
     _hLine(pdf,ML,fyBot,PW-MR,fyBot,0.6,[0,40,120]);
