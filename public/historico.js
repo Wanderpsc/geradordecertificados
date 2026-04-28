@@ -2810,24 +2810,15 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     const _estTblH=(s)=>{
         const dF=Math.max(4.5,BASE_DISC_FONT*s);
         const dLH=dF*LH_PER_PT, dPad=dF*PAD_PER_PT;
-        const sF=Math.max(4.5,BASE_SUBCAT_FONT*s);
-        const sLH=sF*SLH_PER_PT, sPad=sF*SPAD_PER_PT;
         const _hH=BASE_HH*s, _tH=BASE_TOT_H*s;
+        const rowH=dLH+dPad; // altura fixa por linha
         let h=_hH*2;
         catMap.forEach((catDiscs,catId)=>{
-            const sm=new Map();
-            catDiscs.forEach(dc=>{const sk=dc.subcategoria||'';if(!sm.has(sk))sm.set(sk,[]);sm.get(sk).push(dc);});
-            sm.forEach((sds,sid)=>{
-                // subcategorias são células mescladas — sem banda extra de altura
-                sds.forEach(dc=>{
-                    pdf.setFont('helvetica','normal');pdf.setFontSize(dF);
-                    const w=sid?cDisc-3:cSub+cDisc-3;
-                    const ls=pdf.splitTextToSize(dc.nome.toUpperCase(),w);
-                    h+=Math.max(dLH+dPad,ls.length*dLH+dPad);
-                });
-            });
-            if(catId==='formacao_geral') h+=_tH; // total FGB
-            if(catId==='itinerarios') h+=_tH;    // total Itin.
+            let nRows=0;
+            catDiscs.forEach(()=>nRows++);
+            h+=nRows*rowH;
+            if(catId==='formacao_geral') h+=_tH;
+            if(catId==='itinerarios') h+=_tH;
         });
         return h+_tH*2; // CARGA TOTAL + RESULTADO FINAL
     };
@@ -2850,12 +2841,8 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     const totH=BASE_TOT_H*tableScale;
     // ────────────────────────────────────────────────────────────────────────
 
-    // Calcula altura da linha de disciplina considerando quebra de texto
-    const calcRowH=(nome,w)=>{
-        pdf.setFont('helvetica','normal');pdf.setFontSize(DISC_FONT);
-        const lines=pdf.splitTextToSize(nome.toUpperCase(),w??cDisc-3);
-        return Math.max(MIN_ROW_H, lines.length*DISC_LINE_H+DISC_PAD);
-    };
+    // Altura fixa para todas as linhas — garante uniformidade e que o rodapé não saia da página
+    const calcRowH=()=>MIN_ROW_H;
 
     // Header — "COMPONENTES CURRICULARES" mescla as duas linhas (altura 2×hH)
     pdf.setFillColor(255,255,255);pdf.rect(tblX,y,UW,hH*2,'F');
@@ -2916,17 +2903,17 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
             const subcatStartY=y; // marca início para célula mesclada da subcategoria
             subDiscs.forEach(disc=>{
                 const discW=subcatId?cDisc-3:cSub+cDisc-3;
-                const rh=calcRowH(disc.nome,discW);
+                const rh=calcRowH();
                 const notasDisc=notas[disc.nome]||{};
                 pdf.setFillColor(255,255,255);pdf.rect(tblX,y,UW,rh,'F');
-                pdf.setDrawColor(205,220,240);pdf.setLineWidth(0.1);pdf.rect(tblX,y,UW,rh,'S');
+                pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);pdf.rect(tblX,y,UW,rh,'S');
                 pdf.setFont('helvetica','normal');pdf.setFontSize(DISC_FONT);pdf.setTextColor(10,10,10);
                 const discTextX=subcatId?tblX+cNum+cSub+1.5:tblX+cNum+1.5;
                 const discLines=pdf.splitTextToSize(disc.nome.toUpperCase(),discW);
                 const textBlockH=discLines.length*DISC_LINE_H;
                 const textStartY=y+(rh-textBlockH)/2+DISC_LINE_H*0.75;
                 discLines.forEach((ln,li)=>pdf.text(ln,discTextX,textStartY+li*DISC_LINE_H));
-                pdf.setDrawColor(185,205,235);
+                pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);
                 if(subcatId)pdf.line(tblX+cNum+cSub,y,tblX+cNum+cSub,y+rh);
                 pdf.line(tblX+cNum+cSub+cDisc,y,tblX+cNum+cSub+cDisc,y+rh);
                 let nx=tblX+cNum+cSub+cDisc;
@@ -2942,11 +2929,11 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
                     if(catId==='itinerarios'){itinCHSerie[si]+=(ch||0);}
                     pdf.setFont('helvetica','normal');pdf.setFontSize(DISC_FONT);pdf.setTextColor(0,0,0);
                     pdf.text(nv,nx+cNota/2,midY,{align:'center'});
-                    pdf.setDrawColor(185,205,235);pdf.line(nx+cNota,y,nx+cNota,y+rh);
+                    pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);pdf.line(nx+cNota,y,nx+cNota,y+rh);
                     pdf.text(cv,nx+cNota+cCH/2,midY,{align:'center'});
                     pdf.line(nx+pairW,y,nx+pairW,y+rh);nx+=pairW;
                 }
-                pdf.setDrawColor(185,205,235);pdf.line(tblX+UW-cTot,y,tblX+UW-cTot,y+rh);
+                pdf.line(tblX+UW-cTot,y,tblX+UW-cTot,y+rh);
                 if(discChTot)pdf.text(String(discChTot),tblX+UW-cTot+cTot/2,midY,{align:'center'});
                 if(catId==='formacao_geral')fgbChTotal+=discChTot;
                 if(catId==='itinerarios')itinChTotal+=discChTot;
@@ -2958,7 +2945,7 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
                 const subcatBodyH=y-subcatStartY;
                 const midSubY=subcatStartY+subcatBodyH/2;
                 pdf.setFillColor(255,255,255);pdf.rect(tblX+cNum,subcatStartY,cSub,subcatBodyH,'F');
-                pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.1);pdf.rect(tblX+cNum,subcatStartY,cSub,subcatBodyH,'S');
+                pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);pdf.rect(tblX+cNum,subcatStartY,cSub,subcatBodyH,'S');
                 // Texto horizontal centralizado na célula
                 const subFs=Math.max(3.5,Math.min(5.5,cSub*0.22));
                 pdf.setFont('helvetica','bold');pdf.setFontSize(subFs);pdf.setTextColor(10,30,110);
@@ -2981,12 +2968,12 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
             const fgbH=totH;
             const fgbTY=y+fgbH*0.72;
             pdf.setFillColor(255,255,255);pdf.rect(tblX,y,UW,fgbH,'F');
-            pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.2);pdf.rect(tblX,y,UW,fgbH,'S');
+            pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);pdf.rect(tblX,y,UW,fgbH,'S');
             pdf.setFont('helvetica','bold');pdf.setFontSize(DISC_FONT);pdf.setTextColor(0,0,0);
             pdf.text(rowLabel,tblX+cNum+2,fgbTY,{maxWidth:cSub+cDisc+rem-3});
             let nxf=tblX+cNum+cSub+cDisc;
             for(let si=0;si<numSeries;si++){
-                pdf.setDrawColor(0,0,0);pdf.line(nxf+cNota,y,nxf+cNota,y+fgbH);
+                pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);pdf.line(nxf+cNota,y,nxf+cNota,y+fgbH);
                 pdf.setFont('helvetica','bold');pdf.setFontSize(DISC_FONT);pdf.setTextColor(0,0,0);
                 pdf.text(String(rowCHSerie[si]||''),nxf+cNota+cCH/2,fgbTY,{align:'center'});
                 pdf.line(nxf+pairW,y,nxf+pairW,y+fgbH);nxf+=pairW;
@@ -3017,12 +3004,12 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     // Linha CARGA HORÁRIA TOTAL (FGB + Itinérários)
     const totTY=y+totH*0.72;
     pdf.setFillColor(255,255,255);pdf.rect(tblX,y,UW,totH,'F');
-    pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.2);pdf.rect(tblX,y,UW,totH,'S');
+    pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);pdf.rect(tblX,y,UW,totH,'S');
     pdf.setFont('helvetica','bold');pdf.setFontSize(DISC_FONT);pdf.setTextColor(0,0,0);
     pdf.text('CARGA HORÁRIA TOTAL (FORMAÇÃO GERAL BÁSICA E ITINÉRÁRIOS FORMATIVOS)',tblX+cNum+2,totTY,{maxWidth:cSub+cDisc+rem-3});
     let nx2=tblX+cNum+cSub+cDisc;
     for(let si=0;si<numSeries;si++){
-        pdf.setDrawColor(0,0,0);pdf.line(nx2+cNota,y,nx2+cNota,y+totH);
+        pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);pdf.line(nx2+cNota,y,nx2+cNota,y+totH);
         pdf.text(String(totalCHSerie[si]||''),nx2+cNota+cCH/2,totTY,{align:'center'});
         pdf.line(nx2+pairW,y,nx2+pairW,y+totH);nx2+=pairW;
     }
@@ -3033,7 +3020,7 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     // Linha RESULTADO FINAL
     const rfTY=y+totH*0.72;
     pdf.setFillColor(255,255,255);pdf.rect(tblX,y,UW,totH,'F');
-    pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.2);pdf.rect(tblX,y,UW,totH,'S');
+    pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);pdf.rect(tblX,y,UW,totH,'S');
     pdf.setFont('helvetica','bold');pdf.setFontSize(DISC_FONT);pdf.setTextColor(0,0,0);
     pdf.text('RESULTADO FINAL: ',tblX+cNum+2,rfTY);
     pdf.setFont('helvetica','normal');
@@ -3041,7 +3028,7 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     y+=totH;
 
     // Borda externa da tabela
-    pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.4);
+    pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.2);
     pdf.rect(tblX,tblStartY,UW,y-tblStartY,'S');
     y+=2;
 
