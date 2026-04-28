@@ -3004,9 +3004,13 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
             // Fundo branco na coluna cNum
             pdf.setFillColor(255,255,255);pdf.rect(tblX,catStartY,cNum,catBodyH,'F');
             pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);pdf.rect(tblX,catStartY,cNum,catBodyH,'S');
-            // Texto vertical de baixo para cima — angle:90 = CCW = sobe da base
+            // Texto vertical de baixo para cima (angle:90 CCW)
+            // align:'center' é ignorado com angle em muitas versões de jsPDF → calcular manualmente
             pdf.setFont('helvetica','bold');pdf.setFontSize(6);pdf.setTextColor(0,0,0);
-            pdf.text(catNome,tblX+cNum/2,midY,{angle:90,align:'center'});
+            const catTW=pdf.getStringUnitWidth(catNome)*6/pdf.internal.scaleFactor;
+            // startY = ponto inferior do texto (texto cresce para cima a partir daqui)
+            const txtStartY=Math.min(catEndY-1, midY+catTW/2);
+            pdf.text(catNome,tblX+cNum*0.65,txtStartY,{angle:90});
         }
     });
 
