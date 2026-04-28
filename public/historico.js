@@ -2792,8 +2792,9 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     const subcatLabels={aprofundamento_linguagens:'Aprofundamento de Linguagens e suas Tecnologias',aprofundamento_matematica_ciencias:'Aprofundamento de Matemática, Ciências da Natureza e Linguagens e suas Tecnologias',atividades_integradoras:'Atividades Integradoras'};
 
     // ── ESCALA PROPORCIONAL (2 passes para lidar corretamente com clamp de fonte) ────
-    const RODAPE_RESERVED=62;
-    const TABLE_BOTTOM_LIMIT=PH-RODAPE_RESERVED;
+    const RODAPE_RESERVED=62;       // espaço para rodapé quando cabe na mesma página (inclui área carimbo)
+    const RODAPE_MIN_H=30;          // altura mínima necessária para rodapé (LOCAL/DATA + assinaturas)
+    const TABLE_BOTTOM_LIMIT=PH-12; // tabela usa quase a página inteira; rodapé vai p/ pág.2 se não couber
     const AVAIL_TABLE_H=TABLE_BOTTOM_LIMIT-tblStartY;
 
     const BASE_HH=4.8;
@@ -3034,23 +3035,26 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     pdf.text(hist.resultadoFinal||hist.resultado||'',tblX+cNum+40,rfTY,{maxWidth:UW-cNum-43});
     y+=totH;
 
-    // Borda externa da tabela — limitada ao fim da página
-    const tblRectH=Math.min(y,TABLE_BOTTOM_LIMIT)-tblStartY;
+    // Borda externa da tabela
     pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.4);
-    pdf.rect(tblX,tblStartY,UW,tblRectH,'S');
+    pdf.rect(tblX,tblStartY,UW,y-tblStartY,'S');
     y+=2;
 
-    // RODAPÉ — na mesma página se couber, senão em nova página
+    // RODAPÉ — mesma página se sobrar ≥RODAPE_MIN_H mm; senão nova página
     const sig1=cfg?.frente?.assinatura1||'SECRETÁRIO(A)';
     const sig2=cfg?.frente?.assinatura2||'DIRETOR(A)';
     const localData=cfg?.frente?.localData||hist.dataEmissao||'';
     let rodapeY;
-    if(y>TABLE_BOTTOM_LIMIT-8){
-        // tabela ultrapassou limite: rodapé em nova página
+    if(y+RODAPE_MIN_H+3>PH-8){
+        // sem espaço → rodapé em nova página
         pdf.addPage();
         rodapeY=30;
-    } else {
+    } else if(y<PH-RODAPE_RESERVED){
+        // espaço suficiente → posição padrão (inclui área carimbo)
         rodapeY=PH-RODAPE_RESERVED+4;
+    } else {
+        // espaço compacto → 3mm abaixo da tabela
+        rodapeY=y+3;
     }
     _drawLocalData(pdf,localData,rodapeY,PW);
     const sigY=rodapeY+14;
