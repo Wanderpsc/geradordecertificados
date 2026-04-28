@@ -2996,14 +2996,14 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
 
         // Texto vertical da categoria na coluna cNum — abrange toda a altura da categoria
         const catEndY=y;
-        const catBodyH=catEndY-catStartY; // altura total (sem linha de header removida)
+        const catBodyH=catEndY-catStartY;
         if(catBodyH>1){
             const midY=catStartY+catBodyH/2;
-            // Fundo levemente colorido na coluna cNum para toda a categoria
-            pdf.setFillColor(220,228,248);pdf.rect(tblX,catStartY,cNum,catBodyH,'F');
+            // Fundo branco na coluna cNum
+            pdf.setFillColor(255,255,255);pdf.rect(tblX,catStartY,cNum,catBodyH,'F');
             pdf.setDrawColor(150,170,220);pdf.setLineWidth(0.1);pdf.rect(tblX,catStartY,cNum,catBodyH,'S');
             // Texto vertical de baixo para cima (angle:90 = 90° anti-horário)
-            pdf.setFont('helvetica','bold');pdf.setFontSize(6);pdf.setTextColor(10,30,110);
+            pdf.setFont('helvetica','bold');pdf.setFontSize(Math.max(4,Math.min(6,catBodyH*0.05)));pdf.setTextColor(10,30,110);
             pdf.text(catNome,tblX+cNum/2,midY,{angle:90,align:'center'});
         }
     });
