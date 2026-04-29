@@ -2806,7 +2806,7 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     const SLH_PER_PT=BASE_SUBCAT_LINE_H/BASE_SUBCAT_FONT;
     const SPAD_PER_PT=BASE_SUBCAT_PAD/BASE_SUBCAT_FONT;
 
-    // Estimativa com escala s — altura exata por disciplina (N linhas × dLH + dPad)
+    // Estimativa com escala s — inclui expansão de linha para rótulo de subcategoria
     const _estTblH=(s)=>{
         const dF=Math.max(4.5,BASE_DISC_FONT*s);
         const dLH=dF*LH_PER_PT, dPad=dF*PAD_PER_PT;
@@ -2818,11 +2818,21 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
             catDiscs.forEach(dc=>{const sk=dc.subcategoria||'';if(!sm.has(sk))sm.set(sk,[]);sm.get(sk).push(dc);});
             const _ord=k=>k===''?1:k.toUpperCase().includes('ATIVIDADES')?2:0;
             [...sm.entries()].sort((a,b)=>_ord(a[0])-_ord(b[0])).forEach(([sid,sds])=>{
-                sds.forEach(dc=>{
+                const heights=sds.map(dc=>{
                     const w=sid?cDisc-3:cSub+cDisc-3;
                     const ls=pdf.splitTextToSize(dc.nome.toUpperCase(),w);
-                    h+=ls.length*dLH+dPad;
+                    return ls.length*dLH+dPad;
                 });
+                if(sid){
+                    const subLabel=(subcatLabels[sid]||sid).toUpperCase();
+                    pdf.setFont('helvetica','bold');pdf.setFontSize(dF);
+                    const subLns=pdf.splitTextToSize(subLabel,cSub-1.5);
+                    const minSubH=subLns.length*dLH+dPad;
+                    const naturalH=heights.reduce((a,b)=>a+b,0);
+                    if(naturalH<minSubH) heights[heights.length-1]+=(minSubH-naturalH);
+                    pdf.setFont('helvetica','normal');pdf.setFontSize(dF);
+                }
+                h+=heights.reduce((a,b)=>a+b,0);
             });
             if(catId==='formacao_geral') h+=_tH;
             if(catId==='itinerarios') h+=_tH;
@@ -2856,7 +2866,26 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
         return ls.length*DISC_LINE_H+DISC_PAD;
     };
 
-    // Header — "COMPONENTES CURRICULARES" mescla as duas linhas (altura 2×hH)
+    // Pré-passo: garante que a última linha de cada subcategoria seja alta o suficiente
+    // para o rótulo da subcategoria caber em DISC_FONT (sem reduzir a fonte)
+    const discRowH=new Map();
+    catMap.forEach(catDiscs=>{
+        const _sm=new Map();
+        catDiscs.forEach(dc=>{const sk=dc.subcategoria||'';if(!_sm.has(sk))_sm.set(sk,[]);_sm.get(sk).push(dc);});
+        const _ord=k=>k===''?1:k.toUpperCase().includes('ATIVIDADES')?2:0;
+        [..._sm.entries()].sort((a,b)=>_ord(a[0])-_ord(b[0])).forEach(([sid,sds])=>{
+            const heights=sds.map(dc=>calcRowH(dc.nome,sid));
+            if(sid){
+                const subLabel=(subcatLabels[sid]||sid).toUpperCase();
+                pdf.setFont('helvetica','bold');pdf.setFontSize(DISC_FONT);
+                const subLns=pdf.splitTextToSize(subLabel,cSub-1.5);
+                const minSubH=subLns.length*DISC_LINE_H+DISC_PAD;
+                const naturalH=heights.reduce((a,b)=>a+b,0);
+                if(naturalH<minSubH) heights[heights.length-1]+=(minSubH-naturalH);
+            }
+            sds.forEach((dc,i)=>discRowH.set(dc,heights[i]));
+        });
+    }); "COMPONENTES CURRICULARES" mescla as duas linhas (altura 2×hH)
     pdf.setFillColor(255,255,255);pdf.rect(tblX,y,UW,hH*2,'F');
     // Célula mesclada esquerda: cNum+cSub+cDisc, altura 2×hH
     _hText(pdf,'COMPONENTES CURRICULARES',tblX+(cNum+cSub+cDisc)/2,y+hH,{bold:true,size:Math.max(5.5,7*tableScale),align:'center',color:[0,0,0]});
@@ -2919,7 +2948,7 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
             const subcatStartY=y; // marca início para célula mesclada da subcategoria
             subDiscs.forEach(disc=>{
                 const discW=subcatId?cDisc-3:cSub+cDisc-3;
-                const rh=calcRowH(disc.nome,subcatId);
+                const rh=discRowH.get(disc)||calcRowH(disc.nome,subcatId);
                 const notasDisc=notas[disc.nome]||{};
                 pdf.setFillColor(255,255,255);pdf.rect(tblX,y,UW,rh,'F');
                 pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);pdf.rect(tblX,y,UW,rh,'S');
@@ -2961,21 +2990,12 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
                 const subcatBodyH=y-subcatStartY;
                 pdf.setFillColor(255,255,255);pdf.rect(tblX+cNum,subcatStartY,cSub,subcatBodyH,'F');
                 pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);pdf.rect(tblX+cNum,subcatStartY,cSub,subcatBodyH,'S');
-                // Começa com DISC_FONT (mesma fonte de toda a tabela) e reduz até caber
-                let subFs=DISC_FONT;
-                pdf.setFont('helvetica','bold');pdf.setFontSize(subFs);
-                let subLns=pdf.splitTextToSize(subLabel,cSub-1.5);
-                let subLH=subFs*LH_PER_PT;
-                while(subLns.length*subLH+subLH*0.25>subcatBodyH && subFs>3.0){
-                    subFs-=0.2;
-                    pdf.setFont('helvetica','bold');pdf.setFontSize(subFs);
-                    subLns=pdf.splitTextToSize(subLabel,cSub-1.5);
-                    subLH=subFs*LH_PER_PT;
-                }
+                // Fonte igual à planilha toda (DISC_FONT), sem redução
+                pdf.setFont('helvetica','bold');pdf.setFontSize(DISC_FONT);pdf.setTextColor(0,0,0);
+                const subLns=pdf.splitTextToSize(subLabel,cSub-1.5);
+                const subLH=DISC_LINE_H;
                 const subTextH=subLns.length*subLH;
-                // Centralização igual ao padrão das linhas de disciplina (subLH*0.75 = offset de baseline)
                 const subY0=subcatStartY+(subcatBodyH-subTextH)/2+subLH*0.75;
-                pdf.setTextColor(0,0,0);
                 subLns.forEach((ln,li)=>pdf.text(ln,tblX+cNum+cSub/2,subY0+li*subLH,{align:'center'}));
             }
         });
