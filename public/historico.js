@@ -2670,7 +2670,7 @@ function _drawLocalData(pdf, localData, rodapeY, PW) {
     const monthTxt=m?m[2]:'';
     const yearTxt=m?m[3]:'';
 
-    pdf.setLineWidth(0.3);pdf.setDrawColor(0,0,0);
+    pdf.setLineWidth(0.2);pdf.setDrawColor(0,40,120);
     pdf.setFont('helvetica','normal');pdf.setFontSize(7);pdf.setTextColor(0,0,0);
 
     // Linha local
@@ -3144,8 +3144,8 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
         pdf.addPage();
         rodapeY=25;
     } else {
-        // posição fixa: início da área reservada para o rodapé
-        rodapeY=PH-RODAPE_H-2;
+        // posição fixa: início da área reservada para o rodapé — nunca menor que y+4 (gap após tabela)
+        rodapeY=Math.max(PH-RODAPE_H-2, y+4);
     }
     _drawLocalData(pdf,localData,rodapeY,PW);
     const sigY=rodapeY+13;
@@ -3188,7 +3188,7 @@ function _histVersoMedioPortrait(pdf, hist, cfg) {
         pdf.text(lbl,ML,y+3.5);
         pdf.setFont('helvetica','normal');
         pdf.text(val||'',ML+lW,y+3.5,{maxWidth:UW-lW-1});
-        pdf.setDrawColor(80,80,80);pdf.setLineWidth(0.2);
+        pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.2);
         pdf.line(ML+lW,y+4,ML+UW,y+4);y+=5;
     };
     fLine('ESTABELECIMENTO DE ENSINO: ',inst,53);
@@ -3200,7 +3200,7 @@ function _histVersoMedioPortrait(pdf, hist, cfg) {
     pdf.setFont('helvetica','bold');pdf.setFontSize(6.5);pdf.setTextColor(0,0,0);
     pdf.text('RG: ',ML,y+3.5);pdf.setFont('helvetica','normal');
     pdf.text(aluno.rg||'',ML+7,y+3.5,{maxWidth:28});
-    pdf.setDrawColor(80,80,80);pdf.setLineWidth(0.2);pdf.line(ML+7,y+4,ML+37,y+4);
+    pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.2);pdf.line(ML+7,y+4,ML+37,y+4);
     pdf.setFont('helvetica','bold');pdf.text('ÓRGÃO EMISSOR: ',ML+39,y+3.5);
     pdf.setFont('helvetica','normal');pdf.text(aluno.orgaoEmissor||'',ML+65,y+3.5,{maxWidth:24});
     pdf.line(ML+65,y+4,ML+91,y+4);
@@ -4039,7 +4039,7 @@ function _histVersoRodape(pdf, hist, cfg, { PW, PH, ML, MR, UW, y, isMedio }) {
     pdf.setFont('helvetica', 'normal'); pdf.setFontSize(6.5); pdf.setTextColor(10, 10, 10);
     const obsLines = pdf.splitTextToSize(obsText || ' ', UW);
     pdf.text(obsLines.slice(0, 2), ML, y);
-    pdf.setDrawColor(180, 180, 180); pdf.setLineWidth(0.2);
+    pdf.setDrawColor(0, 40, 120); pdf.setLineWidth(0.2);
     [0, 5].forEach(dy => pdf.line(ML, y + dy, ML + UW, y + dy));
     y += 12;
 
