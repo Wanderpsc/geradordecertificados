@@ -3149,9 +3149,9 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     }
     _drawLocalData(pdf,localData,rodapeY,PW);
     const sigY=rodapeY+13;
-    const sigLineW=58;
+    const sigLineW=70;
     [{cx:PW*0.28,sig:sig1},{cx:PW*0.72,sig:sig2}].forEach(({cx,sig})=>{
-        pdf.setLineWidth(0.5);pdf.setDrawColor(0,40,120);
+        pdf.setLineWidth(0.2);pdf.setDrawColor(0,40,120);
         pdf.line(cx-sigLineW/2,sigY,cx+sigLineW/2,sigY);
         _hText(pdf,sig,cx,sigY+4,{size:7,align:'center',bold:true});
     });
@@ -3283,7 +3283,7 @@ function _histVersoMedioPortrait(pdf, hist, cfg) {
     });
     y+=verH+4;
 
-    // OBSERVAÇÕES + RESULTADO PARA AUTENTICAÇÃO
+    // OBSERVAÇÕES + RESERVADO PARA AUTENTICAÇÃO
     const boxesH=75;
     const obsW=Math.floor((UW-2)/2);
     const resW=obsW;
@@ -3300,7 +3300,7 @@ function _histVersoMedioPortrait(pdf, hist, cfg) {
     pdf.setFillColor(255,255,255);pdf.rect(ML+obsW+2,y,resW,boxesH,'F');
     pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.3);pdf.rect(ML+obsW+2,y,resW,boxesH,'S');
     pdf.setFont('helvetica','bold');pdf.setFontSize(6);pdf.setTextColor(0,40,120);
-    const rLabel=pdf.splitTextToSize('RESULTADO PARA AUTENTICAÇÃO',resW-4);
+    const rLabel=pdf.splitTextToSize('RESERVADO PARA AUTENTICAÇÃO',resW-4);
     pdf.text(rLabel,ML+obsW+4,y+5);
     y+=boxesH+3;
 
@@ -3316,8 +3316,8 @@ function _histVersoMedioPortrait(pdf, hist, cfg) {
     _drawLocalData(pdf,localDataV,rodapeYv,PW);
     const sigYv=rodapeYv+14;
     [{cx:ML+UW*0.25,sig:sig1v},{cx:ML+UW*0.75,sig:sig2v}].forEach(({cx,sig})=>{
-        pdf.setLineWidth(0.4);pdf.setDrawColor(0,40,120);
-        pdf.line(cx-35,sigYv,cx+35,sigYv);
+        pdf.setLineWidth(0.2);pdf.setDrawColor(0,40,120);
+        pdf.line(cx-45,sigYv,cx+45,sigYv);
         _hText(pdf,sig,cx,sigYv+4,{size:6.5,align:'center',bold:true});
     });
     const fyBot=PH-8;
@@ -3721,8 +3721,8 @@ function _histFrente(pdf, hist, cfg) {
     const cx1f = ML + UW * 0.25;
     const cx2f = ML + UW * 0.75;
     [{ cx: cx1f, sig: sig1 }, { cx: cx2f, sig: sig2 }].forEach(({ cx, sig }) => {
-        pdf.setLineWidth(0.4); pdf.setDrawColor(0, 40, 120);
-        pdf.line(cx - 35, y, cx + 35, y);
+        pdf.setLineWidth(0.2); pdf.setDrawColor(0, 40, 120);
+        pdf.line(cx - 45, y, cx + 45, y);
         _hText(pdf, sig, cx, y + 4, { size: 6.5, align: 'center', bold: true });
     });
 
@@ -4057,8 +4057,8 @@ function _histVersoRodape(pdf, hist, cfg, { PW, PH, ML, MR, UW, y, isMedio }) {
     const cx1 = ML + UW * 0.25;
     const cx2 = ML + UW * 0.75;
     [{ cx: cx1, sig: sig1 }, { cx: cx2, sig: sig2 }].forEach(({ cx, sig }) => {
-        pdf.setLineWidth(0.4); pdf.setDrawColor(0, 40, 120);
-        pdf.line(cx - 35, y, cx + 35, y);
+        pdf.setLineWidth(0.2); pdf.setDrawColor(0, 40, 120);
+        pdf.line(cx - 45, y, cx + 45, y);
         _hText(pdf, sig, cx, y + 4, { size: 6.5, align: 'center', bold: true });
     });
     y += 8;
