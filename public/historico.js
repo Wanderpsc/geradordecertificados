@@ -2885,7 +2885,9 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
             }
             sds.forEach((dc,i)=>discRowH.set(dc,heights[i]));
         });
-    }); "COMPONENTES CURRICULARES" mescla as duas linhas (altura 2×hH)
+    });
+
+    // Header — "COMPONENTES CURRICULARES" mescla as duas linhas (altura 2×hH)
     pdf.setFillColor(255,255,255);pdf.rect(tblX,y,UW,hH*2,'F');
     // Célula mesclada esquerda: cNum+cSub+cDisc, altura 2×hH
     _hText(pdf,'COMPONENTES CURRICULARES',tblX+(cNum+cSub+cDisc)/2,y+hH,{bold:true,size:Math.max(5.5,7*tableScale),align:'center',color:[0,0,0]});
