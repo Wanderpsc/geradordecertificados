@@ -3048,6 +3048,10 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
             }
         });
 
+        // Texto vertical da categoria na coluna cNum — abrange apenas as disciplinas (não a linha TOTAL)
+        const catEndY=y;
+        const catBodyH=catEndY-catStartY;
+
         // Linha TOTAL após cada categoria
         if(catId==='formacao_geral'||catId==='itinerarios'){
             const isFgb=catId==='formacao_geral';
@@ -3078,9 +3082,6 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
             y+=fgbH;
         }
 
-        // Texto vertical da categoria na coluna cNum — abrange toda a altura da categoria
-        const catEndY=y;
-        const catBodyH=catEndY-catStartY;
         if(catBodyH>1){
             const midY=catStartY+catBodyH/2;
             // Fundo branco na coluna cNum
