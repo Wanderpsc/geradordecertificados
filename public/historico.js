@@ -2806,13 +2806,11 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     const SLH_PER_PT=BASE_SUBCAT_LINE_H/BASE_SUBCAT_FONT;
     const SPAD_PER_PT=BASE_SUBCAT_PAD/BASE_SUBCAT_FONT;
 
-    // Estimativa com escala s — usa dois níveis de altura (1 linha vs 2+ linhas)
+    // Estimativa com escala s — altura exata por disciplina (N linhas × dLH + dPad)
     const _estTblH=(s)=>{
         const dF=Math.max(4.5,BASE_DISC_FONT*s);
         const dLH=dF*LH_PER_PT, dPad=dF*PAD_PER_PT;
         const _hH=BASE_HH*s, _tH=BASE_TOT_H*s;
-        const rh1=dLH+dPad;         // 1 linha
-        const rh2=2*dLH+dPad;       // 2+ linhas
         pdf.setFont('helvetica','normal');pdf.setFontSize(dF);
         let h=_hH*2;
         catMap.forEach((catDiscs,catId)=>{
@@ -2822,7 +2820,7 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
                 sds.forEach(dc=>{
                     const w=sid?cDisc-3:cSub+cDisc-3;
                     const ls=pdf.splitTextToSize(dc.nome.toUpperCase(),w);
-                    h+=ls.length>1?rh2:rh1;
+                    h+=ls.length*dLH+dPad;
                 });
             });
             if(catId==='formacao_geral') h+=_tH;
@@ -2849,14 +2847,12 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     const totH=BASE_TOT_H*tableScale;
     // ────────────────────────────────────────────────────────────────────────
 
-    // Dois níveis de altura: 1 linha compacta, 2+ linhas um pouco maior
-    const ROW_H_1L=DISC_LINE_H+DISC_PAD;
-    const ROW_H_2L=2*DISC_LINE_H+DISC_PAD;
+    // Altura exata por disciplina: N linhas × DISC_LINE_H + DISC_PAD
     const calcRowH=(nome,subcatId)=>{
         pdf.setFont('helvetica','normal');pdf.setFontSize(DISC_FONT);
         const w=subcatId?cDisc-3:cSub+cDisc-3;
         const ls=pdf.splitTextToSize(nome.toUpperCase(),w);
-        return ls.length>1?ROW_H_2L:ROW_H_1L;
+        return ls.length*DISC_LINE_H+DISC_PAD;
     };
 
     // Header — "COMPONENTES CURRICULARES" mescla as duas linhas (altura 2×hH)
