@@ -2726,8 +2726,10 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
 
     const emb=cfg?.emblema||{};
     const tipoEmb=emb.tipo||'brasao-brasil';
-    const bW=parseFloat(emb.largura)||16;
-    const bH=parseFloat(emb.altura)||19;
+    const bW=parseFloat(emb.largura)||22;
+    const bH=parseFloat(emb.altura)||26;
+    const embQual=Math.min(100,Math.max(1,Number(emb.qualidade)||100));
+    const embCompression=embQual>=85?'NONE':embQual>=65?'FAST':embQual>=40?'MEDIUM':'SLOW';
     const hCfg=cfg?.cabecalho||{};
     const l1=hCfg.linha1||'REPÚBLICA FEDERATIVA DO BRASIL';
     const l2=hCfg.linha2||'ESTADO DO PIAUÍ';
@@ -2742,7 +2744,7 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
             let src=null,fmt='PNG';
             if(tipoEmb==='custom'&&typeof HIST_UPLOADS!=='undefined'&&HIST_UPLOADS?.emblemaCustom){src=HIST_UPLOADS.emblemaCustom;fmt=src.startsWith('data:image/png')?'PNG':'JPEG';}
             else if(tipoEmb==='brasao-brasil'&&typeof BRASAO_BRASIL!=='undefined'){src=BRASAO_BRASIL;}
-            if(src)pdf.addImage(src,fmt,PW/2-bW/2,y,bW,bH,undefined,'FAST');
+            if(src)pdf.addImage(src,fmt,PW/2-bW/2,y,bW,bH,undefined,embCompression);
         }catch(_){}
     }
     // Textos centralizados abaixo do brasão — 7pt, espaçamento comprimido
@@ -3057,11 +3059,13 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
             pdf.setFont('helvetica','bold');pdf.setFontSize(DISC_FONT);
             const _fgbLns=pdf.splitTextToSize(rowLabel,cNum+cSub+cDisc-3);
             const fgbH=Math.max(totH,_fgbLns.length*DISC_LINE_H+DISC_PAD);
+            const fgbTextH=_fgbLns.length*DISC_LINE_H;
             const fgbTY=y+fgbH/2+DISC_LINE_H*0.35;
+            const fgbLabelY0=y+(fgbH-fgbTextH)/2+DISC_LINE_H*0.75;
             pdf.setFillColor(255,255,255);pdf.rect(tblX,y,UW,fgbH,'F');
             pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);pdf.rect(tblX,y,UW,fgbH,'S');
             pdf.setFont('helvetica','bold');pdf.setFontSize(DISC_FONT);pdf.setTextColor(0,0,0);
-            pdf.text(rowLabel,tblX+2,fgbTY,{maxWidth:cNum+cSub+cDisc-3});
+            _fgbLns.forEach((ln,li)=>pdf.text(ln,tblX+2,fgbLabelY0+li*DISC_LINE_H));
             let nxf=tblX+cNum+cSub+cDisc;
             for(let si=0;si<numSeries;si++){
                 pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);pdf.line(nxf+cNota,y,nxf+cNota,y+fgbH);
@@ -3097,11 +3101,13 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     pdf.setFont('helvetica','bold');pdf.setFontSize(DISC_FONT);
     const _chLns=pdf.splitTextToSize(_chLabel,cNum+cSub+cDisc-3);
     const chTotH=Math.max(totH,_chLns.length*DISC_LINE_H+DISC_PAD);
+    const chTextH=_chLns.length*DISC_LINE_H;
     const totTY=y+chTotH/2+DISC_LINE_H*0.35;
+    const chLabelY0=y+(chTotH-chTextH)/2+DISC_LINE_H*0.75;
     pdf.setFillColor(255,255,255);pdf.rect(tblX,y,UW,chTotH,'F');
     pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);pdf.rect(tblX,y,UW,chTotH,'S');
     pdf.setTextColor(0,0,0);
-    pdf.text(_chLabel,tblX+2,totTY,{maxWidth:cNum+cSub+cDisc-3});
+    _chLns.forEach((ln,li)=>pdf.text(ln,tblX+2,chLabelY0+li*DISC_LINE_H));
     let nx2=tblX+cNum+cSub+cDisc;
     for(let si=0;si<numSeries;si++){
         pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);pdf.line(nx2+cNota,y,nx2+cNota,y+chTotH);
