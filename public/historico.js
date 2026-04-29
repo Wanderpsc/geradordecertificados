@@ -2797,9 +2797,9 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     const AVAIL_TABLE_H=TABLE_BOTTOM_LIMIT-tblStartY;
 
     const BASE_HH=4.0;
-    const BASE_DISC_FONT=6.0,BASE_DISC_LINE_H=2.8,BASE_DISC_PAD=1.4;
-    const BASE_SUBCAT_FONT=5.5,BASE_SUBCAT_LINE_H=2.5,BASE_SUBCAT_PAD=1.3;
-    const BASE_TOT_H=3.5;
+    const BASE_DISC_FONT=6.0,BASE_DISC_LINE_H=2.2,BASE_DISC_PAD=0.8;
+    const BASE_SUBCAT_FONT=5.5,BASE_SUBCAT_LINE_H=2.0,BASE_SUBCAT_PAD=0.8;
+    const BASE_TOT_H=3.0;
     // Razões fixas: altura de linha e padding derivados do tamanho da fonte
     const LH_PER_PT=BASE_DISC_LINE_H/BASE_DISC_FONT; // mm por pt de fonte
     const PAD_PER_PT=BASE_DISC_PAD/BASE_DISC_FONT;
