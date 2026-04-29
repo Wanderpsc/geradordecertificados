@@ -2715,7 +2715,7 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     const numSeries=Math.min(series.length,3);
     const discs=grade.disciplinas||[];
 
-    const PW=210,PH=297,ML=6,MR=6,MT=2;
+    const PW=210,PH=297,ML=12,MR=12,MT=5;
     const UW=PW-ML-MR;
     let y=MT;
 
@@ -2800,13 +2800,13 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     aFld(y+9.6,'ÓRGÃO EMISSOR:',38,58,aluno.orgaoEmissor||'',28);
     aFld(y+9.6,'CPF:',92,102,aluno.cpf||'',UW-104);
     aFld(y+13.0,'DATA DE NASCIMENTO:',1,38,nascStr);
-    aFld(y+16.4,'NATURALIDADE:',1,25,natStr,78);
-    aFld(y+16.4,'NACIONALIDADE:',109,126,aluno.nacionalidade||'Brasileira',UW-128);
+    aFld(y+16.4,'NATURALIDADE:',1,25,natStr,72);
+    aFld(y+16.4,'NACIONALIDADE:',102,132,aluno.nacionalidade||'Brasileira',UW-134);
     aFld(y+19.4,'FILIAÇÃO:',1,16,filStr);
     y+=boxH+0.5;
 
     // TABELA PRINCIPAL
-    const cNum=8,cSub=24,cDisc=40,cTot=15;
+    const cNum=7,cSub=20,cDisc=36,cTot=12;
     const rem=UW-cNum-cSub-cDisc-cTot;
     const pairW=rem/numSeries;
     const cNota=parseFloat((pairW*0.50).toFixed(2));
@@ -2949,7 +2949,7 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     const chY0=y+(hH*2-chLH*chLns.length)/2+chLH*0.85;
     chLns.forEach((l,i)=>pdf.text(l,tblX+UW-cTot/2,chY0+i*chLH,{align:'center'}));}
     // Linha divisória horizontal entre linha 1 e 2 — apenas nas colunas de séries
-    pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);
+    pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.15);
     pdf.line(tblX+cNum+cSub+cDisc,y+hH,tblX+UW-cTot,y+hH);
     // NOTA / CH na segunda linha
     sx=tblX+cNum+cSub+cDisc;
@@ -2999,14 +2999,14 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
                 const rh=discRowH.get(disc)||calcRowH(disc.nome,subcatId);
                 const notasDisc=notas[disc.nome]||{};
                 pdf.setFillColor(255,255,255);pdf.rect(tblX,y,UW,rh,'F');
-                pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);pdf.rect(tblX,y,UW,rh,'S');
+                pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.15);pdf.rect(tblX,y,UW,rh,'S');
                 pdf.setFont('helvetica','normal');pdf.setFontSize(DISC_FONT);pdf.setTextColor(10,10,10);
                 const discTextX=subcatId?tblX+cNum+cSub+1.5:tblX+cNum+1.5;
                 const discLines=pdf.splitTextToSize(disc.nome.toUpperCase(),discW);
                 const textBlockH=discLines.length*DISC_LINE_H;
                 const textStartY=y+(rh-textBlockH)/2+DISC_LINE_H*0.75;
                 discLines.forEach((ln,li)=>pdf.text(ln,discTextX,textStartY+li*DISC_LINE_H));
-                pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);
+                pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.15);
                 if(subcatId)pdf.line(tblX+cNum+cSub,y,tblX+cNum+cSub,y+rh);
                 pdf.line(tblX+cNum+cSub+cDisc,y,tblX+cNum+cSub+cDisc,y+rh);
                 let nx=tblX+cNum+cSub+cDisc;
@@ -3022,7 +3022,7 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
                     if(catId==='itinerarios'){itinCHSerie[si]+=(ch||0);}
                     pdf.setFont('helvetica','normal');pdf.setFontSize(DISC_FONT);pdf.setTextColor(0,0,0);
                     pdf.text(nv,nx+cNota/2,midY,{align:'center'});
-                    pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);pdf.line(nx+cNota,y,nx+cNota,y+rh);
+                    pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.15);pdf.line(nx+cNota,y,nx+cNota,y+rh);
                     pdf.text(cv,nx+cNota+cCH/2,midY,{align:'center'});
                     pdf.line(nx+pairW,y,nx+pairW,y+rh);nx+=pairW;
                 }
@@ -3037,7 +3037,7 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
                 const subLabel=(subcatLabels[subcatId]||subcatId).toUpperCase();
                 const subcatBodyH=y-subcatStartY;
                 pdf.setFillColor(255,255,255);pdf.rect(tblX+cNum,subcatStartY,cSub,subcatBodyH,'F');
-                pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);pdf.rect(tblX+cNum,subcatStartY,cSub,subcatBodyH,'S');
+                pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.15);pdf.rect(tblX+cNum,subcatStartY,cSub,subcatBodyH,'S');
                 // Fonte igual à planilha toda (DISC_FONT), sem redução
                 pdf.setFont('helvetica','bold');pdf.setFontSize(DISC_FONT);pdf.setTextColor(0,0,0);
                 const subLns=pdf.splitTextToSize(subLabel,cSub-1.5);
@@ -3067,12 +3067,12 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
             const fgbTY=y+fgbH/2+DISC_LINE_H*0.35;
             const fgbLabelY0=y+(fgbH-fgbTextH)/2+DISC_LINE_H*0.75;
             pdf.setFillColor(255,255,255);pdf.rect(tblX,y,UW,fgbH,'F');
-            pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);pdf.rect(tblX,y,UW,fgbH,'S');
+            pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.15);pdf.rect(tblX,y,UW,fgbH,'S');
             pdf.setFont('helvetica','bold');pdf.setFontSize(DISC_FONT);pdf.setTextColor(0,0,0);
             _fgbLns.forEach((ln,li)=>pdf.text(ln,tblX+2,fgbLabelY0+li*DISC_LINE_H));
             let nxf=tblX+cNum+cSub+cDisc;
             for(let si=0;si<numSeries;si++){
-                pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);pdf.line(nxf+cNota,y,nxf+cNota,y+fgbH);
+                pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.15);pdf.line(nxf+cNota,y,nxf+cNota,y+fgbH);
                 pdf.setFont('helvetica','bold');pdf.setFontSize(DISC_FONT);pdf.setTextColor(0,0,0);
                 pdf.text(String(rowCHSerie[si]||''),nxf+cNota+cCH/2,fgbTY,{align:'center'});
                 pdf.line(nxf+pairW,y,nxf+pairW,y+fgbH);nxf+=pairW;
@@ -3086,7 +3086,7 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
             const midY=catStartY+catBodyH/2;
             // Fundo branco na coluna cNum
             pdf.setFillColor(255,255,255);pdf.rect(tblX,catStartY,cNum,catBodyH,'F');
-            pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);pdf.rect(tblX,catStartY,cNum,catBodyH,'S');
+            pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.15);pdf.rect(tblX,catStartY,cNum,catBodyH,'S');
             // Texto vertical de baixo para cima (angle:90 CCW)
             // align:'center' é ignorado com angle em muitas versões de jsPDF → calcular manualmente
             pdf.setFont('helvetica','bold');pdf.setFontSize(DISC_FONT);pdf.setTextColor(0,0,0);
@@ -3106,12 +3106,12 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     const totTY=y+chTotH/2+DISC_LINE_H*0.35;
     const chLabelY0=y+(chTotH-chTextH)/2+DISC_LINE_H*0.75;
     pdf.setFillColor(255,255,255);pdf.rect(tblX,y,UW,chTotH,'F');
-    pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);pdf.rect(tblX,y,UW,chTotH,'S');
+    pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.15);pdf.rect(tblX,y,UW,chTotH,'S');
     pdf.setTextColor(0,0,0);
     _chLns.forEach((ln,li)=>pdf.text(ln,tblX+2,chLabelY0+li*DISC_LINE_H));
     let nx2=tblX+cNum+cSub+cDisc;
     for(let si=0;si<numSeries;si++){
-        pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);pdf.line(nx2+cNota,y,nx2+cNota,y+chTotH);
+        pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.15);pdf.line(nx2+cNota,y,nx2+cNota,y+chTotH);
         pdf.text(String(totalCHSerie[si]||''),nx2+cNota+cCH/2,totTY,{align:'center'});
         pdf.line(nx2+pairW,y,nx2+pairW,y+chTotH);nx2+=pairW;
     }
@@ -3122,7 +3122,7 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     // Linha RESULTADO FINAL
     const rfTY=y+totH/2+DISC_LINE_H*0.35;
     pdf.setFillColor(255,255,255);pdf.rect(tblX,y,UW,totH,'F');
-    pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);pdf.rect(tblX,y,UW,totH,'S');
+    pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.15);pdf.rect(tblX,y,UW,totH,'S');
     pdf.setFont('helvetica','bold');pdf.setFontSize(DISC_FONT);pdf.setTextColor(0,0,0);
     pdf.text('RESULTADO FINAL: ',tblX+2,rfTY);
     pdf.setFont('helvetica','normal');
@@ -3130,7 +3130,7 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     y+=totH;
 
     // Borda externa da tabela
-    pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.2);
+    pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.2);
     pdf.rect(tblX,tblStartY,UW,y-tblStartY,'S');
     y+=2;
 
@@ -3151,7 +3151,7 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     const sigY=rodapeY+13;
     const sigLineW=58;
     [{cx:PW*0.28,sig:sig1},{cx:PW*0.72,sig:sig2}].forEach(({cx,sig})=>{
-        pdf.setLineWidth(0.5);pdf.setDrawColor(0,0,0);
+        pdf.setLineWidth(0.5);pdf.setDrawColor(0,40,120);
         pdf.line(cx-sigLineW/2,sigY,cx+sigLineW/2,sigY);
         _hText(pdf,sig,cx,sigY+4,{size:7,align:'center',bold:true});
     });
@@ -3166,7 +3166,7 @@ function _histVersoMedioPortrait(pdf, hist, cfg) {
     const seriesInfo=hist.seriesInfo||[];
     const series=(grade.nomesSeries&&grade.nomesSeries.length)?grade.nomesSeries:['1ª Série','2ª Série','3ª Série'];
 
-    const PW=210,PH=297,ML=8,MR=8,MT=8;
+    const PW=210,PH=297,ML=12,MR=12,MT=8;
     const UW=PW-ML-MR;
     let y=MT;
 
@@ -3225,7 +3225,7 @@ function _histVersoMedioPortrait(pdf, hist, cfg) {
     pdf.line(ML+20,y+4,ML+UW,y+4);y+=6;
 
     // TABELA DE SÉRIES
-    const sColW=[22,18,96,30,28];
+    const sColW=[21,17,90,30,28];
     const sHdrs=['SÉRIE','ANO','ESTABELECIMENTO DE ENSINO','MUNICÍPIO','ESTADO'];
     const sHdrH=5,sRowH=6;
     pdf.setFillColor(0,40,120);pdf.rect(ML,y,UW,sHdrH,'F');
@@ -3316,7 +3316,7 @@ function _histVersoMedioPortrait(pdf, hist, cfg) {
     _drawLocalData(pdf,localDataV,rodapeYv,PW);
     const sigYv=rodapeYv+14;
     [{cx:ML+UW*0.25,sig:sig1v},{cx:ML+UW*0.75,sig:sig2v}].forEach(({cx,sig})=>{
-        pdf.setLineWidth(0.4);pdf.setDrawColor(0,0,0);
+        pdf.setLineWidth(0.4);pdf.setDrawColor(0,40,120);
         pdf.line(cx-35,sigYv,cx+35,sigYv);
         _hText(pdf,sig,cx,sigYv+4,{size:6.5,align:'center',bold:true});
     });
@@ -3339,7 +3339,7 @@ function _histFrente(pdf, hist, cfg) {
     const isMedio = !isFund;
     const PW = isMedio ? 297 : 210;
     const PH = isMedio ? 210 : 297;
-    const ML = 5, MR = 5, MT = 5;
+    const ML = isMedio ? 12 : 8, MR = isMedio ? 12 : 8, MT = 8;
     const UW = PW - ML - MR; // 287mm para médio, 200mm para fundamental
     let y = MT;
 
@@ -3595,7 +3595,7 @@ function _histFrente(pdf, hist, cfg) {
         // linha de categoria
         pdf.setFillColor(254, 243, 199);
         pdf.rect(tblX, y, UW, catH, 'F');
-        pdf.setDrawColor(200, 150, 50); pdf.setLineWidth(0.15);
+        pdf.setDrawColor(0, 40, 120); pdf.setLineWidth(0.15);
         pdf.rect(tblX, y, UW, catH, 'S');
         pdf.setFont('helvetica', 'bold'); pdf.setFontSize(5.5); pdf.setTextColor(100, 55, 0);
         pdf.text(catNome, tblX + cVert + 1.5, y + 3, { maxWidth: UW - cVert - 2 });
@@ -3606,14 +3606,14 @@ function _histFrente(pdf, hist, cfg) {
             const bg = rowIdx % 2 === 0 ? [248, 252, 255] : [255, 255, 255];
             pdf.setFillColor(...bg);
             pdf.rect(tblX, y, UW, rowH, 'F');
-            pdf.setDrawColor(210, 225, 240); pdf.setLineWidth(0.1);
+            pdf.setDrawColor(0, 40, 120); pdf.setLineWidth(0.1);
             pdf.rect(tblX, y, UW, rowH, 'S');
             pdf.line(tblX + cVert, y, tblX + cVert, y + rowH);
 
             // nome disciplina
             pdf.setFont('helvetica', 'normal'); pdf.setFontSize(5.5); pdf.setTextColor(15, 15, 15);
             pdf.text(disc.nome, tblX + cVert + 1.2, y + rowH - 1, { maxWidth: cDisc - 2 });
-            pdf.setDrawColor(180, 200, 225);
+            pdf.setDrawColor(0, 40, 120);
             pdf.line(tblX + cVert + cDisc, y, tblX + cVert + cDisc, y + rowH);
 
             // polivalência
@@ -3721,7 +3721,7 @@ function _histFrente(pdf, hist, cfg) {
     const cx1f = ML + UW * 0.25;
     const cx2f = ML + UW * 0.75;
     [{ cx: cx1f, sig: sig1 }, { cx: cx2f, sig: sig2 }].forEach(({ cx, sig }) => {
-        pdf.setLineWidth(0.4); pdf.setDrawColor(0, 0, 0);
+        pdf.setLineWidth(0.4); pdf.setDrawColor(0, 40, 120);
         pdf.line(cx - 35, y, cx + 35, y);
         _hText(pdf, sig, cx, y + 4, { size: 6.5, align: 'center', bold: true });
     });
@@ -3745,7 +3745,7 @@ function _histVersoFundamental(pdf, hist, cfg) {
     const discs = grade.disciplinas || [];
     const numAvals = 8;
 
-    const PW = 210, PH = 297, ML = 7, MR = 7, MT = 7;
+    const PW = 210, PH = 297, ML = 12, MR = 12, MT = 8;
     const UW = PW - ML - MR;
     let y = MT;
 
@@ -3864,7 +3864,7 @@ function _histVersoMedio(pdf, hist, cfg) {
     const discs = grade.disciplinas || [];
 
     // Em paisagem A4: 297 x 210
-    const PW = 297, PH = 210, ML = 7, MR = 7, MT = 7;
+    const PW = 297, PH = 210, ML = 12, MR = 12, MT = 8;
     const UW = PW - ML - MR;
     let y = MT;
 
@@ -4057,7 +4057,7 @@ function _histVersoRodape(pdf, hist, cfg, { PW, PH, ML, MR, UW, y, isMedio }) {
     const cx1 = ML + UW * 0.25;
     const cx2 = ML + UW * 0.75;
     [{ cx: cx1, sig: sig1 }, { cx: cx2, sig: sig2 }].forEach(({ cx, sig }) => {
-        pdf.setLineWidth(0.4); pdf.setDrawColor(0, 0, 0);
+        pdf.setLineWidth(0.4); pdf.setDrawColor(0, 40, 120);
         pdf.line(cx - 35, y, cx + 35, y);
         _hText(pdf, sig, cx, y + 4, { size: 6.5, align: 'center', bold: true });
     });
