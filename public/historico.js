@@ -2961,20 +2961,21 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
                 const subcatBodyH=y-subcatStartY;
                 pdf.setFillColor(255,255,255);pdf.rect(tblX+cNum,subcatStartY,cSub,subcatBodyH,'F');
                 pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);pdf.rect(tblX+cNum,subcatStartY,cSub,subcatBodyH,'S');
-                // Ajusta fonte automaticamente para o texto caber sem corte
-                let subFs=Math.min(5.5,subcatFontSz);
+                // Começa com 6pt (igual à coluna de categoria) e reduz até caber
+                let subFs=6;
+                pdf.setFont('helvetica','bold');pdf.setFontSize(subFs);
                 let subLns=pdf.splitTextToSize(subLabel,cSub-1.5);
                 let subLH=subFs*LH_PER_PT;
-                // Reduz fonte até o bloco de texto caber na célula
-                while(subLns.length*subLH+subFs*0.3>subcatBodyH && subFs>3.0){
+                while(subLns.length*subLH+subLH*0.25>subcatBodyH && subFs>3.0){
                     subFs-=0.2;
-                    pdf.setFontSize(subFs);
+                    pdf.setFont('helvetica','bold');pdf.setFontSize(subFs);
                     subLns=pdf.splitTextToSize(subLabel,cSub-1.5);
                     subLH=subFs*LH_PER_PT;
                 }
                 const subTextH=subLns.length*subLH;
-                const subY0=subcatStartY+(subcatBodyH-subTextH)/2+subFs*0.72;
-                pdf.setFont('helvetica','bold');pdf.setFontSize(subFs);pdf.setTextColor(0,0,0);
+                // Centralização igual ao padrão das linhas de disciplina (subLH*0.75 = offset de baseline)
+                const subY0=subcatStartY+(subcatBodyH-subTextH)/2+subLH*0.75;
+                pdf.setTextColor(0,0,0);
                 subLns.forEach((ln,li)=>pdf.text(ln,tblX+cNum+cSub/2,subY0+li*subLH,{align:'center'}));
             }
         });
