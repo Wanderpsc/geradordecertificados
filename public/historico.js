@@ -2959,16 +2959,22 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
             if(subcatId){
                 const subLabel=(subcatLabels[subcatId]||subcatId).toUpperCase();
                 const subcatBodyH=y-subcatStartY;
-                const midSubY=subcatStartY+subcatBodyH/2;
                 pdf.setFillColor(255,255,255);pdf.rect(tblX+cNum,subcatStartY,cSub,subcatBodyH,'F');
                 pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);pdf.rect(tblX+cNum,subcatStartY,cSub,subcatBodyH,'S');
-                // Texto horizontal centralizado na célula
-                const subFs=Math.max(3.5,Math.min(5.5,cSub*0.22));
-                pdf.setFont('helvetica','bold');pdf.setFontSize(subFs);pdf.setTextColor(10,30,110);
-                const subLns=pdf.splitTextToSize(subLabel,cSub-1.5);
-                const subLH=subFs*0.45;
+                // Ajusta fonte automaticamente para o texto caber sem corte
+                let subFs=Math.min(5.5,subcatFontSz);
+                let subLns=pdf.splitTextToSize(subLabel,cSub-1.5);
+                let subLH=subFs*LH_PER_PT;
+                // Reduz fonte até o bloco de texto caber na célula
+                while(subLns.length*subLH+subFs*0.3>subcatBodyH && subFs>3.0){
+                    subFs-=0.2;
+                    pdf.setFontSize(subFs);
+                    subLns=pdf.splitTextToSize(subLabel,cSub-1.5);
+                    subLH=subFs*LH_PER_PT;
+                }
                 const subTextH=subLns.length*subLH;
-                const subY0=subcatStartY+(subcatBodyH-subTextH)/2+subFs*0.35;
+                const subY0=subcatStartY+(subcatBodyH-subTextH)/2+subFs*0.72;
+                pdf.setFont('helvetica','bold');pdf.setFontSize(subFs);pdf.setTextColor(0,0,0);
                 subLns.forEach((ln,li)=>pdf.text(ln,tblX+cNum+cSub/2,subY0+li*subLH,{align:'center'}));
             }
         });
