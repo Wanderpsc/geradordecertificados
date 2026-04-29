@@ -2738,17 +2738,18 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     const end_=hCfg.endereco||'';
     const resol=cfg?.frente?.resolucao||'';
 
-    // Brasão centralizado no topo
+    // Brasão centralizado no topo — posicionado logo abaixo da linha azul (1mm de gap)
+    const brasaoY=y-0.5; // sobe levemente sem tocar na linha (gap ~0.2mm da segunda linha)
     if(tipoEmb!=='nenhum'){
         try{
             let src=null,fmt='PNG';
             if(tipoEmb==='custom'&&typeof HIST_UPLOADS!=='undefined'&&HIST_UPLOADS?.emblemaCustom){src=HIST_UPLOADS.emblemaCustom;fmt=src.startsWith('data:image/png')?'PNG':'JPEG';}
             else if(tipoEmb==='brasao-brasil'&&typeof BRASAO_BRASIL!=='undefined'){src=BRASAO_BRASIL;}
-            if(src)pdf.addImage(src,fmt,PW/2-bW/2,y,bW,bH,undefined,embCompression);
+            if(src)pdf.addImage(src,fmt,PW/2-bW/2,brasaoY,bW,bH,undefined,embCompression);
         }catch(_){}
     }
-    // Textos centralizados abaixo do brasão — 7pt, espaçamento comprimido
-    y+=bH+0.5;
+    // Textos centralizados abaixo do brasão — espaço de separação aumentado
+    y+=bH+5;
     _hText(pdf,l1,PW/2,y,{bold:true,size:7,align:'center'});y+=3.0;
     _hText(pdf,l2,PW/2,y,{bold:true,size:7,align:'center'});y+=3.0;
     _hText(pdf,l3,PW/2,y,{size:7,align:'center'});y+=3.0;
