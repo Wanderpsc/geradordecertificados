@@ -2806,35 +2806,29 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     const SLH_PER_PT=BASE_SUBCAT_LINE_H/BASE_SUBCAT_FONT;
     const SPAD_PER_PT=BASE_SUBCAT_PAD/BASE_SUBCAT_FONT;
 
-    // Estimativa com escala s — usa fontes reais (com clamp) e altura uniforme real
+    // Estimativa com escala s — usa dois níveis de altura (1 linha vs 2+ linhas)
     const _estTblH=(s)=>{
         const dF=Math.max(4.5,BASE_DISC_FONT*s);
         const dLH=dF*LH_PER_PT, dPad=dF*PAD_PER_PT;
         const _hH=BASE_HH*s, _tH=BASE_TOT_H*s;
-        // Altura uniforme: máx linhas necessárias em qualquer disciplina nesta escala
+        const rh1=dLH+dPad;         // 1 linha
+        const rh2=2*dLH+dPad;       // 2+ linhas
         pdf.setFont('helvetica','normal');pdf.setFontSize(dF);
-        let mxL=1;
-        catMap.forEach(catDiscs=>{
+        let h=_hH*2;
+        catMap.forEach((catDiscs,catId)=>{
             const sm=new Map();
             catDiscs.forEach(dc=>{const sk=dc.subcategoria||'';if(!sm.has(sk))sm.set(sk,[]);sm.get(sk).push(dc);});
             sm.forEach((sds,sid)=>{
                 sds.forEach(dc=>{
                     const w=sid?cDisc-3:cSub+cDisc-3;
                     const ls=pdf.splitTextToSize(dc.nome.toUpperCase(),w);
-                    mxL=Math.max(mxL,ls.length);
+                    h+=ls.length>1?rh2:rh1;
                 });
             });
-        });
-        const rowH=Math.max(dLH+dPad, mxL*dLH+dPad);
-        let h=_hH*2;
-        catMap.forEach((catDiscs,catId)=>{
-            let nRows=0;
-            catDiscs.forEach(()=>nRows++);
-            h+=nRows*rowH;
             if(catId==='formacao_geral') h+=_tH;
             if(catId==='itinerarios') h+=_tH;
         });
-        return h+_tH*2; // CARGA TOTAL + RESULTADO FINAL
+        return h+_tH*2;
     };
 
     // Pass 1 — escala inicial
@@ -2855,22 +2849,15 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     const totH=BASE_TOT_H*tableScale;
     // ────────────────────────────────────────────────────────────────────────
 
-    // Altura uniforme: máx linhas necessárias para qualquer disciplina (sem cortar texto)
-    pdf.setFont('helvetica','normal');pdf.setFontSize(DISC_FONT);
-    let _mxL=1;
-    catMap.forEach(catDiscs=>{
-        const sm=new Map();
-        catDiscs.forEach(dc=>{const sk=dc.subcategoria||'';if(!sm.has(sk))sm.set(sk,[]);sm.get(sk).push(dc);});
-        sm.forEach((sds,sid)=>{
-            sds.forEach(dc=>{
-                const w=sid?cDisc-3:cSub+cDisc-3;
-                const ls=pdf.splitTextToSize(dc.nome.toUpperCase(),w);
-                _mxL=Math.max(_mxL,ls.length);
-            });
-        });
-    });
-    const UNIFORM_ROW_H=Math.max(MIN_ROW_H, _mxL*DISC_LINE_H+DISC_PAD);
-    const calcRowH=()=>UNIFORM_ROW_H;
+    // Dois níveis de altura: 1 linha compacta, 2+ linhas um pouco maior
+    const ROW_H_1L=DISC_LINE_H+DISC_PAD;
+    const ROW_H_2L=2*DISC_LINE_H+DISC_PAD;
+    const calcRowH=(nome,subcatId)=>{
+        pdf.setFont('helvetica','normal');pdf.setFontSize(DISC_FONT);
+        const w=subcatId?cDisc-3:cSub+cDisc-3;
+        const ls=pdf.splitTextToSize(nome.toUpperCase(),w);
+        return ls.length>1?ROW_H_2L:ROW_H_1L;
+    };
 
     // Header — "COMPONENTES CURRICULARES" mescla as duas linhas (altura 2×hH)
     pdf.setFillColor(255,255,255);pdf.rect(tblX,y,UW,hH*2,'F');
@@ -2931,7 +2918,7 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
             const subcatStartY=y; // marca início para célula mesclada da subcategoria
             subDiscs.forEach(disc=>{
                 const discW=subcatId?cDisc-3:cSub+cDisc-3;
-                const rh=calcRowH();
+                const rh=calcRowH(disc.nome,subcatId);
                 const notasDisc=notas[disc.nome]||{};
                 pdf.setFillColor(255,255,255);pdf.rect(tblX,y,UW,rh,'F');
                 pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);pdf.rect(tblX,y,UW,rh,'S');
