@@ -2778,7 +2778,7 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     y+=boxH+0.5;
 
     // TABELA PRINCIPAL
-    const cNum=8,cSub=18,cDisc=40,cTot=15;
+    const cNum=8,cSub=24,cDisc=40,cTot=15;
     const rem=UW-cNum-cSub-cDisc-cTot;
     const pairW=rem/numSeries;
     const cNota=parseFloat((pairW*0.50).toFixed(2));
@@ -2829,7 +2829,10 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
                     const subLns=pdf.splitTextToSize(subLabel,cSub-1.5);
                     const minSubH=subLns.length*dLH+dPad;
                     const naturalH=heights.reduce((a,b)=>a+b,0);
-                    if(naturalH<minSubH) heights[heights.length-1]+=(minSubH-naturalH);
+                    if(naturalH<minSubH){
+                        const extra=(minSubH-naturalH)/heights.length;
+                        heights.forEach((_,i)=>heights[i]+=extra);
+                    }
                     pdf.setFont('helvetica','normal');pdf.setFontSize(dF);
                 }
                 h+=heights.reduce((a,b)=>a+b,0);
@@ -2881,7 +2884,11 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
                 const subLns=pdf.splitTextToSize(subLabel,cSub-1.5);
                 const minSubH=subLns.length*DISC_LINE_H+DISC_PAD;
                 const naturalH=heights.reduce((a,b)=>a+b,0);
-                if(naturalH<minSubH) heights[heights.length-1]+=(minSubH-naturalH);
+                if(naturalH<minSubH){
+                    // Distribui o excesso igualmente entre todas as linhas do grupo
+                    const extra=(minSubH-naturalH)/heights.length;
+                    heights.forEach((_,i)=>heights[i]+=extra);
+                }
             }
             sds.forEach((dc,i)=>discRowH.set(dc,heights[i]));
         });
