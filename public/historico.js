@@ -2816,7 +2816,8 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
         catMap.forEach((catDiscs,catId)=>{
             const sm=new Map();
             catDiscs.forEach(dc=>{const sk=dc.subcategoria||'';if(!sm.has(sk))sm.set(sk,[]);sm.get(sk).push(dc);});
-            sm.forEach((sds,sid)=>{
+            const _ord=k=>k===''?1:k.toUpperCase().includes('ATIVIDADES')?2:0;
+            [...sm.entries()].sort((a,b)=>_ord(a[0])-_ord(b[0])).forEach(([sid,sds])=>{
                 sds.forEach(dc=>{
                     const w=sid?cDisc-3:cSub+cDisc-3;
                     const ls=pdf.splitTextToSize(dc.nome.toUpperCase(),w);
@@ -2910,7 +2911,11 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
         const subcatMap=new Map();
         catDiscs.forEach(dc=>{const sk=dc.subcategoria||'';if(!subcatMap.has(sk))subcatMap.set(sk,[]);subcatMap.get(sk).push(dc);});
 
-        subcatMap.forEach((subDiscs,subcatId)=>{
+        // Ordena subcategorias: APROFUNDAMENTO primeiro, sem subcat no meio, ATIVIDADES por último
+        const _subcatOrder=k=>k===''?1:k.toUpperCase().includes('ATIVIDADES')?2:0;
+        const _sortedSubcats=[...subcatMap.entries()].sort((a,b)=>_subcatOrder(a[0])-_subcatOrder(b[0]));
+
+        _sortedSubcats.forEach(([subcatId,subDiscs])=>{
             const subcatStartY=y; // marca início para célula mesclada da subcategoria
             subDiscs.forEach(disc=>{
                 const discW=subcatId?cDisc-3:cSub+cDisc-3;
