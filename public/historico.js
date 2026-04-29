@@ -2934,7 +2934,7 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
                 pdf.line(tblX+cNum+cSub+cDisc,y,tblX+cNum+cSub+cDisc,y+rh);
                 let nx=tblX+cNum+cSub+cDisc;
                 let discChTot=0;
-                const midY=y+rh/2+DISC_FONT*0.18;
+                const midY=y+rh/2+DISC_LINE_H*0.35;
                 for(let si=0;si<numSeries;si++){
                     const nd=notasDisc[String(si+1)]||{};
                     const nv=nd.nota!==undefined?Number(nd.nota).toFixed(1):'';
@@ -2961,8 +2961,8 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
                 const subcatBodyH=y-subcatStartY;
                 pdf.setFillColor(255,255,255);pdf.rect(tblX+cNum,subcatStartY,cSub,subcatBodyH,'F');
                 pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);pdf.rect(tblX+cNum,subcatStartY,cSub,subcatBodyH,'S');
-                // Começa com 6pt (igual à coluna de categoria) e reduz até caber
-                let subFs=6;
+                // Começa com DISC_FONT (mesma fonte de toda a tabela) e reduz até caber
+                let subFs=DISC_FONT;
                 pdf.setFont('helvetica','bold');pdf.setFontSize(subFs);
                 let subLns=pdf.splitTextToSize(subLabel,cSub-1.5);
                 let subLH=subFs*LH_PER_PT;
@@ -2989,7 +2989,7 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
                 :'TOTAL GERAL DA CARGA HORÁRIA DOS ITINÉRÁRIOS FORMATIVOS';
             const rowTot=isFgb?fgbChTotal:itinChTotal;
             const fgbH=totH;
-            const fgbTY=y+fgbH*0.72;
+            const fgbTY=y+fgbH/2+DISC_LINE_H*0.35;
             pdf.setFillColor(255,255,255);pdf.rect(tblX,y,UW,fgbH,'F');
             pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);pdf.rect(tblX,y,UW,fgbH,'S');
             pdf.setFont('helvetica','bold');pdf.setFontSize(DISC_FONT);pdf.setTextColor(0,0,0);
@@ -3016,8 +3016,8 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
             pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);pdf.rect(tblX,catStartY,cNum,catBodyH,'S');
             // Texto vertical de baixo para cima (angle:90 CCW)
             // align:'center' é ignorado com angle em muitas versões de jsPDF → calcular manualmente
-            pdf.setFont('helvetica','bold');pdf.setFontSize(6);pdf.setTextColor(0,0,0);
-            const catTW=pdf.getStringUnitWidth(catNome)*6/pdf.internal.scaleFactor;
+            pdf.setFont('helvetica','bold');pdf.setFontSize(DISC_FONT);pdf.setTextColor(0,0,0);
+            const catTW=pdf.getStringUnitWidth(catNome)*DISC_FONT/pdf.internal.scaleFactor;
             // startY = ponto inferior do texto (texto cresce para cima a partir daqui)
             const txtStartY=Math.min(catEndY-1, midY+catTW/2);
             pdf.text(catNome,tblX+cNum*0.65,txtStartY,{angle:90});
@@ -3025,7 +3025,7 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     });
 
     // Linha CARGA HORÁRIA TOTAL (FGB + Itinérários)
-    const totTY=y+totH*0.72;
+    const totTY=y+totH/2+DISC_LINE_H*0.35;
     pdf.setFillColor(255,255,255);pdf.rect(tblX,y,UW,totH,'F');
     pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);pdf.rect(tblX,y,UW,totH,'S');
     pdf.setFont('helvetica','bold');pdf.setFontSize(DISC_FONT);pdf.setTextColor(0,0,0);
@@ -3041,7 +3041,7 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     y+=totH;
 
     // Linha RESULTADO FINAL
-    const rfTY=y+totH*0.72;
+    const rfTY=y+totH/2+DISC_LINE_H*0.35;
     pdf.setFillColor(255,255,255);pdf.rect(tblX,y,UW,totH,'F');
     pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);pdf.rect(tblX,y,UW,totH,'S');
     pdf.setFont('helvetica','bold');pdf.setFontSize(DISC_FONT);pdf.setTextColor(0,0,0);
