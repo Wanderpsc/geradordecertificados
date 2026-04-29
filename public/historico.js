@@ -3113,7 +3113,7 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
         rodapeY=25;
     } else {
         // posição fixa: início da área reservada para o rodapé
-        rodapeY=PH-RODAPE_H+4;
+        rodapeY=PH-RODAPE_H-2;
     }
     _drawLocalData(pdf,localData,rodapeY,PW);
     const sigY=rodapeY+13;
