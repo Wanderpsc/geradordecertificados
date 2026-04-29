@@ -6,6 +6,28 @@
 // ==================== ESTADO ====================
 let HIST_UPLOADS = JSON.parse(localStorage.getItem('histUploads') || '{}');
 
+// ==================== FETCH COM TIMEOUT ====================
+async function _fetchHist(url, opcoes, timeoutMs = 90000) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+        const resp = await fetch(url, { ...opcoes, signal: controller.signal });
+        clearTimeout(timer);
+        return resp;
+    } catch (e) {
+        clearTimeout(timer);
+        if (e.name === 'AbortError') {
+            const err = new Error('timeout');
+            err.isTimeout = true;
+            throw err;
+        }
+        throw e;
+    }
+}
+
+const _MSG_AGUARDANDO = '<div style="text-align:center;color:#9ca3af;padding:20px;grid-column:1/-1;">⏳ Aguardando servidor... (pode levar até 1 min na 1ª conexão)</div>';
+const _MSG_TIMEOUT = '<div style="text-align:center;color:#f59e0b;padding:20px;grid-column:1/-1;">&#9888;&#65039; Servidor não respondeu. <button onclick="inicializarHistorico()" style="background:none;border:none;color:#3b82f6;cursor:pointer;text-decoration:underline;font-size:inherit;">Tentar novamente</button></div>';
+
 const HIST_STATE = {
     grades: [],
     matrizes: [],
@@ -248,8 +270,9 @@ async function carregarModelosHist() {
     const grid = document.getElementById('histModelosGrid');
     if (!grid) return;
 
+    grid.innerHTML = _MSG_AGUARDANDO;
     try {
-        const resp = await fetch(`${API_URL}/modelos?tipo=historico`, {
+        const resp = await _fetchHist(`${API_URL}/modelos?tipo=historico`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await resp.json();
@@ -272,7 +295,7 @@ async function carregarModelosHist() {
             </div>
         `).join('');
     } catch(e) {
-        if (grid) grid.innerHTML = '<div style="text-align:center;color:#ef4444;padding:20px;grid-column:1/-1;">Erro ao carregar modelos.</div>';
+        if (grid) grid.innerHTML = e.isTimeout ? _MSG_TIMEOUT : '<div style="text-align:center;color:#ef4444;padding:20px;grid-column:1/-1;">Erro ao carregar modelos.</div>';
     }
 }
 
@@ -369,8 +392,9 @@ async function carregarListaMatrizes() {
     if (!token) return;
     const container = document.getElementById('listaMatrizes');
     if (!container) return;
+    container.innerHTML = _MSG_AGUARDANDO;
     try {
-        const resp = await fetch(`${API_URL}/historicos/matrizes`, {
+        const resp = await _fetchHist(`${API_URL}/historicos/matrizes`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await resp.json();
@@ -391,7 +415,7 @@ async function carregarListaMatrizes() {
             </div>
         `).join('');
     } catch (e) {
-        if (container) container.innerHTML = '<div style="text-align:center;color:#ef4444;padding:20px;grid-column:1/-1;">Erro ao carregar matrizes.</div>';
+        if (container) container.innerHTML = e.isTimeout ? _MSG_TIMEOUT : '<div style="text-align:center;color:#ef4444;padding:20px;grid-column:1/-1;">Erro ao carregar matrizes.</div>';
     }
 }
 
@@ -583,9 +607,11 @@ async function carregarListaGrades() {
     const token = localStorage.getItem('token');
     if (!token) return;
     const container = document.getElementById('listaGrades');
+    if (!container) return;
 
+    container.innerHTML = _MSG_AGUARDANDO;
     try {
-        const resp = await fetch(`${API_URL}/historicos/grades`, {
+        const resp = await _fetchHist(`${API_URL}/historicos/grades`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await resp.json();
@@ -621,7 +647,7 @@ async function carregarListaGrades() {
             </div>
         `).join('');
     } catch (e) {
-        container.innerHTML = '<div style="text-align: center; color: #ef4444; padding: 20px; grid-column: 1/-1;">Erro ao carregar grades.</div>';
+        if (container) container.innerHTML = e.isTimeout ? _MSG_TIMEOUT : '<div style="text-align: center; color: #ef4444; padding: 20px; grid-column: 1/-1;">Erro ao carregar grades.</div>';
     }
 }
 
@@ -2257,7 +2283,7 @@ async function carregarListaHistoricos() {
     try {
         const tipo = document.getElementById('histTipo')?.value || '';
         const url = `${API_URL}/historicos` + (tipo ? `?tipo=${tipo}` : '');
-        const resp = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+        const resp = await _fetchHist(url, { headers: { 'Authorization': `Bearer ${token}` } });
         const data = await resp.json();
 
         if (!data.success || !data.historicos.length) {
@@ -2322,7 +2348,7 @@ async function carregarListaHistoricos() {
         );
         filtrarListaAlunosHistorico();
     } catch (e) {
-        container.innerHTML = '<div style="text-align:center;padding:20px;color:#ef4444;">Erro ao carregar históricos.</div>';
+        container.innerHTML = e.isTimeout ? _MSG_TIMEOUT : '<div style="text-align:center;padding:20px;color:#ef4444;">Erro ao carregar históricos.</div>';
     }
 }
 
@@ -3042,7 +3068,6 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
                 pdf.setFont('helvetica','bold');pdf.setFontSize(DISC_FONT);pdf.setTextColor(0,0,0);
                 pdf.text(String(rowCHSerie[si]||''),nxf+cNota+cCH/2,fgbTY,{align:'center'});
                 pdf.line(nxf+pairW,y,nxf+pairW,y+fgbH);nxf+=pairW;
-            }
             }
             pdf.line(tblX+UW-cTot,y,tblX+UW-cTot,y+fgbH);
             pdf.text(String(rowTot||''),tblX+UW-cTot+cTot/2,fgbTY,{align:'center'});
