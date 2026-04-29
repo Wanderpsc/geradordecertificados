@@ -2837,10 +2837,21 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
                 }
                 h+=heights.reduce((a,b)=>a+b,0);
             });
-            if(catId==='formacao_geral') h+=_tH;
-            if(catId==='itinerarios') h+=_tH;
+            if(catId==='formacao_geral'){
+                pdf.setFont('helvetica','bold');pdf.setFontSize(dF);
+                const lns=pdf.splitTextToSize('TOTAL GERAL DA CARGA HORÁRIA DA FORMAÇÃO GERAL BÁSICA',cNum+cSub+cDisc-3);
+                h+=Math.max(_tH,lns.length*dLH+dPad);
+            }
+            if(catId==='itinerarios'){
+                pdf.setFont('helvetica','bold');pdf.setFontSize(dF);
+                const lns=pdf.splitTextToSize('TOTAL GERAL DA CARGA HORÁRIA DOS ITINÉRARIOS FORMATIVOS',cNum+cSub+cDisc-3);
+                h+=Math.max(_tH,lns.length*dLH+dPad);
+            }
         });
-        return h+_tH*2;
+        pdf.setFont('helvetica','bold');pdf.setFontSize(dF);
+        const _lnsCH=pdf.splitTextToSize('CARGA HORÁRIA TOTAL (FORMAÇÃO GERAL BÁSICA E ITINÉRARIOS FORMATIVOS)',cNum+cSub+cDisc-3);
+        const _lnsRF=pdf.splitTextToSize('RESULTADO FINAL:',cNum+cSub+cDisc-3);
+        return h+Math.max(_tH,_lnsCH.length*dLH+dPad)+Math.max(_tH,_lnsRF.length*dLH+dPad);
     };
 
     // Pass 1 — escala inicial
@@ -3015,9 +3026,11 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
             const rowCHSerie=isFgb?fgbCHSerie:itinCHSerie;
             const rowLabel=isFgb
                 ?'TOTAL GERAL DA CARGA HORÁRIA DA FORMAÇÃO GERAL BÁSICA'
-                :'TOTAL GERAL DA CARGA HORÁRIA DOS ITINÉRÁRIOS FORMATIVOS';
+                :'TOTAL GERAL DA CARGA HORÁRIA DOS ITINÉRARIOS FORMATIVOS';
             const rowTot=isFgb?fgbChTotal:itinChTotal;
-            const fgbH=totH;
+            pdf.setFont('helvetica','bold');pdf.setFontSize(DISC_FONT);
+            const _fgbLns=pdf.splitTextToSize(rowLabel,cNum+cSub+cDisc-3);
+            const fgbH=Math.max(totH,_fgbLns.length*DISC_LINE_H+DISC_PAD);
             const fgbTY=y+fgbH/2+DISC_LINE_H*0.35;
             pdf.setFillColor(255,255,255);pdf.rect(tblX,y,UW,fgbH,'F');
             pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);pdf.rect(tblX,y,UW,fgbH,'S');
@@ -3029,6 +3042,7 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
                 pdf.setFont('helvetica','bold');pdf.setFontSize(DISC_FONT);pdf.setTextColor(0,0,0);
                 pdf.text(String(rowCHSerie[si]||''),nxf+cNota+cCH/2,fgbTY,{align:'center'});
                 pdf.line(nxf+pairW,y,nxf+pairW,y+fgbH);nxf+=pairW;
+            }
             }
             pdf.line(tblX+UW-cTot,y,tblX+UW-cTot,y+fgbH);
             pdf.text(String(rowTot||''),tblX+UW-cTot+cTot/2,fgbTY,{align:'center'});
@@ -3053,21 +3067,25 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
         }
     });
 
-    // Linha CARGA HORÁRIA TOTAL (FGB + Itinérários)
-    const totTY=y+totH/2+DISC_LINE_H*0.35;
-    pdf.setFillColor(255,255,255);pdf.rect(tblX,y,UW,totH,'F');
-    pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);pdf.rect(tblX,y,UW,totH,'S');
-    pdf.setFont('helvetica','bold');pdf.setFontSize(DISC_FONT);pdf.setTextColor(0,0,0);
-    pdf.text('CARGA HORÁRIA TOTAL (FORMAÇÃO GERAL BÁSICA E ITINÉRÁRIOS FORMATIVOS)',tblX+2,totTY,{maxWidth:cNum+cSub+cDisc-3});
+    // Linha CARGA HORÁRIA TOTAL (FGB + Itinérios)
+    const _chLabel='CARGA HORÁRIA TOTAL (FORMAÇÃO GERAL BÁSICA E ITINÉRARIOS FORMATIVOS)';
+    pdf.setFont('helvetica','bold');pdf.setFontSize(DISC_FONT);
+    const _chLns=pdf.splitTextToSize(_chLabel,cNum+cSub+cDisc-3);
+    const chTotH=Math.max(totH,_chLns.length*DISC_LINE_H+DISC_PAD);
+    const totTY=y+chTotH/2+DISC_LINE_H*0.35;
+    pdf.setFillColor(255,255,255);pdf.rect(tblX,y,UW,chTotH,'F');
+    pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);pdf.rect(tblX,y,UW,chTotH,'S');
+    pdf.setTextColor(0,0,0);
+    pdf.text(_chLabel,tblX+2,totTY,{maxWidth:cNum+cSub+cDisc-3});
     let nx2=tblX+cNum+cSub+cDisc;
     for(let si=0;si<numSeries;si++){
-        pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);pdf.line(nx2+cNota,y,nx2+cNota,y+totH);
+        pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);pdf.line(nx2+cNota,y,nx2+cNota,y+chTotH);
         pdf.text(String(totalCHSerie[si]||''),nx2+cNota+cCH/2,totTY,{align:'center'});
-        pdf.line(nx2+pairW,y,nx2+pairW,y+totH);nx2+=pairW;
+        pdf.line(nx2+pairW,y,nx2+pairW,y+chTotH);nx2+=pairW;
     }
-    pdf.line(tblX+UW-cTot,y,tblX+UW-cTot,y+totH);
+    pdf.line(tblX+UW-cTot,y,tblX+UW-cTot,y+chTotH);
     pdf.text(String(chTotalGeral||''),tblX+UW-cTot+cTot/2,totTY,{align:'center'});
-    y+=totH;
+    y+=chTotH;
 
     // Linha RESULTADO FINAL
     const rfTY=y+totH/2+DISC_LINE_H*0.35;
