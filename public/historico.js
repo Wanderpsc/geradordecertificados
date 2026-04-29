@@ -3022,7 +3022,7 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
             pdf.setFillColor(255,255,255);pdf.rect(tblX,y,UW,fgbH,'F');
             pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);pdf.rect(tblX,y,UW,fgbH,'S');
             pdf.setFont('helvetica','bold');pdf.setFontSize(DISC_FONT);pdf.setTextColor(0,0,0);
-            pdf.text(rowLabel,tblX+cNum+2,fgbTY,{maxWidth:cSub+cDisc-3});
+            pdf.text(rowLabel,tblX+2,fgbTY,{maxWidth:cNum+cSub+cDisc-3});
             let nxf=tblX+cNum+cSub+cDisc;
             for(let si=0;si<numSeries;si++){
                 pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);pdf.line(nxf+cNota,y,nxf+cNota,y+fgbH);
@@ -3058,7 +3058,7 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     pdf.setFillColor(255,255,255);pdf.rect(tblX,y,UW,totH,'F');
     pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);pdf.rect(tblX,y,UW,totH,'S');
     pdf.setFont('helvetica','bold');pdf.setFontSize(DISC_FONT);pdf.setTextColor(0,0,0);
-    pdf.text('CARGA HORÁRIA TOTAL (FORMAÇÃO GERAL BÁSICA E ITINÉRÁRIOS FORMATIVOS)',tblX+cNum+2,totTY,{maxWidth:cSub+cDisc-3});
+    pdf.text('CARGA HORÁRIA TOTAL (FORMAÇÃO GERAL BÁSICA E ITINÉRÁRIOS FORMATIVOS)',tblX+2,totTY,{maxWidth:cNum+cSub+cDisc-3});
     let nx2=tblX+cNum+cSub+cDisc;
     for(let si=0;si<numSeries;si++){
         pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);pdf.line(nx2+cNota,y,nx2+cNota,y+totH);
@@ -3074,9 +3074,9 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     pdf.setFillColor(255,255,255);pdf.rect(tblX,y,UW,totH,'F');
     pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);pdf.rect(tblX,y,UW,totH,'S');
     pdf.setFont('helvetica','bold');pdf.setFontSize(DISC_FONT);pdf.setTextColor(0,0,0);
-    pdf.text('RESULTADO FINAL: ',tblX+cNum+2,rfTY);
+    pdf.text('RESULTADO FINAL: ',tblX+2,rfTY);
     pdf.setFont('helvetica','normal');
-    pdf.text(hist.resultadoFinal||hist.resultado||'',tblX+cNum+2+cSub*0.5,rfTY,{maxWidth:cSub+cDisc-3});
+    pdf.text(hist.resultadoFinal||hist.resultado||'',tblX+2+cNum*0.5,rfTY,{maxWidth:cNum+cSub+cDisc-3});
     y+=totH;
 
     // Borda externa da tabela
