@@ -36,6 +36,7 @@ const subUsuarioSchema = new mongoose.Schema({
         editarAlunos: { type: Boolean, default: true },
         excluirAlunos: { type: Boolean, default: false },
         gerarCertificados: { type: Boolean, default: true },
+        gerarHistoricos: { type: Boolean, default: true },
         editarModelos: { type: Boolean, default: false },
         verLogs: { type: Boolean, default: false }
     },

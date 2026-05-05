@@ -24,8 +24,8 @@ router.delete('/grades/:id', checarPermissao('editarModelos'), ctrl.excluirGrade
 // Históricos (dados por aluno)
 router.get('/', ctrl.listarHistoricos);
 router.get('/:id', ctrl.obterHistorico);
-router.post('/', checarPermissao('gerarCertificados'), ctrl.salvarHistorico);
-router.put('/:id', checarPermissao('gerarCertificados'), ctrl.atualizarHistorico);
+router.post('/', checarPermissao('gerarHistoricos'), ctrl.salvarHistorico);
+router.put('/:id', checarPermissao('gerarHistoricos'), ctrl.atualizarHistorico);
 router.delete('/:id', checarPermissao('excluirAlunos'), ctrl.excluirHistorico);
 
 module.exports = router;

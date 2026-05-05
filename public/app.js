@@ -160,6 +160,7 @@ function aplicarPermissoesSubUsuario() {
     // ── Abas bloqueadas ─────────────────────────────────────────────────
     // Sub-usuários nunca acessam "Gerenciar Usuários"
     const esconderTabs = ['usuarios'];
+    if (!p.gerarHistoricos) esconderTabs.push('historico');
     esconderTabs.forEach(tab => {
         const el = document.querySelector(`[data-tab="${tab}"]`);
         if (el) el.style.display = 'none';
@@ -174,6 +175,7 @@ function aplicarPermissoesSubUsuario() {
     if (!p.excluirAlunos)   css += `.btn-excluir-aluno, [onclick*="excluirAluno"] { display: none !important; pointer-events: none; }`;
     if (!p.editarModelos)   css += `#btnSalvarModelo, #btnNovoModelo, [onclick*="salvarModelo"], [onclick*="excluirModelo"], [onclick*="deletarModelo"], [onclick*="arquivarModelo"] { display: none !important; }`;
     if (!p.gerarCertificados) css += `#btnGerarCert, #btnGerarLote, [onclick*="gerarCertificado"] { display: none !important; }`;
+    if (!p.gerarHistoricos) css += `[onclick*="salvarHistorico"], [onclick*="novoHistorico"], [onclick*="excluirHistorico"], [onclick*="editarHistorico"], .btn-novo-historico, .btn-salvar-historico { display: none !important; }`;
     if (!p.verLogs)         css += `[data-tab="logs"], .logs-section { display: none !important; }`;
     style.textContent = css;
     document.head.appendChild(style);
@@ -222,6 +224,11 @@ function inicializarTabs() {
 }
 
 function navegarParaTab(targetTab, atualizarHash = true) {
+    // Bloquear aba de historico para sub-usuários sem permissão
+    if (targetTab === 'historico' && !_temPermissao('gerarHistoricos')) {
+        alert('Seu perfil não tem permissão para acessar o Histórico Escolar.');
+        return;
+    }
     // Bloquear aba de usuarios para sub-usuarios
     if (targetTab === 'usuarios' && !_temPermissao('_acessoAdmin')) {
         mostrarNotificacao('Acesso nao permitido.', 'error');
@@ -4577,8 +4584,9 @@ async function carregarSubUsuarios() {
             editarAlunos: '✏️ Editar',
             excluirAlunos: '🗑️ Excluir',
             gerarCertificados: '📄 Certificados',
+            gerarHistoricos: '📋 Históricos',
             editarModelos: '🎨 Modelos',
-            verLogs: '📋 Logs'
+            verLogs: '🔍 Logs'
         };
 
         container.innerHTML = data.subUsuarios.map(u => {
@@ -4623,6 +4631,7 @@ function abrirFormSubUsuario() {
     document.getElementById('permEditarAlunos').checked = true;
     document.getElementById('permExcluirAlunos').checked = false;
     document.getElementById('permGerarCertificados').checked = true;
+    document.getElementById('permGerarHistoricos').checked = true;
     document.getElementById('permEditarModelos').checked = false;
     document.getElementById('permVerLogs').checked = false;
 }
@@ -4666,6 +4675,7 @@ async function salvarSubUsuario() {
         editarAlunos: document.getElementById('permEditarAlunos').checked,
         excluirAlunos: document.getElementById('permExcluirAlunos').checked,
         gerarCertificados: document.getElementById('permGerarCertificados').checked,
+        gerarHistoricos: document.getElementById('permGerarHistoricos').checked,
         editarModelos: document.getElementById('permEditarModelos').checked,
         verLogs: document.getElementById('permVerLogs').checked
     };
@@ -4726,6 +4736,7 @@ async function editarSubUsuario(id) {
         document.getElementById('permEditarAlunos').checked = !!p.editarAlunos;
         document.getElementById('permExcluirAlunos').checked = !!p.excluirAlunos;
         document.getElementById('permGerarCertificados').checked = !!p.gerarCertificados;
+        document.getElementById('permGerarHistoricos').checked = p.gerarHistoricos !== false;
         document.getElementById('permEditarModelos').checked = !!p.editarModelos;
         document.getElementById('permVerLogs').checked = !!p.verLogs;
 
