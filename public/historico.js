@@ -2797,34 +2797,47 @@ function _aplicarModeloSelecionado(gradeId) {
 }
 
 async function _confirmarModeloSelecionado() {
-    const gradeId = window._modeloGeracaoAtualId;
+    const gradeId = String(window._modeloGeracaoAtualId || '');
     const grades = window._modeloGeracaoGrades || [];
     const hist = window._modeloGeracaoHist;
     const callback = window._modeloGeracaoCallback;
 
     document.getElementById('modalSeletorModeloGeracao')?.remove();
 
-    // Encontra a grade selecionada na lista local
-    let gradeEscolhida = grades.find(g => g._id === gradeId);
+    if (!gradeId || !callback) {
+        mostrarNotificacao('Nenhum modelo selecionado.', 'error');
+        return;
+    }
 
-    // Se a grade local não tem disciplinas completas, busca no servidor
-    if (!gradeEscolhida?.disciplinas?.length) {
-        try {
+    mostrarNotificacao('Gerando PDF...', 'info');
+
+    try {
+        // Encontra a grade selecionada na lista local (comparando como string)
+        let gradeEscolhida = grades.find(g => String(g._id) === gradeId);
+
+        // Se não encontrou ou não tem disciplinas, busca completa no servidor
+        if (!gradeEscolhida?.disciplinas?.length) {
             const token = localStorage.getItem('token');
             const resp = await fetch(`${API_URL}/historicos/grades/${gradeId}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await resp.json();
             if (data.success) gradeEscolhida = data.grade;
-        } catch(e) {}
+        }
+
+        if (!gradeEscolhida) {
+            mostrarNotificacao('Modelo não encontrado. Usando grade original.', 'warning');
+            callback(Object.assign({}, hist));
+            return;
+        }
+
+        // Substitui grade no hist temporariamente (não persiste)
+        const histComNovoModelo = Object.assign({}, hist, { grade: gradeEscolhida });
+        callback(histComNovoModelo);
+    } catch(e) {
+        console.error('Erro ao confirmar modelo:', e);
+        mostrarNotificacao('Erro ao gerar PDF: ' + (e.message || e), 'error');
     }
-
-    if (!gradeEscolhida) { callback(hist.grade || {}); return; }
-
-    // Substitui grade no hist temporariamente (não persiste)
-    // As notas são mantidas — combinadas por nome de disciplina no PDF
-    const histComNovoModelo = Object.assign({}, hist, { grade: gradeEscolhida });
-    callback(histComNovoModelo);
 }
 
 async function previewHistorico(id) {
@@ -2855,38 +2868,42 @@ async function previewHistorico(id) {
 }
 
 function _gerarPreviewPDF(hist) {
-    const cfg = obterConfigHist();
-    const { jsPDF } = window.jspdf;
-    const isMedioPreview = hist.tipo === 'medio';
-    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    try {
+        const cfg = obterConfigHist();
+        const { jsPDF } = window.jspdf;
+        const isMedioPreview = hist.tipo === 'medio';
+        const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
-    if (isMedioPreview) {
-        _histFrenteMedioPortrait(pdf, hist, cfg);
-        pdf.addPage();
-        _histVersoMedioPortrait(pdf, hist, cfg);
-    } else {
-        _histFrente(pdf, hist, cfg);
-        pdf.addPage();
-        _histVerso(pdf, hist, cfg);
+        if (isMedioPreview) {
+            _histFrenteMedioPortrait(pdf, hist, cfg);
+            pdf.addPage();
+            _histVersoMedioPortrait(pdf, hist, cfg);
+        } else {
+            _histFrente(pdf, hist, cfg);
+            pdf.addPage();
+            _histVerso(pdf, hist, cfg);
+        }
+
+        if (_histPreviewBlobUrl) URL.revokeObjectURL(_histPreviewBlobUrl);
+        _histPreviewBlobUrl = URL.createObjectURL(pdf.output('blob'));
+
+        const card = document.getElementById('histPreviewCard');
+        const frame = document.getElementById('histPreviewFrame');
+        const label = document.getElementById('histPreviewNomeAluno');
+
+        if (card) card.style.display = '';
+        if (frame) frame.src = _histPreviewBlobUrl;
+        if (label) label.textContent = `Aluno: ${hist.aluno?.nome || '—'}`;
+
+        setTimeout(() => {
+            if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 200);
+
+        mostrarNotificacao('Pré-visualização pronta!', 'success');
+    } catch(e) {
+        console.error('Erro ao gerar preview PDF:', e);
+        mostrarNotificacao('Erro ao gerar pré-visualização: ' + (e.message || e), 'error');
     }
-
-    // Revogar blob anterior para liberar memória
-    if (_histPreviewBlobUrl) URL.revokeObjectURL(_histPreviewBlobUrl);
-    _histPreviewBlobUrl = URL.createObjectURL(pdf.output('blob'));
-
-    const card = document.getElementById('histPreviewCard');
-    const frame = document.getElementById('histPreviewFrame');
-    const label = document.getElementById('histPreviewNomeAluno');
-
-    if (card) card.style.display = '';
-    if (frame) frame.src = _histPreviewBlobUrl;
-    if (label) label.textContent = `Aluno: ${hist.aluno?.nome || '—'}`;
-
-    setTimeout(() => {
-        if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 200);
-
-    mostrarNotificacao('Pré-visualização pronta!', 'success');
 }
 
 function _atualizarOrientacaoHist(tipo) {
@@ -3078,6 +3095,375 @@ function _drawLocalData(pdf, localData, rodapeY, PW) {
 }
 
 function _histFrenteMedioPortrait(pdf, hist, cfg) {
+    // =====================================================================
+    // FRENTE: disciplinas como COLUNAS (texto vertical), séries como LINHAS
+    // Replica exatamente o modelo oficial das imagens de referência
+    // =====================================================================
+    const aluno=hist.aluno||{};
+    const grade=hist.grade||{};
+    const notas=hist.notas||{};
+    const seriesInfo=hist.seriesInfo||[];
+    const series=(grade.nomesSeries&&grade.nomesSeries.length)?grade.nomesSeries:['1ª Série','2ª Série','3ª Série'];
+    const numSeries=series.length;
+    const discs=grade.disciplinas||[];
+
+    const PW=210,PH=297,ML=8,MR=8,MT=5;
+    const UW=PW-ML-MR;
+    let y=MT;
+
+    // ─── CABEÇALHO ───────────────────────────────────────────────────────
+    const hCfg=cfg?.cabecalho||{};
+    const l1=hCfg.linha1||'REPÚBLICA FEDERATIVA DO BRASIL';
+    const l2=hCfg.linha2||'ESTADO DO PIAUÍ';
+    const l3=hCfg.linha3||'SECRETARIA DE ESTADO DA EDUCAÇÃO';
+    const inst=hCfg.nomeInstituicao||'';
+    const end_=hCfg.endereco||'';
+    const resol=cfg?.frente?.resolucao||'';
+
+    // Dupla linha superior
+    _hLine(pdf,ML,y,PW-MR,y,0.6,[0,40,120]);
+    _hLine(pdf,ML,y+1.3,PW-MR,y+1.3,0.2,[0,40,120]);
+    y+=3;
+
+    // Brasão centralizado
+    const emb=cfg?.emblema||{};
+    const tipoEmb=emb.tipo||'brasao-brasil';
+    const bW=Number(emb.largura)||22;
+    const bH=Number(emb.altura)||26;
+    const embQual=Math.min(100,Math.max(1,Number(emb.qualidade)||100));
+    const embComp=embQual>=85?'NONE':embQual>=65?'FAST':'MEDIUM';
+    if(tipoEmb!=='nenhum'){
+        try{
+            let src=null,fmt='PNG';
+            if(tipoEmb==='custom'&&typeof HIST_UPLOADS!=='undefined'&&HIST_UPLOADS?.emblemaCustom){src=HIST_UPLOADS.emblemaCustom;fmt=src.startsWith('data:image/png')?'PNG':'JPEG';}
+            else if(tipoEmb==='brasao-brasil'&&typeof BRASAO_BRASIL!=='undefined'){src=BRASAO_BRASIL;}
+            if(src)pdf.addImage(src,fmt,PW/2-bW/2,y,bW,bH,undefined,embComp);
+        }catch(_){}
+    }
+    y+=bH+2;
+    const _cabLn=(txt,bold,sz)=>{
+        if(!txt)return;
+        pdf.setFont('helvetica',bold?'bold':'normal');pdf.setFontSize(sz||7);pdf.setTextColor(0,0,0);
+        const ls=pdf.splitTextToSize(txt,UW-4);
+        pdf.text(ls,PW/2,y,{align:'center'});y+=ls.length*3.2;
+    };
+    _cabLn(l1,true,7);_cabLn(l2,true,7);_cabLn(l3,false,7);
+
+    // Linhas de estabelecimento e endereço
+    if(inst){
+        pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.2);
+        pdf.line(ML,y+1,PW-MR,y+1,'S');
+        pdf.setFont('helvetica','normal');pdf.setFontSize(7);pdf.setTextColor(0,0,0);
+        pdf.text(inst,PW/2,y-0.5,{align:'center',maxWidth:UW-4});
+        y+=5;
+        pdf.line(ML,y+1,PW-MR,y+1,'S');
+        if(end_){pdf.text(end_,PW/2,y-0.5,{align:'center',maxWidth:UW-4});}
+        y+=5;
+    } else {
+        pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.2);
+        pdf.line(ML,y+2,PW-MR,y+2,'S');
+        pdf.setFont('helvetica','normal');pdf.setFontSize(6);pdf.setTextColor(80,80,80);
+        pdf.text('ESTABELECIMENTO DE ENSINO',PW/2,y+0.5,{align:'center'});
+        y+=6;
+        pdf.line(ML,y+2,PW-MR,y+2,'S');
+        pdf.text('ENDEREÇO',PW/2,y+0.5,{align:'center'});
+        y+=6;
+    }
+
+    // Linha de resolução
+    const resolNum=(resol||'').replace(/^resolu[çc][aã]o\s+cee\/pi\s*/i,'').trim();
+    pdf.setFont('helvetica','normal');pdf.setFontSize(7);pdf.setTextColor(0,0,0);
+    const resolTxt='Autorização de Funcionamento pela Resolução CEE/PI Nº '+(resolNum||resol||'___');
+    pdf.text(resolTxt,ML+2,y+1.5);
+    pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.2);
+    const resolTxtW=pdf.getStringUnitWidth(resolTxt)*7/pdf.internal.scaleFactor;
+    pdf.line(ML+2+resolTxtW+2,y+2,PW-MR-2,y+2);
+    y+=7;
+
+    // TÍTULO CENTRAL
+    pdf.setFont('helvetica','bold');pdf.setFontSize(8.5);pdf.setTextColor(0,0,0);
+    pdf.text('HISTÓRICO ESCOLAR - ENSINO MÉDIO EM TEMPO INTEGRAL I',PW/2,y+1,{align:'center'});
+    y+=6;
+
+    // ─── DADOS DO ALUNO ───────────────────────────────────────────────────
+    const dN=aluno.dataNascimento||{};
+    const nascStr=dN.dia?`${dN.dia} de ${dN.mes||''} de ${dN.ano||''}`:'';
+    const natStr=[aluno.naturalidade?.cidade,aluno.naturalidade?.estado].filter(Boolean).join('/');
+    const filStr1=aluno.filiacao?.mae||'';
+    const filStr2=aluno.filiacao?.pai||'';
+
+    const _aluLn=(lbl,val,cont)=>{
+        pdf.setFont('helvetica','bold');pdf.setFontSize(6);pdf.setTextColor(0,0,0);
+        pdf.text(lbl,ML,y+3.5);
+        const lw=pdf.getStringUnitWidth(lbl)*6/pdf.internal.scaleFactor+1;
+        pdf.setFont('helvetica','normal');pdf.setTextColor(0,0,0);
+        pdf.text(val||'_',ML+lw,y+3.5,{maxWidth:cont?(PW-MR-ML-lw-2):(PW/2-ML-lw-2)});
+        pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);
+        pdf.line(ML,y+4,PW-MR,y+4);
+    };
+
+    const _aluDbl=(lbl1,val1,lbl2,val2,lbl3,val3)=>{
+        pdf.setFont('helvetica','bold');pdf.setFontSize(6);pdf.setTextColor(0,0,0);
+        const lw1=pdf.getStringUnitWidth(lbl1)*6/pdf.internal.scaleFactor+0.5;
+        pdf.text(lbl1,ML,y+3.5);
+        pdf.setFont('helvetica','normal');
+        const col2x=PW*0.5,col3x=PW*0.76;
+        pdf.text(val1||'',ML+lw1,y+3.5,{maxWidth:col2x-ML-lw1-2});
+        pdf.setFont('helvetica','bold');
+        const lw2=pdf.getStringUnitWidth(lbl2)*6/pdf.internal.scaleFactor+0.5;
+        pdf.text(lbl2,col2x,y+3.5);
+        pdf.setFont('helvetica','normal');
+        pdf.text(val2||'',col2x+lw2,y+3.5,{maxWidth:col3x-col2x-lw2-2});
+        pdf.setFont('helvetica','bold');
+        const lw3=pdf.getStringUnitWidth(lbl3)*6/pdf.internal.scaleFactor+0.5;
+        pdf.text(lbl3,col3x,y+3.5);
+        pdf.setFont('helvetica','normal');
+        pdf.text(val3||'',col3x+lw3,y+3.5,{maxWidth:PW-MR-col3x-lw3-1});
+        pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);
+        pdf.line(ML,y+4,PW-MR,y+4);
+    };
+
+    pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);
+    // Linha 1: ESTABELECIMENTO DE ENSINO / MUNICÍPIO / UF
+    _aluDbl('ESTABELECIMENTO DE ENSINO:',inst,'MUNICÍPIO:',aluno.municipio||natStr,'UF:',aluno.uf||'');y+=4.5;
+    // Linha 2: ESTUDANTE / RG / ÓRGÃO EMISSOR / CPF
+    pdf.setFont('helvetica','bold');pdf.setFontSize(6);pdf.setTextColor(0,0,0);
+    pdf.text('ESTUDANTE:',ML,y+3.5);
+    pdf.setFont('helvetica','normal');
+    pdf.text(aluno.nome||'',ML+20,y+3.5,{maxWidth:PW*0.45-20});
+    pdf.setFont('helvetica','bold');pdf.text('RG:',PW*0.54,y+3.5);
+    pdf.setFont('helvetica','normal');pdf.text(aluno.rg||'',PW*0.54+5,y+3.5,{maxWidth:28});
+    pdf.setFont('helvetica','bold');pdf.text('ÓRGÃO EMISSOR:',PW*0.70,y+3.5);
+    pdf.setFont('helvetica','normal');pdf.text(aluno.orgaoEmissor||'',PW*0.70+28,y+3.5,{maxWidth:18});
+    pdf.setFont('helvetica','bold');pdf.text('CPF:',PW*0.87,y+3.5);
+    pdf.setFont('helvetica','normal');pdf.text(aluno.cpf||'',PW*0.87+7,y+3.5,{maxWidth:12});
+    pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);pdf.line(ML,y+4,PW-MR,y+4);y+=4.5;
+    // Linha 3: DATA DE NASCIMENTO / NATURALIDADE / NACIONALIDADE
+    pdf.setFont('helvetica','bold');pdf.setFontSize(6);pdf.text('DATA DE NASCIMENTO:',ML,y+3.5);
+    pdf.setFont('helvetica','normal');pdf.text(nascStr||'___',ML+34,y+3.5,{maxWidth:30});
+    pdf.setFont('helvetica','bold');pdf.text('NATURALIDADE:',PW*0.47,y+3.5);
+    pdf.setFont('helvetica','normal');pdf.text(natStr||'',PW*0.47+24,y+3.5,{maxWidth:35});
+    pdf.setFont('helvetica','bold');pdf.text('NACIONALIDADE:',PW*0.76,y+3.5);
+    pdf.setFont('helvetica','normal');pdf.text(aluno.nacionalidade||'',PW*0.76+25,y+3.5,{maxWidth:20});
+    pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);pdf.line(ML,y+4,PW-MR,y+4);y+=4.5;
+    // Linha 4: FILIAÇÃO
+    pdf.setFont('helvetica','bold');pdf.setFontSize(6);pdf.text('FILIAÇÃO:',ML,y+3.5);
+    pdf.setFont('helvetica','normal');pdf.text(filStr1,ML+14,y+3.5,{maxWidth:UW-16});
+    pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);pdf.line(ML,y+4,PW-MR,y+4);y+=4.5;
+    // Linha 5: E (segundo familiar)
+    pdf.setFont('helvetica','bold');pdf.setFontSize(6);pdf.text('E',ML,y+3.5);
+    pdf.setFont('helvetica','normal');pdf.text(filStr2,ML+5,y+3.5,{maxWidth:UW-7});
+    pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);pdf.line(ML,y+4,PW-MR,y+4);y+=5;
+
+    // ─── TABELA PRINCIPAL: disciplinas = colunas, séries = linhas ─────────
+    // Medir espaço disponível
+    const RODAPE_H=30;
+    const tblBottom=PH-RODAPE_H;
+    const availH=tblBottom-y;
+
+    // Separar disciplinas por categoria (mantendo ordem da grade)
+    const catOrder=['formacao_geral','itinerarios','atividades_integradoras'];
+    const catLabels={formacao_geral:'FORMAÇÃO GERAL BÁSICA',itinerarios:'ITINERÁRIOS FORMATIVOS',atividades_integradoras:'ATIVIDADES INTEGRADORAS'};
+    const catMap=new Map();
+    catOrder.forEach(c=>catMap.set(c,[]));
+    discs.forEach(d=>{
+        const k=d.categoria||'formacao_geral';
+        if(!catMap.has(k))catMap.set(k,[]);
+        catMap.get(k).push(d);
+    });
+    // Remover categorias vazias
+    [...catMap.keys()].forEach(k=>{if(!catMap.get(k).length)catMap.delete(k);});
+
+    const allDiscs=[...catMap.values()].flat();
+    const nCols=allDiscs.length;
+
+    // Calcular larguras
+    // Coluna "COMPONENTES CURRICULARES" (esquerda fixa)
+    const cCC=28; // mm
+    const remW=UW-cCC;
+    // Cada disciplina tem largura igual
+    const colW=remW/nCols;
+
+    // Alturas das linhas de dados
+    // Cabeçalho (texto vertical disciplinas): altura proporcional ao texto mais longo
+    // Usar altura fixa de 35mm para cabeçalho (comporta ~6 chars de nome)
+    // Escalar se não couber
+    const rowData=3.8; // altura linha de dados (1ª SÉRIE / CARGA HORÁRIA)
+    const rowInst=3.2; // altura linha estabelecimento/município/uf/ano
+    // Por série: 2 linhas de dados + 1 linha info = 3 linhas → rowData*2 + rowInst
+    const perSerieH=rowData*2+rowInst;
+    const totalDataH=perSerieH*numSeries;
+
+    // Altura disponível para o cabeçalho vertical
+    const hdrH=Math.min(50,Math.max(25,availH-totalDataH-4));
+
+    const tblX=ML;
+    let tblY=y;
+
+    // ── LINHA 0: cabeçalho de categoria (FORMAÇÃO GERAL BÁSICA etc.) ─────
+    // Agrupa colunas consecutivas por categoria e desenha um retângulo de header
+    {
+        let cx=tblX+cCC;
+        let catGroupStart=cx;
+        let prevCat=null;
+        const catGroups=[];
+        allDiscs.forEach((d,i)=>{
+            const cat=d.categoria||'formacao_geral';
+            if(cat!==prevCat){
+                if(prevCat!==null)catGroups.push({cat:prevCat,x:catGroupStart,w:cx-catGroupStart});
+                catGroupStart=cx;prevCat=cat;
+            }
+            cx+=colW;
+            if(i===allDiscs.length-1)catGroups.push({cat,x:catGroupStart,w:cx-catGroupStart});
+        });
+
+        // Desenha header de categorias (fundo branco, borda azul, texto horizontal)
+        const catHdrH=5;
+        catGroups.forEach(({cat,x,w})=>{
+            const lbl=catLabels[cat]||cat.toUpperCase();
+            pdf.setFillColor(220,230,245);
+            pdf.rect(x,tblY,w,catHdrH,'F');
+            pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.2);
+            pdf.rect(x,tblY,w,catHdrH,'S');
+            pdf.setFont('helvetica','bold');pdf.setFontSize(5.5);pdf.setTextColor(0,0,120);
+            const lns=pdf.splitTextToSize(lbl,w-1);
+            pdf.text(lns,x+w/2,tblY+2.5,{align:'center'});
+        });
+        // Célula COMPONENTES CURRICULARES (abrange altura do header de categoria + altura vertical)
+        // Será desenhada depois como retângulo mesclado
+        tblY+=catHdrH;
+    }
+
+    // ── LINHA 1: nomes de disciplinas em texto vertical ──────────────────
+    // Calcular fonte proporcional ao colW
+    const vFontSz=Math.min(6.5,Math.max(4.0,colW*1.1));
+    {
+        // Célula mesclada "COMPONENTES CURRICULARES" na coluna esquerda, altura hdrH+catHdrH
+        // (desenhada aqui com o y atual já após catHdrH)
+        pdf.setFillColor(255,255,255);
+        pdf.rect(tblX,y,cCC,hdrH+5,'F'); // +5 = catHdrH anterior
+        pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.2);
+        pdf.rect(tblX,y,cCC,hdrH+5,'S');
+        pdf.setFont('helvetica','bold');pdf.setFontSize(6);pdf.setTextColor(0,0,0);
+        const ccLns=pdf.splitTextToSize('COMPONENTES\nCURRICULARES',cCC-2);
+        const ccH=ccLns.length*3;
+        pdf.text(ccLns,tblX+cCC/2,y+(hdrH+5)/2-ccH/2+3,{align:'center'});
+
+        // Cada disciplina: retângulo + texto vertical (rotacionado 90°)
+        allDiscs.forEach((d,i)=>{
+            const cx=tblX+cCC+i*colW;
+            pdf.setFillColor(255,255,255);
+            pdf.rect(cx,tblY,colW,hdrH,'F');
+            pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.15);
+            pdf.rect(cx,tblY,colW,hdrH,'S');
+            // Texto vertical: rotaciona 90°, começa da base e vai para cima
+            pdf.setFont('helvetica','normal');pdf.setFontSize(vFontSz);pdf.setTextColor(0,0,0);
+            const nomeTxt=d.nome.toUpperCase();
+            // Centro horizontal da célula, base da célula
+            const txtX=cx+colW/2;
+            const txtY=tblY+hdrH-1;
+            pdf.text(nomeTxt,txtX,txtY,{angle:90,maxWidth:hdrH-2,align:'left'});
+        });
+        tblY+=hdrH;
+    }
+
+    // ── LINHAS DE DADOS: por série ───────────────────────────────────────
+    series.forEach((serNome,si)=>{
+        const sInfo=(seriesInfo||[]).find(x=>x.serie===String(si+1))||{};
+        const sKey=String(si+1);
+
+        // Linha 1: nota por disciplina
+        {
+            const rh=rowData;
+            // Célula "N° SÉRIE"
+            pdf.setFillColor(240,245,255);
+            pdf.rect(tblX,tblY,cCC,rh,'F');
+            pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.15);pdf.rect(tblX,tblY,cCC,rh,'S');
+            pdf.setFont('helvetica','bold');pdf.setFontSize(5.5);pdf.setTextColor(0,0,0);
+            pdf.text(serNome.toUpperCase(),tblX+1,tblY+rh/2+1.8);
+            // Notas por disciplina
+            allDiscs.forEach((d,i)=>{
+                const cx=tblX+cCC+i*colW;
+                const nd=(notas[d.nome]||{})[sKey]||{};
+                const nv=nd.nota!==undefined?String(Number(nd.nota).toFixed(1)):'';
+                pdf.setFillColor(255,255,255);pdf.rect(cx,tblY,colW,rh,'F');
+                pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.15);pdf.rect(cx,tblY,colW,rh,'S');
+                pdf.setFont('helvetica','normal');pdf.setFontSize(5.5);pdf.setTextColor(0,0,0);
+                pdf.text(nv,cx+colW/2,tblY+rh/2+1.8,{align:'center'});
+            });
+            tblY+=rh;
+        }
+        // Linha 2: carga horária por disciplina
+        {
+            const rh=rowData;
+            pdf.setFillColor(248,250,255);
+            pdf.rect(tblX,tblY,cCC,rh,'F');
+            pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.15);pdf.rect(tblX,tblY,cCC,rh,'S');
+            pdf.setFont('helvetica','bold');pdf.setFontSize(5);pdf.setTextColor(0,0,0);
+            pdf.text('CARGA HORÁRIA',tblX+1,tblY+rh/2+1.8);
+            allDiscs.forEach((d,i)=>{
+                const cx=tblX+cCC+i*colW;
+                const ch=(d.cargaHorariaPorSerie?.[si]??d.cargaHorariaPadrao??0);
+                pdf.setFillColor(255,255,255);pdf.rect(cx,tblY,colW,rh,'F');
+                pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.15);pdf.rect(cx,tblY,colW,rh,'S');
+                pdf.setFont('helvetica','normal');pdf.setFontSize(5);pdf.setTextColor(80,80,80);
+                pdf.text(ch?String(ch):'',cx+colW/2,tblY+rh/2+1.8,{align:'center'});
+            });
+            tblY+=rh;
+        }
+        // Linha 3: info (estabelecimento | município | uf | ano) — uma única linha mesclada
+        {
+            const rh=rowInst;
+            const estab=sInfo.estabelecimento||'';
+            const mun=sInfo.cidadeUf||'';
+            const uf=sInfo.uf||'';
+            const ano=sInfo.ano||'';
+            // Divide UW em 4 partes
+            const partW=[UW*0.43,UW*0.28,UW*0.12,UW*0.17];
+            let px=tblX;
+            const cells=[
+                {lbl:'ESTABELECIMENTO DE ENSINO',val:estab},
+                {lbl:'MUNICÍPIO',val:mun.split('-')[0]||mun},
+                {lbl:'UF',val:uf||mun.split('-')[1]||''},
+                {lbl:'ANO',val:ano},
+            ];
+            cells.forEach(({lbl,val},ci)=>{
+                const pw=partW[ci];
+                pdf.setFillColor(235,242,255);pdf.rect(px,tblY,pw,rh,'F');
+                pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.15);pdf.rect(px,tblY,pw,rh,'S');
+                pdf.setFont('helvetica','bold');pdf.setFontSize(4.5);pdf.setTextColor(0,0,120);
+                pdf.text(lbl,px+pw/2,tblY+1.5,{align:'center',maxWidth:pw-0.5});
+                pdf.setFont('helvetica','normal');pdf.setFontSize(5);pdf.setTextColor(0,0,0);
+                pdf.text(val,px+pw/2,tblY+rh-0.5,{align:'center',maxWidth:pw-1});
+                px+=pw;
+            });
+            tblY+=rh;
+        }
+    });
+
+    // Borda externa da tabela
+    pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.3);
+    pdf.rect(tblX,y,UW,tblY-y,'S');
+
+    // ─── RODAPÉ ──────────────────────────────────────────────────────────
+    const sig1=cfg?.frente?.assinatura1||'SECRETÁRIO(A)';
+    const sig2=cfg?.frente?.assinatura2||'DIRETOR(A)';
+    const localData=cfg?.frente?.localData||hist.dataEmissao||'';
+    const rodapeY=Math.max(tblY+4,PH-RODAPE_H+2);
+    _drawLocalData(pdf,localData,rodapeY,PW);
+    const sigY=rodapeY+13;
+    [{cx:PW*0.28,sig:sig1},{cx:PW*0.72,sig:sig2}].forEach(({cx,sig})=>{
+        pdf.setLineWidth(0.2);pdf.setDrawColor(0,40,120);
+        pdf.line(cx-35,sigY,cx+35,sigY);
+        _hText(pdf,sig,cx,sigY+4,{size:7,align:'center',bold:true});
+    });
+    const fyBot=PH-6;
+    _hLine(pdf,ML,fyBot,PW-MR,fyBot,0.6,[0,40,120]);
+    _hLine(pdf,ML,fyBot+1.2,PW-MR,fyBot+1.2,0.2,[0,40,120]);
+}
+
+function _histFrenteMedioPortraitLegado(pdf, hist, cfg) {
+    // versão anterior (mantida para referência)
     const aluno=hist.aluno||{};
     const grade=hist.grade||{};
     const notas=hist.notas||{};
