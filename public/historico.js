@@ -2032,7 +2032,7 @@ function abrirFichaIndividual() {
     const anoAtual = fichaExistente.length ? fichaExistente[0].ano : new Date().getFullYear().toString();
 
     let html = `
-    <div style="background:white;border-radius:16px;padding:28px;max-width:95vw;width:1200px;max-height:90vh;overflow-y:auto;">
+    <div style="background:white;border-radius:12px;padding:20px 16px;width:calc(100vw - 16px);max-width:none;min-height:0;overflow-y:auto;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
             <h2 style="color:#1e3a8a;">📝 Ficha Individual do Rendimento Escolar e Frequência do Aluno</h2>
             <button onclick="this.closest('.overlay-modal').remove()" style="background:none;border:none;font-size:24px;cursor:pointer;">✕</button>
@@ -2044,8 +2044,8 @@ function abrirFichaIndividual() {
             <span style="color:#6b7280;font-size:12px;">Preencher somente em caso de transferência durante o período letivo.</span>
         </div>
 
-        <div style="overflow-x:auto;">
-            <table style="width:100%;border-collapse:collapse;font-size:11px;">
+        <div style="overflow-x:auto;overflow-y:visible;">
+            <table style="min-width:1500px;width:max-content;border-collapse:collapse;font-size:11px;">
                 <thead>
                     <tr style="background:#1e3a8a;color:white;">
                         <th rowspan="3" style="padding:6px 8px;border:1px solid #93c5fd;min-width:160px;text-align:left;">COMPONENTES CURRICULARES</th>
