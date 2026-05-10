@@ -3060,36 +3060,38 @@ function _drawLocalData(pdf, localData, rodapeY, PW) {
     pdf.setLineWidth(0.2);pdf.setDrawColor(0,40,120);
     pdf.setFont('helvetica','normal');pdf.setFontSize(7);pdf.setTextColor(0,0,0);
 
+    const TY=rodapeY-3.5; // baseline do texto acima da linha
+
     // Linha local
     pdf.line(lx,rodapeY,lx+localW,rodapeY);
-    pdf.text(localTxt,lx+localW/2,rodapeY-1,{align:'center',maxWidth:localW-2});
+    pdf.text(localTxt,lx+localW/2,TY,{align:'center',maxWidth:localW-2});
     pdf.setFont('helvetica','bold');pdf.setFontSize(5.5);
     pdf.text('LOCAL',lx+localW/2,rodapeY+3.5,{align:'center'});
     lx+=localW;
 
     // Vírgula
     pdf.setFont('helvetica','normal');pdf.setFontSize(7);
-    pdf.text(',',lx+0.5,rodapeY-1);lx+=commaW;
+    pdf.text(',',lx+0.5,TY);lx+=commaW;
 
     // Linha dia
     pdf.line(lx,rodapeY,lx+dayW,rodapeY);
-    pdf.text(dayTxt,lx+dayW/2,rodapeY-1,{align:'center',maxWidth:dayW});
+    pdf.text(dayTxt,lx+dayW/2,TY,{align:'center',maxWidth:dayW});
     lx+=dayW;
 
     // " de "
-    pdf.text(' de ',lx+deW/2,rodapeY-1,{align:'center'});lx+=deW;
+    pdf.text(' de ',lx+deW/2,TY,{align:'center'});lx+=deW;
 
     // Linha mês
     pdf.line(lx,rodapeY,lx+monthW,rodapeY);
-    pdf.text(monthTxt,lx+monthW/2,rodapeY-1,{align:'center',maxWidth:monthW-2});
+    pdf.text(monthTxt,lx+monthW/2,TY,{align:'center',maxWidth:monthW-2});
     lx+=monthW;
 
     // " de "
-    pdf.text(' de ',lx+deW/2,rodapeY-1,{align:'center'});lx+=deW;
+    pdf.text(' de ',lx+deW/2,TY,{align:'center'});lx+=deW;
 
     // Linha ano
     pdf.line(lx,rodapeY,lx+yearW,rodapeY);
-    pdf.text(yearTxt,lx+yearW/2,rodapeY-1,{align:'center',maxWidth:yearW});
+    pdf.text(yearTxt,lx+yearW/2,TY,{align:'center',maxWidth:yearW});
     pdf.setFont('helvetica','bold');pdf.setFontSize(5.5);
     pdf.text('DATA',lx+yearW/2,rodapeY+3.5,{align:'center'});
 }
@@ -3207,37 +3209,52 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
         pdf.line(ML,y+4,PW-MR,y+4);
     };
 
-    pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);
-    // Linha 1: ESTABELECIMENTO DE ENSINO / MUNICÍPIO / UF
-    _aluDbl('ESTABELECIMENTO DE ENSINO:',inst,'MUNICÍPIO:',aluno.municipio||natStr,'UF:',aluno.uf||'');y+=4.5;
+    const _fLn=(lbl,val,x2,maxW)=>{
+        pdf.setFont('helvetica','bold');pdf.setFontSize(6);pdf.setTextColor(0,0,0);
+        pdf.text(lbl,ML,y+3.5);
+        pdf.setFont('helvetica','normal');
+        pdf.text(String(val||''),x2,y+3.5,{maxWidth:maxW});
+    };
+    const _fDbl=(items)=>{
+        let px=ML;
+        items.forEach(({lbl,val,w})=>{
+            pdf.setFont('helvetica','bold');pdf.setFontSize(6);pdf.setTextColor(0,0,0);
+            pdf.text(lbl,px,y+3.5);
+            const lw=pdf.getStringUnitWidth(lbl)*6/pdf.internal.scaleFactor+0.8;
+            pdf.setFont('helvetica','normal');pdf.setFontSize(6);pdf.setTextColor(0,0,0);
+            pdf.text(String(val||''),px+lw,y+3.5,{maxWidth:w-lw-1});
+            px+=w;
+        });
+    };
+    // Linha 1: ESTABELECIMENTO / MUNICÍPIO / UF
+    _fDbl([
+        {lbl:'ESTABELECIMENTO DE ENSINO:',val:inst,w:UW*0.55},
+        {lbl:'MUNICÍPIO:',val:aluno.municipio||(natStr.split('/')[0]||'').trim(),w:UW*0.35},
+        {lbl:'UF:',val:aluno.uf||(natStr.split('/')[1]||'').trim(),w:UW*0.10}
+    ]);y+=4.5;
     // Linha 2: ESTUDANTE / RG / ÓRGÃO EMISSOR / CPF
-    pdf.setFont('helvetica','bold');pdf.setFontSize(6);pdf.setTextColor(0,0,0);
-    pdf.text('ESTUDANTE:',ML,y+3.5);
-    pdf.setFont('helvetica','normal');
-    pdf.text(aluno.nome||'',ML+20,y+3.5,{maxWidth:PW*0.45-20});
-    pdf.setFont('helvetica','bold');pdf.text('RG:',PW*0.54,y+3.5);
-    pdf.setFont('helvetica','normal');pdf.text(aluno.rg||'',PW*0.54+5,y+3.5,{maxWidth:28});
-    pdf.setFont('helvetica','bold');pdf.text('ÓRGÃO EMISSOR:',PW*0.70,y+3.5);
-    pdf.setFont('helvetica','normal');pdf.text(aluno.orgaoEmissor||'',PW*0.70+28,y+3.5,{maxWidth:18});
-    pdf.setFont('helvetica','bold');pdf.text('CPF:',PW*0.87,y+3.5);
-    pdf.setFont('helvetica','normal');pdf.text(aluno.cpf||'',PW*0.87+7,y+3.5,{maxWidth:12});
-    pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);pdf.line(ML,y+4,PW-MR,y+4);y+=4.5;
+    _fDbl([
+        {lbl:'ESTUDANTE:',val:aluno.nome||'',w:UW*0.47},
+        {lbl:'RG:',val:aluno.rg||'',w:UW*0.18},
+        {lbl:'ÓRGÃO EMISSOR:',val:aluno.orgaoEmissor||'',w:UW*0.20},
+        {lbl:'CPF:',val:aluno.cpf||'',w:UW*0.15}
+    ]);y+=4.5;
     // Linha 3: DATA DE NASCIMENTO / NATURALIDADE / NACIONALIDADE
-    pdf.setFont('helvetica','bold');pdf.setFontSize(6);pdf.text('DATA DE NASCIMENTO:',ML,y+3.5);
-    pdf.setFont('helvetica','normal');pdf.text(nascStr||'___',ML+34,y+3.5,{maxWidth:30});
-    pdf.setFont('helvetica','bold');pdf.text('NATURALIDADE:',PW*0.47,y+3.5);
-    pdf.setFont('helvetica','normal');pdf.text(natStr||'',PW*0.47+24,y+3.5,{maxWidth:35});
-    pdf.setFont('helvetica','bold');pdf.text('NACIONALIDADE:',PW*0.76,y+3.5);
-    pdf.setFont('helvetica','normal');pdf.text(aluno.nacionalidade||'',PW*0.76+25,y+3.5,{maxWidth:20});
-    pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);pdf.line(ML,y+4,PW-MR,y+4);y+=4.5;
+    _fDbl([
+        {lbl:'DATA DE NASCIMENTO:',val:nascStr||'',w:UW*0.36},
+        {lbl:'NATURALIDADE:',val:natStr||'',w:UW*0.38},
+        {lbl:'NACIONALIDADE:',val:aluno.nacionalidade||'',w:UW*0.26}
+    ]);y+=4.5;
     // Linha 4: FILIAÇÃO
-    pdf.setFont('helvetica','bold');pdf.setFontSize(6);pdf.text('FILIAÇÃO:',ML,y+3.5);
-    pdf.setFont('helvetica','normal');pdf.text(filStr1,ML+14,y+3.5,{maxWidth:UW-16});
-    pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);pdf.line(ML,y+4,PW-MR,y+4);y+=4.5;
+    pdf.setFont('helvetica','bold');pdf.setFontSize(6);pdf.setTextColor(0,0,0);
+    pdf.text('FILIAÇÃO:',ML,y+3.5);
+    pdf.setFont('helvetica','normal');
+    pdf.text(filStr1,ML+15,y+3.5,{maxWidth:UW-16});y+=4.5;
     // Linha 5: E (segundo familiar)
-    pdf.setFont('helvetica','bold');pdf.setFontSize(6);pdf.text('E',ML,y+3.5);
-    pdf.setFont('helvetica','normal');pdf.text(filStr2,ML+5,y+3.5,{maxWidth:UW-7});
-    pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.15);pdf.line(ML,y+4,PW-MR,y+4);y+=5;
+    pdf.setFont('helvetica','bold');pdf.setFontSize(6);pdf.setTextColor(0,0,0);
+    pdf.text('E',ML,y+3.5);
+    pdf.setFont('helvetica','normal');
+    pdf.text(filStr2,ML+5,y+3.5,{maxWidth:UW-6});y+=5;
 
     // ─── TABELA PRINCIPAL: disciplinas = colunas, séries = linhas ─────────
     // Medir espaço disponível
@@ -4006,7 +4023,7 @@ function _histVersoMedioPortrait(pdf, hist, cfg) {
     const filStr1=aluno.filiacao?.mae||'';
     const filStr2=aluno.filiacao?.pai||'';
     const aluW=anoX+ANO_W-centroX;
-    let dy=y+ANO_H+1.5;
+    let dy=y+14; // começa abaixo das 2 linhas do título (y+9.5) + margem
     const dlH=4.5;
 
     const _aluLn=(campos,yy)=>{
@@ -4018,8 +4035,7 @@ function _histVersoMedioPortrait(pdf, hist, cfg) {
             const lw=pdf.getStringUnitWidth(lbl)*5.5/pdf.internal.scaleFactor+0.5;
             pdf.setFont('helvetica','normal');pdf.setFontSize(5.5);pdf.setTextColor(0,0,0);
             pdf.text(String(val||''),px+lw,yy,{maxWidth:w-lw-1});
-            pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.1);
-            pdf.line(px,yy+1,px+w,yy+1);
+            // sem linha
             px+=w;
         });
     };
@@ -4267,17 +4283,17 @@ function _histVersoMedioPortrait(pdf, hist, cfg) {
     pdf.setFont('helvetica','bold');pdf.setFontSize(5.5);pdf.setTextColor(0,40,120);
     pdf.text('VERIFICAÇÃO DE RENDIMENTO E FREQUÊNCIA ESCOLAR',ML+1.5,verTop+4);
     const verLines=[
-        'Considerar-se-á o estudante que quanto à:',
-        '1- Nota/Média obtiver mínimo de 60% de rendimento escolar em cada componente curricular da Formação Geral Básica/FGB;',
-        '2- As unidades curriculares dos Itinerários Formativos-IFs do Ensino Médio Regular (Tempo Integral e Parcial), serão avaliadas exclusivamente de forma qualitativa.',
-        '3- Todas as unidades curriculares dos Itinerários Formativos-IFs possuem escala de engajamento única: I-EA (8,5<EA≤10); II-ES (6,0<ES≤8,5); III-EB (EB=6,0).',
-        '4- Assiduidade obtiver frequência mínima de 75% do total da carga horária trabalhada pela escola durante o ano letivo.',
+        'Considerar-se-a o estudante que quanto a:',
+        '1- Nota/Media obtiver minimo de 60% de rendimento escolar em cada componente curricular da Formacao Geral Basica/FGB;',
+        '2- As unidades curriculares dos Itinerarios Formativos-IFs do Ensino Medio Regular (Tempo Integral e Parcial), serao avaliadas exclusivamente de forma qualitativa.',
+        '3- Todas as unidades curriculares dos Itinerarios Formativos-IFs possuem escala de engajamento unica: I-EA; II-ES; III-EB (I-EA: 8,5 < EA <= 10; II-ES: 6,0 < ES <= 8,5; III-EB: EB = 6,0).',
+        '4- Assiduidade obtiver frequencia minima de 75% do total da carga horaria trabalhada pela escola durante o ano letivo.',
     ];
     pdf.setFont('helvetica','normal');pdf.setFontSize(4.5);pdf.setTextColor(10,10,10);
     let vy=verTop+7;
     verLines.forEach(t=>{
         const ls=pdf.splitTextToSize(t,verW-3);
-        if(vy+ls.length*2.5<verTop+VER_H-1){pdf.text(ls,ML+1.5,vy);vy+=ls.length*2.5+0.8;}
+        if(vy+ls.length*2.8<verTop+VER_H-1){pdf.text(ls,ML+1.5,vy);vy+=ls.length*2.8+0.6;}
     });
 
     pdf.setFillColor(255,255,255);pdf.rect(ML+verW,verTop,resW,VER_H,'F');
