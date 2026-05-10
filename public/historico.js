@@ -3962,82 +3962,103 @@ function _histVersoMedioPortrait(pdf, hist, cfg) {
         return av;
     };
 
-    // ─── LINHA DUPLA SUPERIOR ─────────────────────────────────────────────
-    _hLine(pdf,ML,y,PW-MR,y,0.6,[0,40,120]);
-    _hLine(pdf,ML,y+1.3,PW-MR,y+1.3,0.2,[0,40,120]);
-    y+=3;
-
-    // ─── CABEÇALHO: brasão à esquerda + bloco de dados à direita ─────────
+    // ─── CABEÇALHO (layout fiel ao modelo oficial) ────────────────────────
+    // [brasão top-left] [TÍTULO BOLD CENTRALIZADO] [ANO top-right]
+    // [gov text abaixo brasão] [dados do aluno abaixo do título]
     const emb=cfg?.emblema||{};
     const tipoEmb=emb.tipo||'brasao-brasil';
     const bW=Number(emb.largura)||18;
-    const bH=Number(emb.altura)||22;
+    const bH=Number(emb.altura)||20;
     const embQual=Math.min(100,Math.max(1,Number(emb.qualidade)||100));
     const embComp=embQual>=85?'NONE':embQual>=65?'FAST':embQual>=40?'MEDIUM':'SLOW';
 
-    const brasaoX=ML;
-    const brasaoY=y;
+    // Linha dupla superior
+    _hLine(pdf,ML,y,PW-MR,y,0.6,[0,40,120]);
+    _hLine(pdf,ML,y+1.2,PW-MR,y+1.2,0.2,[0,40,120]);
+    y+=2.5;
+    const hdrTopY=y;
+
+    // Constantes de layout
+    const LEFT_COL=32;          // coluna esquerda: brasão + gov text
+    const ANO_W=20,ANO_H=9;     // caixa ANO
+    const anoX=PW-MR-ANO_W;
+    const centroX=ML+LEFT_COL+1;
+    const centroW=anoX-centroX-1;
+
+    // Brasão (topo esquerdo)
     if(tipoEmb!=='nenhum'){
         try{
             let src=null,fmt='PNG';
             if(tipoEmb==='custom'&&typeof HIST_UPLOADS!=='undefined'&&HIST_UPLOADS?.emblemaCustom){src=HIST_UPLOADS.emblemaCustom;fmt=src.startsWith('data:image/png')?'PNG':'JPEG';}
             else if(tipoEmb==='brasao-brasil'&&typeof BRASAO_BRASIL!=='undefined'){src=BRASAO_BRASIL;}
-            if(src)pdf.addImage(src,fmt,brasaoX,brasaoY,bW,bH,undefined,embComp);
+            if(src)pdf.addImage(src,fmt,ML,y,bW,bH,undefined,embComp);
         }catch(_){}
     }
 
-    // Bloco de governo e escola abaixo do brasão
-    let ty=y;
-    const govX=ML+bW+3;
-    const govW=UW-bW-3;
+    // Caixa ANO (topo direito)
+    pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.25);
+    pdf.rect(anoX,y,ANO_W,ANO_H,'S');
     pdf.setFont('helvetica','bold');pdf.setFontSize(6.5);pdf.setTextColor(0,0,0);
-    pdf.text(l1,govX+govW/2,ty+3,{align:'center',maxWidth:govW});ty+=3.5;
-    pdf.setFontSize(6.5);pdf.text(l2,govX+govW/2,ty+3,{align:'center',maxWidth:govW});ty+=3.5;
-    pdf.setFont('helvetica','normal');pdf.setFontSize(6);pdf.text(l3,govX+govW/2,ty+3,{align:'center',maxWidth:govW});ty+=3;
-    pdf.setFont('helvetica','bold');pdf.setFontSize(6);pdf.text(inst,govX+govW/2,ty+3,{align:'center',maxWidth:govW});ty+=3.5;
+    pdf.text('ANO:',anoX+1.5,y+6);
+    pdf.setFont('helvetica','normal');pdf.setFontSize(6.5);
+    pdf.text(fichaAno||'',anoX+ANO_W/2+1,y+6,{align:'center',maxWidth:ANO_W-12});
 
-    // Caixa ANO à direita do brasão
-    const anoBoxW=20,anoBoxH=8,anoBoxX=PW-MR-anoBoxW,anoBoxY=y;
-    pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.3);
-    pdf.rect(anoBoxX,anoBoxY,anoBoxW,anoBoxH,'S');
-    pdf.setFont('helvetica','bold');pdf.setFontSize(6);pdf.setTextColor(0,0,0);
-    pdf.text('ANO:',anoBoxX+1.5,anoBoxY+3.5);
-    pdf.setFont('helvetica','normal');pdf.text(fichaAno,anoBoxX+10,anoBoxY+3.5,{maxWidth:8});
+    // Título centralizado no centro (bold, 2 linhas, sem fundo colorido)
+    pdf.setFont('helvetica','bold');pdf.setFontSize(8);pdf.setTextColor(0,0,0);
+    pdf.text('FICHA INDIVIDUAL DO RENDIMENTO ESCOLAR E FREQUÊNCIA DO ESTUDANTE',
+        centroX+centroW/2,y+4.5,{align:'center',maxWidth:centroW});
+    pdf.text('DO ENSINO MÉDIO REGULAR EM TEMPO INTEGRAL I',
+        centroX+centroW/2,y+9.5,{align:'center',maxWidth:centroW});
 
-    y=Math.max(y+bH,ty)+2;
+    // Gov text: abaixo do brasão, coluna esquerda
+    const govCX=ML+LEFT_COL/2;
+    let govY=y+bH+2;
+    pdf.setFont('helvetica','bold');pdf.setFontSize(5.5);pdf.setTextColor(0,0,0);
+    pdf.text(l1,govCX,govY,{align:'center',maxWidth:LEFT_COL-1});govY+=3.2;
+    pdf.text(l2,govCX,govY,{align:'center',maxWidth:LEFT_COL-1});govY+=3.2;
+    pdf.setFont('helvetica','normal');pdf.setFontSize(5);
+    pdf.text(l3,govCX,govY,{align:'center',maxWidth:LEFT_COL-1});govY+=3;
 
-    // ─── TÍTULO DA FICHA ──────────────────────────────────────────────────
-    pdf.setFillColor(0,40,120);pdf.rect(ML,y,UW,6,'F');
-    pdf.setFont('helvetica','bold');pdf.setFontSize(6.5);pdf.setTextColor(255,255,255);
-    const tituloFicha='FICHA INDIVIDUAL DO RENDIMENTO ESCOLAR E FREQUÊNCIA DO ESTUDANTE DO ENSINO MÉDIO REGULAR EM TEMPO INTEGRAL I';
-    const tituloLns=pdf.splitTextToSize(tituloFicha,UW-4);
-    const tituloH=Math.max(6,tituloLns.length*3.5+2);
-    pdf.setFillColor(0,40,120);pdf.rect(ML,y,UW,tituloH,'F');
-    pdf.setFont('helvetica','bold');pdf.setFontSize(6.5);pdf.setTextColor(255,255,255);
-    tituloLns.forEach((ln,i)=>pdf.text(ln,PW/2,y+3+i*3.5,{align:'center'}));
-    y+=tituloH+1;
+    // Dados do aluno: à direita, abaixo do título + caixa ANO
+    const filStr1=aluno.filiacao?.mae||'';
+    const filStr2=aluno.filiacao?.pai||'';
+    const aluW=anoX+ANO_W-centroX;
+    let dy=y+ANO_H+1.5;
+    const dlH=4.5;
 
-    // ─── DADOS DO ALUNO ───────────────────────────────────────────────────
-    const alunoBoxH=16;
-    pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.2);
-    pdf.rect(ML,y,UW,alunoBoxH,'S');
-    [4,8,12].forEach(off=>pdf.line(ML,y+off,ML+UW,y+off));
-
-    const af=(ly,lbl,lW,val,maxW)=>{
-        pdf.setFont('helvetica','bold');pdf.setFontSize(5.5);pdf.setTextColor(0,30,100);
-        pdf.text(lbl,ML+1,ly);
-        pdf.setFont('helvetica','normal');pdf.setFontSize(5.5);pdf.setTextColor(0,0,0);
-        pdf.text(val||'',ML+lW,ly,{maxWidth:maxW||(UW-lW-1)});
+    const _aluLn=(campos,yy)=>{
+        let px=centroX;
+        campos.forEach(({lbl,val,fw})=>{
+            const w=aluW*fw;
+            pdf.setFont('helvetica','bold');pdf.setFontSize(5.5);pdf.setTextColor(0,30,100);
+            pdf.text(lbl,px,yy);
+            const lw=pdf.getStringUnitWidth(lbl)*5.5/pdf.internal.scaleFactor+0.5;
+            pdf.setFont('helvetica','normal');pdf.setFontSize(5.5);pdf.setTextColor(0,0,0);
+            pdf.text(String(val||''),px+lw,yy,{maxWidth:w-lw-1});
+            pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.1);
+            pdf.line(px,yy+1,px+w,yy+1);
+            px+=w;
+        });
     };
-    af(y+2.8,'ESTABELECIMENTO DE ENSINO:',45,inst,UW-80);
-    af(y+2.8,'MUNICÍPIO/UF:',UW-35,natStr||'',33);
-    af(y+6.8,'ESTUDANTE:',18,aluno.nome||'');
-    af(y+10.8,'RG:',6,aluno.rg||'',28);
-    af(y+10.8,'ÓRGÃO EMISSOR:',ML+40-ML,aluno.orgaoEmissor||'',20);
-    af(y+10.8,'CPF:',ML+72-ML,aluno.cpf||'',40);
-    af(y+14.8,'DATA DE NASCIMENTO:',34,nascStr,UW/2-36);
-    af(y+14.8,'NATURALIDADE:',UW/2+12,natStr,UW/2-40);
-    y+=alunoBoxH+1;
+
+    const mun=(aluno.municipio||natStr.split('/')[0]||'').trim();
+    const uf=(aluno.uf||natStr.split('/')[1]||'').trim();
+    _aluLn([{lbl:'ESTABELECIMENTO DE ENSINO:',val:inst,fw:0.55},{lbl:'MUNICÍPIO:',val:mun,fw:0.33},{lbl:'UF:',val:uf,fw:0.12}],dy);dy+=dlH;
+    _aluLn([{lbl:'ESTUDANTE:',val:aluno.nome||'',fw:0.45},{lbl:'RG:',val:aluno.rg||'',fw:0.16},{lbl:'ÓRGÃO EMISSOR:',val:aluno.orgaoEmissor||'',fw:0.21},{lbl:'CPF:',val:aluno.cpf||'',fw:0.18}],dy);dy+=dlH;
+    _aluLn([{lbl:'DATA DE NASCIMENTO:',val:nascStr,fw:0.38},{lbl:'NATURALIDADE:',val:natStr,fw:0.36},{lbl:'NACIONALIDADE:',val:aluno.nacionalidade||'',fw:0.26}],dy);dy+=dlH;
+    _aluLn([{lbl:'FILIAÇÃO:',val:filStr1,fw:1.0}],dy);dy+=dlH;
+    _aluLn([{lbl:'E',val:filStr2,fw:1.0}],dy);
+
+    // Separador vertical entre coluna esquerda e área central
+    const hdrBot=Math.max(govY,dy)+1;
+    pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.2);
+    pdf.line(ML+LEFT_COL,hdrTopY,ML+LEFT_COL,hdrBot);
+
+    // Borda externa do cabeçalho
+    pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.3);
+    pdf.rect(ML,hdrTopY,UW,hdrBot-hdrTopY,'S');
+
+    y=hdrBot+2;
 
     // ─── TABELA BIMESTRAL ─────────────────────────────────────────────────
     // Layout: COMPONENTES | Av1(N,F) | Av2(N,F) | Bim1(MB,FTB) | Av3 | Av4 | Bim2 | Av5 | Av6 | Bim3 | Av7 | Av8 | Bim4
