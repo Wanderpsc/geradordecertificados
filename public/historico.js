@@ -3957,11 +3957,33 @@ function _histVersoMedioPortrait(pdf, hist, cfg) {
     const fichaAno = fichaEntry.ano || '';
     const fichaRegistros = fichaEntry.registros || [];
 
-    // Função auxiliar para buscar avaliação
+    // Chave da última série (ex: '3' para 3ª Série) — usada no fallback automático
+    const _ultimaSerieKey = String(
+        grade.nomesSeries?.length || grade.numSeries || 3
+    );
+    // Série info da última série para exibir o ano no cabeçalho ANO
+    const _ultimaSerieInfo = (hist.seriesInfo || []).find(
+        si => si.serie === _ultimaSerieKey
+    ) || {};
+    const fichaAnoAuto = fichaAno || _ultimaSerieInfo.ano || '';
+
+    // Função auxiliar para buscar avaliação.
+    // Se a ficha individual não foi preenchida, usa automaticamente a nota
+    // da última série (3ª Série) como MB de cada bimestre: as duas avaliações
+    // do bimestre recebem o mesmo valor → MB = nota final.
+    const _fichaVazia = fichaRegistros.length === 0;
     const _getAv=(discNome,avNum)=>{
-        const reg=fichaRegistros.find(r=>r.disciplina===discNome)||{};
-        const av=(reg.avaliacoes||[]).find(a=>a.num===avNum)||{};
-        return av;
+        if(!_fichaVazia){
+            const reg=fichaRegistros.find(r=>r.disciplina===discNome)||{};
+            const av=(reg.avaliacoes||[]).find(a=>a.num===avNum)||{};
+            return av;
+        }
+        // Fallback automático: preenche com a nota da última série
+        const notaDisc=(notas[discNome]||{})[_ultimaSerieKey]||{};
+        if(notaDisc.nota!==undefined){
+            return { nota: notaDisc.nota, faltas: notaDisc.faltas ?? 0 };
+        }
+        return {};
     };
 
     // ─── CABEÇALHO (layout fiel ao modelo oficial) ────────────────────────
@@ -4005,7 +4027,7 @@ function _histVersoMedioPortrait(pdf, hist, cfg) {
     pdf.setFont('helvetica','bold');pdf.setFontSize(6.5);pdf.setTextColor(0,0,0);
     pdf.text('ANO:',anoX+1.5,y+6);
     pdf.setFont('helvetica','normal');pdf.setFontSize(6.5);
-    pdf.text(fichaAno||'',anoX+ANO_W/2+1,y+6,{align:'center',maxWidth:ANO_W-12});
+    pdf.text(fichaAnoAuto||'',anoX+ANO_W/2+1,y+6,{align:'center',maxWidth:ANO_W-12});
 
     // Título centralizado no centro (bold, 2 linhas, sem fundo colorido)
     pdf.setFont('helvetica','bold');pdf.setFontSize(8);pdf.setTextColor(0,0,0);
