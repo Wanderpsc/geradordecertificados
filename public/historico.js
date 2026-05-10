@@ -3060,7 +3060,7 @@ function _drawLocalData(pdf, localData, rodapeY, PW) {
     pdf.setLineWidth(0.2);pdf.setDrawColor(0,40,120);
     pdf.setFont('helvetica','normal');pdf.setFontSize(7);pdf.setTextColor(0,0,0);
 
-    const TY=rodapeY-3.5; // baseline do texto acima da linha
+    const TY=rodapeY-5; // baseline do texto acima da linha (5mm evita sobreposição)
 
     // Linha local
     pdf.line(lx,rodapeY,lx+localW,rodapeY);
@@ -3991,7 +3991,9 @@ function _histVersoMedioPortrait(pdf, hist, cfg) {
             let src=null,fmt='PNG';
             if(tipoEmb==='custom'&&typeof HIST_UPLOADS!=='undefined'&&HIST_UPLOADS?.emblemaCustom){src=HIST_UPLOADS.emblemaCustom;fmt=src.startsWith('data:image/png')?'PNG':'JPEG';}
             else if(tipoEmb==='brasao-brasil'&&typeof BRASAO_BRASIL!=='undefined'){src=BRASAO_BRASIL;}
-            if(src)pdf.addImage(src,fmt,ML,y,bW,bH,undefined,embComp);
+            // Centraliza o brasão dentro da coluna esquerda (LEFT_COL)
+            const bX=ML+LEFT_COL/2-bW/2;
+            if(src)pdf.addImage(src,fmt,bX,y,bW,bH,undefined,embComp);
         }catch(_){}
     }
 
@@ -4077,7 +4079,7 @@ function _histVersoMedioPortrait(pdf, hist, cfg) {
     const hdrH1=4.5;  // cabeçalho nível 1 (AVALIAÇÃO/FREQUÊNCIA)
     const hdrH2=4.0;  // cabeçalho nível 2 (1ª AVALIAÇÃO...)
     const hdrH3=3.0;  // cabeçalho nível 3 (NOTA/FALTAS/MB/FTB)
-    const rowH=3.5;   // altura linha disciplina
+    const rowH=5.0;   // altura linha disciplina (5mm comporta 2 linhas de texto)
     const tblHdrH=hdrH1+hdrH2+hdrH3;
 
     const DISC_FONT_SZ=4.8;
@@ -4199,9 +4201,15 @@ function _histVersoMedioPortrait(pdf, hist, cfg) {
             const bg=rowIdx%2===0?[250,252,255]:[255,255,255];
             pdf.setFillColor(...bg);pdf.rect(tblX,y,UW,rowH,'F');
             pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.1);pdf.rect(tblX,y,UW,rowH,'S');
-            // Nome da disciplina
+            // Nome da disciplina — centralizado verticalmente na célula
             pdf.setFont('helvetica','normal');pdf.setFontSize(DISC_FONT_SZ);pdf.setTextColor(10,10,10);
-            pdf.text(disc.nome,tblX+1,y+rowH-1,{maxWidth:cDisc-2});
+            {
+                const discLines=pdf.splitTextToSize(disc.nome,cDisc-2);
+                const lineHmm=DISC_FONT_SZ*0.42; // ~mm por linha
+                const blockH=discLines.length*lineHmm;
+                const textY=y+(rowH-blockH)/2+lineHmm*0.85;
+                pdf.text(discLines,tblX+1,Math.max(y+lineHmm,textY));
+            }
             pdf.setDrawColor(0,40,120);pdf.line(tblX+cDisc,y,tblX+cDisc,y+rowH);
 
             // Células bimestrais
