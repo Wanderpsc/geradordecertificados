@@ -2872,11 +2872,11 @@ function _gerarPreviewPDF(hist) {
         const cfg = obterConfigHist();
         const { jsPDF } = window.jspdf;
         const isMedioPreview = hist.tipo === 'medio';
-        const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        const pdf = new jsPDF({ orientation: isMedioPreview ? 'landscape' : 'portrait', unit: 'mm', format: 'a4' });
 
         if (isMedioPreview) {
             _histFrenteMedioPortrait(pdf, hist, cfg);
-            pdf.addPage();
+            pdf.addPage({ orientation: 'landscape' });
             _histVersoMedioPortrait(pdf, hist, cfg);
         } else {
             _histFrente(pdf, hist, cfg);
@@ -2979,15 +2979,15 @@ async function _gerarLotePDF(ids, gradeEscolhida, token) {
 
             const isMedio = hist.tipo === 'medio';
             if (!primeiroDoc) {
-                pdf.addPage({ orientation: 'portrait' });
+                pdf.addPage({ orientation: isMedio ? 'landscape' : 'portrait' });
             } else {
-                pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+                pdf = new jsPDF({ orientation: isMedio ? 'landscape' : 'portrait', unit: 'mm', format: 'a4' });
             }
             primeiroDoc = false;
 
             if (isMedio) {
                 _histFrenteMedioPortrait(pdf, hist, cfg);
-                pdf.addPage();
+                pdf.addPage({ orientation: 'landscape' });
                 _histVersoMedioPortrait(pdf, hist, cfg);
             } else {
                 _histFrente(pdf, hist, cfg);
@@ -3107,7 +3107,8 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     const numSeries=series.length;
     const discs=grade.disciplinas||[];
 
-    const PW=210,PH=297,ML=8,MR=8,MT=5;
+    // A4 PAISAGEM: largura=297mm, altura=210mm
+    const PW=297,PH=210,ML=8,MR=8,MT=5;
     const UW=PW-ML-MR;
     let y=MT;
 
@@ -3931,7 +3932,8 @@ function _histVersoMedioPortrait(pdf, hist, cfg) {
     const notas=hist.notas||{};
     const discs=grade.disciplinas||[];
 
-    const PW=210,PH=297,ML=8,MR=8,MT=6;
+    // A4 PAISAGEM: largura=297mm, altura=210mm
+    const PW=297,PH=210,ML=8,MR=8,MT=6;
     const UW=PW-ML-MR;
     let y=MT;
 
