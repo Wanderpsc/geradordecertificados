@@ -635,7 +635,7 @@ async function carregarListaGrades() {
                             <span style="background: ${g.tipo === 'medio' ? '#dbeafe' : '#d1fae5'}; color: ${g.tipo === 'medio' ? '#1e40af' : '#065f46'}; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 600;">
                                 ${g.tipo === 'medio' ? 'ENSINO MÉDIO' : 'ENSINO FUNDAMENTAL'}
                             </span>
-                            ${g.serie ? `<span style="background:#f3f4f6;color:#374151;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;">${escapeHtml(g.serie)}</span>` : ''}
+                            ${(g.nomesSeries?.length > 1) ? `<span style="background:#f3f4f6;color:#374151;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;">${escapeHtml(g.nomesSeries[0])} a ${escapeHtml(g.nomesSeries[g.nomesSeries.length-1])}</span>` : g.serie ? `<span style="background:#f3f4f6;color:#374151;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;">${escapeHtml(g.serie)}</span>` : ''}
                         </div>
                         <h3 style="margin:0; font-size: 15px; color: #1e3a8a;">${escapeHtml(g.nome)}</h3>
                     </div>
@@ -3125,10 +3125,7 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     const end_=hCfg.endereco||'';
     const resol=cfg?.frente?.resolucao||'';
 
-    // Dupla linha superior
-    _hLine(pdf,ML,y,PW-MR,y,0.6,[0,40,120]);
-    _hLine(pdf,ML,y+1.3,PW-MR,y+1.3,0.2,[0,40,120]);
-    y+=3;
+    y+=1;
 
     // Brasão centralizado
     const emb=cfg?.emblema||{};
@@ -3462,9 +3459,6 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
         pdf.line(cx-35,sigY,cx+35,sigY);
         _hText(pdf,sig,cx,sigY+4,{size:7,align:'center',bold:true});
     });
-    const fyBot=PH-6;
-    _hLine(pdf,ML,fyBot,PW-MR,fyBot,0.6,[0,40,120]);
-    _hLine(pdf,ML,fyBot+1.2,PW-MR,fyBot+1.2,0.2,[0,40,120]);
 }
 
 function _histFrenteMedioPortraitLegado(pdf, hist, cfg) {
@@ -3996,10 +3990,7 @@ function _histVersoMedioPortrait(pdf, hist, cfg) {
     const embQual=Math.min(100,Math.max(1,Number(emb.qualidade)||100));
     const embComp=embQual>=85?'NONE':embQual>=65?'FAST':embQual>=40?'MEDIUM':'SLOW';
 
-    // Linha dupla superior
-    _hLine(pdf,ML,y,PW-MR,y,0.6,[0,40,120]);
-    _hLine(pdf,ML,y+1.2,PW-MR,y+1.2,0.2,[0,40,120]);
-    y+=2.5;
+    y+=1;
     const hdrTopY=y;
 
     // Constantes de layout
@@ -4331,7 +4322,7 @@ function _histVersoMedioPortrait(pdf, hist, cfg) {
     pdf.setFillColor(240,245,255);pdf.rect(ML,verTop,verW,VER_H,'F');
     pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.2);pdf.rect(ML,verTop,verW,VER_H,'S');
     pdf.setFont('helvetica','bold');pdf.setFontSize(5.5);pdf.setTextColor(0,40,120);
-    pdf.text('VERIFICAÇÃO DE RENDIMENTO E FREQUÊNCIA ESCOLAR',ML+1.5,verTop+4);
+    pdf.text('VERIFICAÇÃO DE RENDIMENTO E FREQUÊNCIA ESCOLAR',ML+verW/2,verTop+4,{align:'center',maxWidth:verW-3});
     const verLines=[
         'Considerar-se-á o estudante que quanto à:',
         '1- Nota/Média obtiver mínimo de 60% de rendimento escolar em cada componente curricular da Formação Geral Básica/FGB;',
@@ -4363,10 +4354,7 @@ function _histVersoMedioPortrait(pdf, hist, cfg) {
         pdf.text(obsLns.slice(0,Math.floor((OBS_H-6)/3)),ML+1.5,obsTop+8);
     }
 
-    // ─── NESTE DOCUMENTO / LOCAL / ASSINATURAS ───────────────────────────
-    pdf.setFont('helvetica','italic');pdf.setFontSize(5.5);pdf.setTextColor(50,50,50);
-    pdf.text('Neste documento não deverá haver emendas e nem rasuras.',PW/2,rasurY,{align:'center'});
-
+    // ─── LOCAL / ASSINATURAS ────────────────────────────────────────────
     const sig1v=cfg?.frente?.assinatura1||'SECRETÁRIO(A)';
     const sig2v=cfg?.frente?.assinatura2||'DIRETOR(A)';
     const localDataV=cfg?.frente?.localData||hist.dataEmissao||'';
@@ -4380,8 +4368,6 @@ function _histVersoMedioPortrait(pdf, hist, cfg) {
         pdf.text(sig,cx,sigLblY,{align:'center'});
     });
 
-    _hLine(pdf,ML,fyBot,PW-MR,fyBot,0.6,[0,40,120]);
-    _hLine(pdf,ML,fyBot+1.0,PW-MR,fyBot+1.0,0.2,[0,40,120]);
 }
 
 function _histVersoMedioPortraitLegado(pdf, hist, cfg) {
