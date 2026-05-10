@@ -4180,6 +4180,19 @@ function _histVersoMedioPortrait(pdf, hist, cfg) {
 
     y+=tblHdrH;
 
+    // ─── Calcular atenTop antecipadamente para limitar o corpo da tabela ──
+    // (mesma lógica do bloco de rodapé, calculada antes do loop)
+    const _fyBot=PH-3;
+    const _sigLblY=_fyBot-5;
+    const _sigLineY=_sigLblY-7;
+    const _localLineY=_sigLineY-9;
+    const _rasurY=_localLineY-5;
+    const _OBS_H=20;
+    const _VER_H=38;
+    const _obsTop=_rasurY-1-_OBS_H;
+    const _verTop=_obsTop-1-_VER_H;
+    const tblMaxY=_verTop-5-1; // atenTop - 1mm de margem
+
     // ─── LINHAS DE DISCIPLINAS ────────────────────────────────────────────
     const tblBodyStart=y;
     let rowIdx=0;
@@ -4190,8 +4203,10 @@ function _histVersoMedioPortrait(pdf, hist, cfg) {
     const catLabels={formacao_geral:'FORMAÇÃO GERAL BÁSICA',itinerarios:'ITINERÁRIOS FORMATIVOS',atividades_integradoras:'ATIVIDADES INTEGRADORAS',linguagens:'LINGUAGENS, CÓDIGOS E SUAS TECNOLOGIAS',ciencias_humanas:'CIÊNCIAS HUMANAS E SUAS TECNOLOGIAS',ciencias_natureza:'CIÊNCIAS DA NATUREZA E SUAS TECNOLOGIAS',matematica:'MATEMÁTICA E SUAS TECNOLOGIAS',parte_flexivel:'PARTE FLEXÍVEL (DIVERSIFICADA)',ensino_religioso:'ENSINO RELIGIOSO'};
 
     catMap.forEach((catDiscs,catId)=>{
+        if(y>=tblMaxY) return; // tabela já atingiu o rodapé
         const catNome=catLabels[catId]||catId.toUpperCase();
         // Linha de categoria
+        if(y+rowH>tblMaxY) return;
         pdf.setFillColor(220,230,255);
         pdf.rect(tblX,y,UW,rowH,'F');
         pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.15);pdf.rect(tblX,y,UW,rowH,'S');
@@ -4200,6 +4215,7 @@ function _histVersoMedioPortrait(pdf, hist, cfg) {
         y+=rowH;
 
         catDiscs.forEach(disc=>{
+            if(y+rowH>tblMaxY) return; // para de desenhar ao atingir o rodapé
             const bg=rowIdx%2===0?[250,252,255]:[255,255,255];
             pdf.setFillColor(...bg);pdf.rect(tblX,y,UW,rowH,'F');
             pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.1);pdf.rect(tblX,y,UW,rowH,'S');
@@ -4293,11 +4309,11 @@ function _histVersoMedioPortrait(pdf, hist, cfg) {
     pdf.setFont('helvetica','bold');pdf.setFontSize(5.5);pdf.setTextColor(0,40,120);
     pdf.text('VERIFICAÇÃO DE RENDIMENTO E FREQUÊNCIA ESCOLAR',ML+1.5,verTop+4);
     const verLines=[
-        'Considerar-se-a o estudante que quanto a:',
-        '1- Nota/Media obtiver minimo de 60% de rendimento escolar em cada componente curricular da Formacao Geral Basica/FGB;',
-        '2- As unidades curriculares dos Itinerarios Formativos-IFs do Ensino Medio Regular (Tempo Integral e Parcial), serao avaliadas exclusivamente de forma qualitativa.',
-        '3- Todas as unidades curriculares dos Itinerarios Formativos-IFs possuem escala de engajamento unica: I-EA; II-ES; III-EB (I-EA: 8,5 < EA <= 10; II-ES: 6,0 < ES <= 8,5; III-EB: EB = 6,0).',
-        '4- Assiduidade obtiver frequencia minima de 75% do total da carga horaria trabalhada pela escola durante o ano letivo.',
+        'Considerar-se-á o estudante que quanto à:',
+        '1- Nota/Média obtiver mínimo de 60% de rendimento escolar em cada componente curricular da Formação Geral Básica/FGB;',
+        '2- As unidades curriculares dos Itinérarios Formativos-IFs do Ensino Médio Regular (Tempo Integral e Parcial), serão avaliadas exclusivamente de forma qualitativa.',
+        '3- Todas as unidades curriculares dos Itinérarios Formativos-IFs (Linhas de Aprofundamento, Projeto de Vida, Eletivas e as Atividades Integradoras), possuem uma escala de engajamento única, com as seguintes definições operacionais: I - Engajamento Avançado (EA); II - Engajamento Satisfatório (ES) e III - Engajamento Básico (EB). Os conceitos definidos nos Incisos de I a III, correspondem respectivamente aos seguintes intervalos em escala numérica de conceitos variando de 6,0 (seis) a 10,0 (dez): 8,5 < (EA) <= 10; 6,0 < (ES) <= 8,5; (EB) = 6,0',
+        '4- Assiduidade obtiver frequência mínima de 75% do total da carga horária trabalhada pela escola durante o ano letivo.',
     ];
     pdf.setFont('helvetica','normal');pdf.setFontSize(4.5);pdf.setTextColor(10,10,10);
     let vy=verTop+7;
