@@ -1526,9 +1526,14 @@
 
             <!-- Seção 2: Histórico Escolar -->
             <div class="card" style="margin-top: 20px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                    <h2>📋 Histórico Escolar</h2>
-                    <button class="btn btn-primary" onclick="abrirModalNovaGrade()">+ Novo Histórico</button>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 8px;">
+                    <h2 style="margin:0;">📋 Histórico Escolar</h2>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                        <button class="btn btn-success" onclick="criarModeloEMIntegralI()" style="background:linear-gradient(135deg,#0369a1,#0ea5e9);font-weight:700;" title="Cria automaticamente a matriz e o histórico com as disciplinas do modelo EM Integral I">
+                            ⚡ Criar Modelo: EM Integral I
+                        </button>
+                        <button class="btn btn-primary" onclick="abrirModalNovaGrade()">+ Novo Histórico</button>
+                    </div>
                 </div>
                 <p style="color: #6b7280; font-size: 13px; margin-bottom: 15px;">Monte um Histórico Escolar selecionando uma Matriz para cada série. A união das matrizes forma o histórico completo.</p>
                 <div id="listaGrades" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px;">

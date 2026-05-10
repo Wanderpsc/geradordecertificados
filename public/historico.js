@@ -656,6 +656,95 @@ function abrirModalNovaGrade() {
     abrirModalNovoHistorico(null);
 }
 
+// ==================== CRIAR MODELO PRONTO: EM INTEGRAL I ====================
+async function criarModeloEMIntegralI() {
+    const token = localStorage.getItem('token');
+    if (!token) { mostrarNotificacao('Faça login para continuar.', 'error'); return; }
+
+    if (!confirm('Isso criará automaticamente:\n• 1 Matriz Curricular "EM Integral I — Padrão"\n• 1 Grade de Histórico "Ensino Médio Integral I" (3 séries)\n\nContinuar?')) return;
+
+    mostrarNotificacao('Criando modelo... Aguarde.', 'info');
+
+    const disciplinasBase = [
+        // Formação Geral Básica
+        { nome: 'Língua Portuguesa',      categoria: 'formacao_geral',          cargaHorariaPadrao: 240 },
+        { nome: 'Arte',                   categoria: 'formacao_geral',          cargaHorariaPadrao: 80 },
+        { nome: 'Educação Física',        categoria: 'formacao_geral',          cargaHorariaPadrao: 80 },
+        { nome: 'Língua Inglesa',         categoria: 'formacao_geral',          cargaHorariaPadrao: 80 },
+        { nome: 'Língua Espanhola',       categoria: 'formacao_geral',          cargaHorariaPadrao: 80 },
+        { nome: 'Matemática',             categoria: 'formacao_geral',          cargaHorariaPadrao: 120 },
+        { nome: 'Física',                 categoria: 'formacao_geral',          cargaHorariaPadrao: 120 },
+        { nome: 'Química',                categoria: 'formacao_geral',          cargaHorariaPadrao: 120 },
+        { nome: 'Biologia',               categoria: 'formacao_geral',          cargaHorariaPadrao: 120 },
+        { nome: 'História',               categoria: 'formacao_geral',          cargaHorariaPadrao: 40 },
+        { nome: 'Geografia',              categoria: 'formacao_geral',          cargaHorariaPadrao: 40 },
+        { nome: 'Filosofia',              categoria: 'formacao_geral',          cargaHorariaPadrao: 40 },
+        { nome: 'Sociologia',             categoria: 'formacao_geral',          cargaHorariaPadrao: 40 },
+        { nome: 'Projeto de Vida',        categoria: 'formacao_geral',          cargaHorariaPadrao: 120 },
+        // Itinerários Formativos
+        { nome: 'Eletiva 01',             categoria: 'itinerarios',             cargaHorariaPadrao: 80 },
+        { nome: 'Eletiva 02',             categoria: 'itinerarios',             cargaHorariaPadrao: 80 },
+        { nome: 'Eletiva 03',             categoria: 'itinerarios',             cargaHorariaPadrao: 80 },
+        { nome: 'Eletiva 04',             categoria: 'itinerarios',             cargaHorariaPadrao: 80 },
+        { nome: 'Trilha de Aprendizagem Específica',  categoria: 'itinerarios', cargaHorariaPadrao: 120 },
+        { nome: 'Trilha de Aprendizagem Integrada',   categoria: 'itinerarios', cargaHorariaPadrao: 120 },
+        { nome: 'Estudo Orientado (EO)',  categoria: 'itinerarios',             cargaHorariaPadrao: 80 },
+        // Atividades Integradoras
+        { nome: 'Seminários Integradores (SI)',              categoria: 'atividades_integradoras', cargaHorariaPadrao: 40 },
+        { nome: 'Projetos Pedagógicos Interdisciplinares (PPI)', categoria: 'atividades_integradoras', cargaHorariaPadrao: 40 },
+    ];
+
+    try {
+        // 1. Criar a Matriz
+        const rMatriz = await fetch(`${API_URL}/historicos/matrizes`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ titulo: 'EM Integral I — Padrão', disciplinas: disciplinasBase })
+        });
+        const dMatriz = await rMatriz.json();
+        if (!dMatriz.success) { mostrarNotificacao('Erro ao criar matriz: ' + (dMatriz.message || ''), 'error'); return; }
+        const matrizId = dMatriz.matriz._id;
+
+        // 2. Montar disciplinas para a grade (cargaHorariaPorSerie para 3 séries)
+        const disciplinasGrade = disciplinasBase.map(d => ({
+            nome: d.nome,
+            categoria: d.categoria,
+            cargaHorariaPorSerie: [d.cargaHorariaPadrao, d.cargaHorariaPadrao, d.cargaHorariaPadrao],
+            cargaHorariaPadrao: d.cargaHorariaPadrao
+        }));
+
+        const seriesMatrizes = [
+            { serieIdx: 0, serieNome: '1ª Série', matrizId },
+            { serieIdx: 1, serieNome: '2ª Série', matrizId },
+            { serieIdx: 2, serieNome: '3ª Série', matrizId },
+        ];
+
+        // 3. Criar a Grade
+        const rGrade = await fetch(`${API_URL}/historicos/grades`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({
+                tipo: 'medio',
+                nome: 'Ensino Médio Integral I',
+                numSeries: 3,
+                nomesSeries: ['1ª Série', '2ª Série', '3ª Série'],
+                disciplinas: disciplinasGrade,
+                seriesMatrizes
+            })
+        });
+        const dGrade = await rGrade.json();
+        if (!dGrade.success) { mostrarNotificacao('Erro ao criar grade: ' + (dGrade.message || ''), 'error'); return; }
+
+        mostrarNotificacao('✅ Modelo "Ensino Médio Integral I" criado com sucesso! Agora selecione um aluno em "Lançar Notas".', 'success');
+        // Atualizar listas
+        carregarListaGrades();
+        carregarListaMatrizes();
+    } catch (e) {
+        console.error(e);
+        mostrarNotificacao('Erro de conexão ao criar modelo.', 'error');
+    }
+}
+
 function abrirModalGrade(gradeExistente) {
     const isEdit = !!gradeExistente;
     const g = gradeExistente || { tipo: 'medio', nome: '', disciplinas: [], serie: '', nomesSeries: [] };
