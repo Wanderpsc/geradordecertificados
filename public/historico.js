@@ -4215,23 +4215,28 @@ function _histVersoMedioPortrait(pdf, hist, cfg) {
         y+=rowH;
 
         catDiscs.forEach(disc=>{
-            if(y+rowH>tblMaxY) return; // para de desenhar ao atingir o rodapé
+            // Calcular altura dinâmica pela quantidade de linhas do nome
+            pdf.setFont('helvetica','normal');pdf.setFontSize(DISC_FONT_SZ);
+            const discLines=pdf.splitTextToSize(disc.nome,cDisc-2);
+            const lineHmm=DISC_FONT_SZ*0.42;
+            const thisRowH=Math.max(rowH, discLines.length*lineHmm+2.5);
+
+            if(y+thisRowH>tblMaxY) return; // para de desenhar ao atingir o rodapé
             const bg=rowIdx%2===0?[250,252,255]:[255,255,255];
-            pdf.setFillColor(...bg);pdf.rect(tblX,y,UW,rowH,'F');
-            pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.1);pdf.rect(tblX,y,UW,rowH,'S');
+            pdf.setFillColor(...bg);pdf.rect(tblX,y,UW,thisRowH,'F');
+            pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.1);pdf.rect(tblX,y,UW,thisRowH,'S');
             // Nome da disciplina — centralizado horizontal e verticalmente na célula
-            pdf.setFont('helvetica','normal');pdf.setFontSize(DISC_FONT_SZ);pdf.setTextColor(10,10,10);
+            pdf.setTextColor(10,10,10);
             {
-                const discLines=pdf.splitTextToSize(disc.nome,cDisc-2);
-                const lineHmm=DISC_FONT_SZ*0.42; // ~mm por linha
                 const blockH=discLines.length*lineHmm;
-                const textY=y+(rowH-blockH)/2+lineHmm*0.85;
+                const textY=y+(thisRowH-blockH)/2+lineHmm*0.85;
                 pdf.text(discLines,tblX+cDisc/2,Math.max(y+lineHmm,textY),{align:'center',maxWidth:cDisc-2});
             }
-            pdf.setDrawColor(0,40,120);pdf.line(tblX+cDisc,y,tblX+cDisc,y+rowH);
+            pdf.setDrawColor(0,40,120);pdf.line(tblX+cDisc,y,tblX+cDisc,y+thisRowH);
 
             // Células bimestrais
             let cx=tblX+cDisc;
+            const midY=y+thisRowH/2+DISC_FONT_SZ*0.18; // centro vertical da célula
             for(let bim=0;bim<4;bim++){
                 const avA=bim*2+1,avB=bim*2+2;
                 const avDataA=_getAv(disc.nome,avA);
@@ -4240,40 +4245,37 @@ function _histVersoMedioPortrait(pdf, hist, cfg) {
                 const faltasA=avDataA.faltas!==undefined?String(avDataA.faltas):'';
                 const notaB=avDataB.nota!==undefined?Number(avDataB.nota).toFixed(1):'';
                 const faltasB=avDataB.faltas!==undefined?String(avDataB.faltas):'';
-                // MB calculado: (notaA + notaB) / 2 (apenas se ambas existirem)
                 const mbVal=(avDataA.nota!==undefined&&avDataB.nota!==undefined)?
                     ((Number(avDataA.nota)+Number(avDataB.nota))/2).toFixed(1):'';
-                // FTB calculado: faltas A + faltas B
                 const ftbVal=(avDataA.faltas!==undefined||avDataB.faltas!==undefined)?
                     String((Number(avDataA.faltas||0)+Number(avDataB.faltas||0))):'';
 
-                const midY=y+rowH/2+DISC_FONT_SZ*0.18; // centro vertical da célula
                 pdf.setFont('helvetica','normal');pdf.setFontSize(DISC_FONT_SZ);pdf.setTextColor(0,0,0);
                 // Av A
                 pdf.text(notaA,cx+subColW/2,midY,{align:'center'});
-                pdf.setDrawColor(0,40,120);pdf.line(cx+subColW,y,cx+subColW,y+rowH);
+                pdf.setDrawColor(0,40,120);pdf.line(cx+subColW,y,cx+subColW,y+thisRowH);
                 cx+=subColW;
                 pdf.text(faltasA,cx+subColW/2,midY,{align:'center'});
-                pdf.line(cx+subColW,y,cx+subColW,y+rowH);
+                pdf.line(cx+subColW,y,cx+subColW,y+thisRowH);
                 cx+=subColW;
                 // Av B
                 pdf.text(notaB,cx+subColW/2,midY,{align:'center'});
-                pdf.line(cx+subColW,y,cx+subColW,y+rowH);
+                pdf.line(cx+subColW,y,cx+subColW,y+thisRowH);
                 cx+=subColW;
                 pdf.text(faltasB,cx+subColW/2,midY,{align:'center'});
-                pdf.line(cx+subColW,y,cx+subColW,y+rowH);
+                pdf.line(cx+subColW,y,cx+subColW,y+thisRowH);
                 cx+=subColW;
                 // MB
                 pdf.setFont('helvetica','bold');
                 pdf.text(mbVal,cx+subColW/2,midY,{align:'center'});
-                pdf.line(cx+subColW,y,cx+subColW,y+rowH);
+                pdf.line(cx+subColW,y,cx+subColW,y+thisRowH);
                 cx+=subColW;
                 // FTB
                 pdf.text(ftbVal,cx+subColW/2,midY,{align:'center'});
-                pdf.line(cx+subColW,y,cx+subColW,y+rowH);
+                pdf.line(cx+subColW,y,cx+subColW,y+thisRowH);
                 cx+=subColW;
             }
-            rowIdx++;y+=rowH;
+            rowIdx++;y+=thisRowH;
         });
     });
 
