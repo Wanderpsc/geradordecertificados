@@ -3150,35 +3150,18 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     };
     _cabLn(l1,true,7);_cabLn(l2,true,7);_cabLn(l3,false,7);
 
-    // Linhas de estabelecimento e endereço
-    if(inst){
-        pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.2);
-        pdf.line(ML,y+1,PW-MR,y+1,'S');
-        pdf.setFont('helvetica','normal');pdf.setFontSize(7);pdf.setTextColor(0,0,0);
-        pdf.text(inst,PW/2,y-0.5,{align:'center',maxWidth:UW-4});
-        y+=5;
-        pdf.line(ML,y+1,PW-MR,y+1,'S');
-        if(end_){pdf.text(end_,PW/2,y-0.5,{align:'center',maxWidth:UW-4});}
-        y+=5;
-    } else {
-        pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.2);
-        pdf.line(ML,y+2,PW-MR,y+2,'S');
-        pdf.setFont('helvetica','normal');pdf.setFontSize(6);pdf.setTextColor(80,80,80);
-        pdf.text('ESTABELECIMENTO DE ENSINO',PW/2,y+0.5,{align:'center'});
-        y+=6;
-        pdf.line(ML,y+2,PW-MR,y+2,'S');
-        pdf.text('ENDEREÇO',PW/2,y+0.5,{align:'center'});
-        y+=6;
-    }
-
-    // Linha de resolução
-    const resolNum=(resol||'').replace(/^resolu[çc][aã]o\s+cee\/pi\s*/i,'').trim();
+    // Estabelecimento e endereço — sem linhas, centralizado
     pdf.setFont('helvetica','normal');pdf.setFontSize(7);pdf.setTextColor(0,0,0);
+    pdf.text(inst||'ESTABELECIMENTO DE ENSINO',PW/2,y+3,{align:'center',maxWidth:UW-4});
+    y+=5;
+    pdf.text(end_||'ENDEREÇO',PW/2,y+3,{align:'center',maxWidth:UW-4});
+    y+=5;
+
+    // Resolução — sem linha, centralizada
+    const resolNum=(resol||'').replace(/^resolu[çc][aã]o\s+cee\/pi\s*/i,'').trim();
     const resolTxt='Autorização de Funcionamento pela Resolução CEE/PI Nº '+(resolNum||resol||'___');
-    pdf.text(resolTxt,ML+2,y+1.5);
-    pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.2);
-    const resolTxtW=pdf.getStringUnitWidth(resolTxt)*7/pdf.internal.scaleFactor;
-    pdf.line(ML+2+resolTxtW+2,y+2,PW-MR-2,y+2);
+    pdf.setFont('helvetica','normal');pdf.setFontSize(7);pdf.setTextColor(0,0,0);
+    pdf.text(resolTxt,PW/2,y+3,{align:'center',maxWidth:UW-4});
     y+=7;
 
     // TÍTULO CENTRAL
