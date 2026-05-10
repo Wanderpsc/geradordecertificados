@@ -4241,85 +4241,92 @@ function _histVersoMedioPortrait(pdf, hist, cfg) {
     pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.3);
     pdf.rect(tblX,tblBodyStart-tblHdrH,UW,y-tblBodyStart+tblHdrH,'S');
 
-    y+=1;
+    // ─── ANCORAGEM DO RODAPÉ (de baixo para cima) ─────────────────────────
+    // Reservas fixas a partir do fundo da página (paisagem: PH=210)
+    const fyBot=PH-4;            // dupla linha final
+    const sigY=fyBot-12;         // linha de assinatura
+    const localY=sigY-8;         // linha LOCAL / DATA
+    const rasurY=localY-4;       // "Neste documento não deverá..."
+    const BOTTOM_FIXED=rasurY;   // tudo acima disso é conteúdo variável
 
-    // Nota de atenção
-    pdf.setFont('helvetica','italic');pdf.setFontSize(5.5);pdf.setTextColor(80,80,80);
-    pdf.text('ATENÇÃO: Preencher somente no caso do(a) estudante solicitar transferência durante o ano letivo.',ML,y+3.5);
-    y+=5;
-    pdf.setFont('helvetica','normal');pdf.setFontSize(5.5);pdf.setTextColor(50,50,50);
-    pdf.text('MB: Média Bimestral   FTB: Falta Total Bimestre',ML,y+3);
-    y+=5;
+    // Espaço disponível após a tabela
+    const tabelaBot=y+1;
+    const espacoDisp=BOTTOM_FIXED-tabelaBot-1;
 
-    // ─── VERIFICAÇÃO DE RENDIMENTO ────────────────────────────────────────
+    // ─── ATENÇÃO + MB / FTB (1 linha compacta) ────────────────────────────
+    pdf.setFont('helvetica','italic');pdf.setFontSize(4.8);pdf.setTextColor(80,80,80);
+    pdf.text('ATENÇÃO: Preencher somente no caso do(a) estudante solicitar transferência durante o ano letivo.',ML,tabelaBot+2.5);
+    pdf.setFont('helvetica','normal');pdf.setFontSize(4.8);pdf.setTextColor(50,50,50);
+    pdf.text('MB: Média Bimestral   FTB: Falta Total Bimestre',PW-MR,tabelaBot+2.5,{align:'right'});
+
+    const secTop=tabelaBot+5; // início das seções abaixo da nota
+    const secH=Math.max(0,BOTTOM_FIXED-secTop-1); // altura total disponível para seções
+
+    // Dividir espaço: VERIFICAÇÃO+RESERVADO (lado a lado, 55%) | OBSERVAÇÕES (45%)
+    const verH=Math.floor(secH*0.55);
+    const obsH=secH-verH-1;
+
+    // ─── VERIFICAÇÃO + RESERVADO (lado a lado) ────────────────────────────
+    const verW=Math.floor(UW*0.60);
+    const resW=UW-verW;
+
+    // VERIFICAÇÃO
+    pdf.setFillColor(240,245,255);pdf.rect(ML,secTop,verW,verH,'F');
+    pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.2);pdf.rect(ML,secTop,verW,verH,'S');
+    pdf.setFont('helvetica','bold');pdf.setFontSize(6);pdf.setTextColor(0,40,120);
+    pdf.text('VERIFICAÇÃO DE RENDIMENTO E FREQUÊNCIA ESCOLAR',ML+1.5,secTop+4);
     const verLines=[
-        '1. O(a) estudante será considerado(a) aprovado(a) quando a média bimestral for igual ou superior a 5,0 (cinco) em cada componente curricular.',
-        '2. A frequência mínima exigida é de 75% do total de horas letivas.',
-        '3. Nos componentes dos Itinerários Formativos, a avaliação é qualitativa: A (Avançado), AA (Ainda Avançando).',
-        '4. Atividades Integradoras: frequência mínima de 75% do total da carga horária trabalhada para cada turma durante o ano letivo.',
+        '1- Nota/Média obtiver mínimo de 60% de rendimento escolar em cada componente curricular da Formação Geral Básica/FGB;',
+        '2- As unidades curriculares dos Itinerários Formativos-IFs do Ensino Médio Regular (Tempo Integral e Parcial), serão avaliadas exclusivamente de forma qualitativa.',
+        '3- Todas as unidades curriculares dos Itinerários Formativos-IFs (Linhas de Aprofundamento, Projeto de Vida, Eletivas e as Atividades Integradoras), possuem uma escala de engajamento única: I - Engajamento Avançado (EA); II - Engajamento Satisfatório (ES) e III - Engajamento Básico (EB). Os conceitos nos Incisos de I a III correspondem respectivamente: 8,5 < (EA) ≤ 10; 6,0 < (ES) ≤ 8,5; (EB) = 6,0',
+        '4- Assiduidade obtiver frequência mínima de 75% do total da carga horária trabalhada pela escola durante o ano letivo.',
     ];
-    const verTitleH=5;
-    let verTotalH=verTitleH+2;
-    pdf.setFontSize(5.5);
-    verLines.forEach(t=>{verTotalH+=pdf.splitTextToSize(t,UW-7).length*3.2+1.2;});
-    verTotalH=Math.max(verTotalH,24);
-
-    pdf.setFillColor(235,240,255);pdf.rect(ML,y,UW,verTotalH,'F');
-    pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.25);pdf.rect(ML,y,UW,verTotalH,'S');
-    pdf.setFont('helvetica','bold');pdf.setFontSize(6.5);pdf.setTextColor(0,40,120);
-    pdf.text('VERIFICAÇÃO DE RENDIMENTO E FREQUÊNCIA ESCOLAR',ML+2,y+verTitleH-1);
-    pdf.setFont('helvetica','normal');pdf.setFontSize(5.5);pdf.setTextColor(15,15,15);
-    let vy=y+verTitleH+1.5;
+    const verFontSz=4.5;
+    pdf.setFont('helvetica','normal');pdf.setFontSize(verFontSz);pdf.setTextColor(10,10,10);
+    let vy=secTop+6.5;
     verLines.forEach(t=>{
-        const ls=pdf.splitTextToSize(t,UW-7);
-        pdf.text(ls,ML+3,vy);vy+=ls.length*3.2+1.2;
+        const ls=pdf.splitTextToSize(t,verW-4);
+        if(vy+ls.length*2.6<secTop+verH-1){pdf.text(ls,ML+2,vy);vy+=ls.length*2.6+1;}
     });
-    y+=verTotalH+2;
 
-    // ─── OBSERVAÇÕES + RESERVADO ──────────────────────────────────────────
-    const avSpace=PH-y-30; // espaço disponível antes das assinaturas
-    const boxesH=Math.max(avSpace,20);
-    const halfW=(UW-2)/2;
+    // RESERVADO
+    pdf.setFillColor(255,255,255);pdf.rect(ML+verW,secTop,resW,verH,'F');
+    pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.2);pdf.rect(ML+verW,secTop,resW,verH,'S');
+    pdf.setFont('helvetica','bold');pdf.setFontSize(6);pdf.setTextColor(0,40,120);
+    const rLns=pdf.splitTextToSize('RESERVADO PARA AUTENTICAÇÃO',resW-3);
+    pdf.text(rLns,ML+verW+1.5,secTop+4);
 
-    pdf.setFillColor(255,255,255);pdf.rect(ML,y,halfW,boxesH,'F');
-    pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.25);pdf.rect(ML,y,halfW,boxesH,'S');
-    pdf.setFont('helvetica','bold');pdf.setFontSize(6.5);pdf.setTextColor(0,40,120);
-    pdf.text('OBSERVAÇÕES',ML+2,y+5);
+    // ─── OBSERVAÇÕES (full width abaixo) ──────────────────────────────────
+    const obsTop=secTop+verH+1;
+    pdf.setFillColor(255,255,255);pdf.rect(ML,obsTop,UW,obsH,'F');
+    pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.2);pdf.rect(ML,obsTop,UW,obsH,'S');
+    pdf.setFont('helvetica','bold');pdf.setFontSize(6);pdf.setTextColor(0,40,120);
+    pdf.text('OBSERVAÇÕES:',ML+1.5,obsTop+4);
     if(fichaEntry.observacao){
-        pdf.setFont('helvetica','normal');pdf.setFontSize(6);pdf.setTextColor(0,0,0);
-        const obsLines=pdf.splitTextToSize(fichaEntry.observacao,halfW-5);
-        pdf.text(obsLines.slice(0,Math.floor((boxesH-8)/3.5)),ML+2,y+10);
+        pdf.setFont('helvetica','normal');pdf.setFontSize(5.5);pdf.setTextColor(0,0,0);
+        const obsLines=pdf.splitTextToSize(fichaEntry.observacao,UW-5);
+        pdf.text(obsLines.slice(0,Math.floor((obsH-6)/3.2)),ML+2,obsTop+7);
     }
 
-    pdf.setFillColor(255,255,255);pdf.rect(ML+halfW+2,y,halfW,boxesH,'F');
-    pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.25);pdf.rect(ML+halfW+2,y,halfW,boxesH,'S');
-    pdf.setFont('helvetica','bold');pdf.setFontSize(6.5);pdf.setTextColor(0,40,120);
-    const rLns=pdf.splitTextToSize('RESERVADO PARA AUTENTICAÇÃO',halfW-4);
-    pdf.text(rLns,ML+halfW+4,y+5);
-    // Número de registro
-    if(hist.registro){
-        pdf.setFont('helvetica','normal');pdf.setFontSize(6);pdf.setTextColor(0,0,0);
-        pdf.text(hist.registro,ML+halfW+4,y+12);
-    }
-    y+=boxesH+2;
+    // ─── "NESTE DOCUMENTO NÃO DEVERÁ HAVER EMENDAS..." ───────────────────
+    pdf.setFont('helvetica','italic');pdf.setFontSize(5.5);pdf.setTextColor(60,60,60);
+    pdf.text('Neste documento não deverá haver emendas e nem rasuras.',PW/2,rasurY,{align:'center'});
 
-    // Nota rasuras
-    pdf.setFont('helvetica','italic');pdf.setFontSize(5.8);pdf.setTextColor(60,60,60);
-    pdf.text('Neste documento não deverão haver emendas e nem rasuras.',PW/2,y+2.5,{align:'center'});
-
-    // ─── RODAPÉ VERSO ─────────────────────────────────────────────────────
+    // ─── LOCAL / DATA ─────────────────────────────────────────────────────
     const sig1v=cfg?.frente?.assinatura1||'SECRETÁRIO(A)';
     const sig2v=cfg?.frente?.assinatura2||'DIRETOR(A)';
     const localDataV=cfg?.frente?.localData||hist.dataEmissao||'';
-    const rodapeYv=PH-28;
-    _drawLocalData(pdf,localDataV,rodapeYv,PW);
-    const sigYv=rodapeYv+12;
-    [{cx:ML+UW*0.25,sig:sig1v},{cx:ML+UW*0.75,sig:sig2v}].forEach(({cx,sig})=>{
+    _drawLocalData(pdf,localDataV,localY,PW);
+
+    // ─── ASSINATURAS ──────────────────────────────────────────────────────
+    const sigLineW=60;
+    [{cx:PW*0.28,sig:sig1v},{cx:PW*0.72,sig:sig2v}].forEach(({cx,sig})=>{
         pdf.setLineWidth(0.2);pdf.setDrawColor(0,40,120);
-        pdf.line(cx-45,sigYv,cx+45,sigYv);
-        _hText(pdf,sig,cx,sigYv+4,{size:6,align:'center',bold:true});
+        pdf.line(cx-sigLineW/2,sigY,cx+sigLineW/2,sigY);
+        _hText(pdf,sig,cx,sigY+4,{size:6,align:'center',bold:true});
     });
-    const fyBot=PH-6;
+
+    // ─── DUPLA LINHA INFERIOR ─────────────────────────────────────────────
     _hLine(pdf,ML,fyBot,PW-MR,fyBot,0.6,[0,40,120]);
     _hLine(pdf,ML,fyBot+1.2,PW-MR,fyBot+1.2,0.2,[0,40,120]);
 }
