@@ -2705,13 +2705,135 @@ async function carregarFormNotasAsync() {
 
 let _histPreviewBlobUrl = null; // guarda a URL atual para abrir em nova página
 
+// ==================== SELETOR DE MODELO PARA GERAÇÃO DE PDF ====================
+/**
+ * Exibe um modal para o usuário escolher qual modelo (grade) usar ao gerar o PDF.
+ * Após a escolha, chama callback(gradeObj) — onde gradeObj pode ser a grade
+ * original do histórico ou outra escolhida pelo usuário.
+ */
+async function _mostrarSeletorModeloHist(hist, callback) {
+    const token = localStorage.getItem('token');
+    const tipo = hist.tipo || 'medio';
+
+    // Busca grades disponíveis para este tipo
+    let gradesDisponiveis = [];
+    try {
+        const resp = await fetch(`${API_URL}/historicos/grades`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await resp.json();
+        if (data.success) {
+            gradesDisponiveis = (data.grades || []).filter(g => g.tipo === tipo);
+        }
+    } catch(e) {}
+
+    // Se só há o modelo já vinculado (ou nenhum), pula o seletor
+    const gradeAtual = hist.grade || {};
+    if (gradesDisponiveis.length <= 1) { callback(gradeAtual); return; }
+
+    const modal = document.createElement('div');
+    modal.id = 'modalSeletorModeloGeracao';
+    modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.65);z-index:10100;display:flex;align-items:center;justify-content:center;padding:20px;';
+
+    const opcoesHTML = gradesDisponiveis.map(g => {
+        const isAtual = g._id === (gradeAtual._id || gradeAtual);
+        return `<div onclick="_aplicarModeloSelecionado('${g._id}')"
+            data-grade-id="${g._id}"
+            style="display:flex;align-items:center;gap:10px;padding:12px 16px;border:2px solid ${isAtual ? '#3b82f6' : '#e5e7eb'};background:${isAtual ? '#eff6ff' : 'white'};border-radius:10px;cursor:pointer;transition:all .15s;"
+            onmouseover="this.style.borderColor='#3b82f6';this.style.background='#eff6ff'"
+            onmouseout="if(this.dataset.gradeId!==window._modeloGeracaoAtualId){this.style.borderColor='#e5e7eb';this.style.background='white';}">
+            <div style="flex:1;">
+                <div style="font-weight:700;font-size:13px;color:#1e3a8a;">${escapeHtml(g.nome)}</div>
+                <div style="font-size:11px;color:#6b7280;">${g.disciplinas?.length || 0} disciplinas — ${g.nomesSeries?.join(', ') || ''}</div>
+            </div>
+            ${isAtual ? '<span style="font-size:11px;color:#1d4ed8;font-weight:600;white-space:nowrap;">✔ Modelo atual</span>' : ''}
+        </div>`;
+    }).join('');
+
+    modal.innerHTML = `
+    <div style="background:white;border-radius:16px;padding:28px;max-width:500px;width:95%;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <h2 style="color:#1e3a8a;margin:0;font-size:17px;">📄 Selecione o Modelo para o PDF</h2>
+            <button onclick="document.getElementById('modalSeletorModeloGeracao').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#6b7280;">✕</button>
+        </div>
+        <p style="color:#6b7280;font-size:12px;margin-bottom:16px;">
+            O modelo define quais disciplinas e cargas horárias aparecem no PDF.<br>
+            As <strong>notas já lançadas</strong> serão mantidas e associadas pelo nome da disciplina.
+        </p>
+        <div style="display:flex;flex-direction:column;gap:8px;" id="seletorModelosLista">
+            ${opcoesHTML}
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px;border-top:1px solid #e5e7eb;padding-top:14px;">
+            <button class="btn btn-secondary" onclick="document.getElementById('modalSeletorModeloGeracao').remove()">Cancelar</button>
+            <button class="btn btn-primary" id="btnConfirmarModeloGeracao" onclick="_confirmarModeloSelecionado()" disabled>✅ Gerar com este Modelo</button>
+        </div>
+    </div>`;
+
+    document.body.appendChild(modal);
+    modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+
+    // Pré-selecionar o modelo atual
+    window._modeloGeracaoAtualId = gradeAtual._id || null;
+    window._modeloGeracaoCallback = callback;
+    window._modeloGeracaoHist = hist;
+    window._modeloGeracaoGrades = gradesDisponiveis;
+
+    if (window._modeloGeracaoAtualId) {
+        const btn = document.getElementById('btnConfirmarModeloGeracao');
+        if (btn) btn.disabled = false;
+    }
+}
+
+function _aplicarModeloSelecionado(gradeId) {
+    window._modeloGeracaoAtualId = gradeId;
+    // Highlight selecionado
+    document.querySelectorAll('#seletorModelosLista > div').forEach(el => {
+        const sel = el.dataset.gradeId === gradeId;
+        el.style.borderColor = sel ? '#3b82f6' : '#e5e7eb';
+        el.style.background = sel ? '#eff6ff' : 'white';
+    });
+    const btn = document.getElementById('btnConfirmarModeloGeracao');
+    if (btn) btn.disabled = false;
+}
+
+async function _confirmarModeloSelecionado() {
+    const gradeId = window._modeloGeracaoAtualId;
+    const grades = window._modeloGeracaoGrades || [];
+    const hist = window._modeloGeracaoHist;
+    const callback = window._modeloGeracaoCallback;
+
+    document.getElementById('modalSeletorModeloGeracao')?.remove();
+
+    // Encontra a grade selecionada na lista local
+    let gradeEscolhida = grades.find(g => g._id === gradeId);
+
+    // Se a grade local não tem disciplinas completas, busca no servidor
+    if (!gradeEscolhida?.disciplinas?.length) {
+        try {
+            const token = localStorage.getItem('token');
+            const resp = await fetch(`${API_URL}/historicos/grades/${gradeId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await resp.json();
+            if (data.success) gradeEscolhida = data.grade;
+        } catch(e) {}
+    }
+
+    if (!gradeEscolhida) { callback(hist.grade || {}); return; }
+
+    // Substitui grade no hist temporariamente (não persiste)
+    // As notas são mantidas — combinadas por nome de disciplina no PDF
+    const histComNovoModelo = Object.assign({}, hist, { grade: gradeEscolhida });
+    callback(histComNovoModelo);
+}
+
 async function previewHistorico(id) {
     if (!window.jspdf?.jsPDF) {
         mostrarNotificacao('Biblioteca jsPDF não carregada. Recarregue a página.', 'error');
         return;
     }
     const token = localStorage.getItem('token');
-    mostrarNotificacao('Gerando pré-visualização...', 'info');
+    mostrarNotificacao('Carregando histórico...', 'info');
 
     try {
         const resp = await fetch(`${API_URL}/historicos/${id}`, {
@@ -2720,43 +2842,51 @@ async function previewHistorico(id) {
         const data = await resp.json();
         if (!data.success) { mostrarNotificacao('Histórico não encontrado.', 'error'); return; }
 
-        const hist = data.historico;
-        const cfg = obterConfigHist();
-        const { jsPDF } = window.jspdf;
-const isMedioPreview = hist.tipo === 'medio';
-        const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        const histOriginal = data.historico;
 
-        if (isMedioPreview) {
-            _histFrenteMedioPortrait(pdf, hist, cfg);
-            pdf.addPage();
-            _histVersoMedioPortrait(pdf, hist, cfg);
-        } else {
-            _histFrente(pdf, hist, cfg);
-            pdf.addPage();
-            _histVerso(pdf, hist, cfg);
-        }
-
-        // Revogar blob anterior para liberar memória
-        if (_histPreviewBlobUrl) URL.revokeObjectURL(_histPreviewBlobUrl);
-        _histPreviewBlobUrl = URL.createObjectURL(pdf.output('blob'));
-
-        const card = document.getElementById('histPreviewCard');
-        const frame = document.getElementById('histPreviewFrame');
-        const label = document.getElementById('histPreviewNomeAluno');
-
-        if (card) card.style.display = '';
-        if (frame) frame.src = _histPreviewBlobUrl;
-        if (label) label.textContent = `Aluno: ${hist.aluno?.nome || '—'}`;
-
-        setTimeout(() => {
-            if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 200);
-
-        mostrarNotificacao('Pré-visualização pronta!', 'success');
+        // Exibe seletor de modelo antes de gerar
+        await _mostrarSeletorModeloHist(histOriginal, (hist) => {
+            _gerarPreviewPDF(hist);
+        });
     } catch (e) {
         console.error('Erro ao gerar pré-visualização:', e);
         mostrarNotificacao('Erro ao gerar pré-visualização.', 'error');
     }
+}
+
+function _gerarPreviewPDF(hist) {
+    const cfg = obterConfigHist();
+    const { jsPDF } = window.jspdf;
+    const isMedioPreview = hist.tipo === 'medio';
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+    if (isMedioPreview) {
+        _histFrenteMedioPortrait(pdf, hist, cfg);
+        pdf.addPage();
+        _histVersoMedioPortrait(pdf, hist, cfg);
+    } else {
+        _histFrente(pdf, hist, cfg);
+        pdf.addPage();
+        _histVerso(pdf, hist, cfg);
+    }
+
+    // Revogar blob anterior para liberar memória
+    if (_histPreviewBlobUrl) URL.revokeObjectURL(_histPreviewBlobUrl);
+    _histPreviewBlobUrl = URL.createObjectURL(pdf.output('blob'));
+
+    const card = document.getElementById('histPreviewCard');
+    const frame = document.getElementById('histPreviewFrame');
+    const label = document.getElementById('histPreviewNomeAluno');
+
+    if (card) card.style.display = '';
+    if (frame) frame.src = _histPreviewBlobUrl;
+    if (label) label.textContent = `Aluno: ${hist.aluno?.nome || '—'}`;
+
+    setTimeout(() => {
+        if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 200);
+
+    mostrarNotificacao('Pré-visualização pronta!', 'success');
 }
 
 function _atualizarOrientacaoHist(tipo) {
@@ -2789,13 +2919,33 @@ async function gerarHistoricoPDF() {
     if (!ids.length) { mostrarNotificacao('Selecione pelo menos um histórico.', 'error'); return; }
     if (!window.jspdf?.jsPDF) { mostrarNotificacao('Biblioteca jsPDF não carregada. Recarregue a página.', 'error'); return; }
 
+    const token = localStorage.getItem('token');
+
+    // Busca o primeiro histórico para usar como referência no seletor de modelo
+    let histReferencia = null;
+    try {
+        const resp = await fetch(`${API_URL}/historicos/${ids[0]}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await resp.json();
+        if (data.success) histReferencia = data.historico;
+    } catch(e) {}
+
+    if (!histReferencia) { mostrarNotificacao('Erro ao carregar histórico.', 'error'); return; }
+
+    // Exibe seletor de modelo (usando o primeiro histórico como referência)
+    await _mostrarSeletorModeloHist(histReferencia, async (histComModelo) => {
+        const gradeEscolhida = histComModelo.grade;
+        await _gerarLotePDF(ids, gradeEscolhida, token);
+    });
+}
+
+async function _gerarLotePDF(ids, gradeEscolhida, token) {
     mostrarNotificacao(`Gerando ${ids.length} histórico(s)...`, 'info');
     const { jsPDF } = window.jspdf;
     const cfg = obterConfigHist();
-    // orientacão será definida por histórico individualmente abaixo
     let pdf = null;
     let primeiroDoc = true;
-    const token = localStorage.getItem('token');
 
     for (const histId of ids) {
         try {
@@ -2805,7 +2955,11 @@ async function gerarHistoricoPDF() {
             const data = await resp.json();
             if (!data.success) continue;
 
-            const hist = data.historico;
+            // Aplica o modelo escolhido (substitui a grade, mantém notas)
+            const hist = gradeEscolhida
+                ? Object.assign({}, data.historico, { grade: gradeEscolhida })
+                : data.historico;
+
             const isMedio = hist.tipo === 'medio';
             if (!primeiroDoc) {
                 pdf.addPage({ orientation: 'portrait' });
@@ -2827,6 +2981,8 @@ async function gerarHistoricoPDF() {
             console.error('Erro ao gerar histórico:', histId, e);
         }
     }
+
+    if (!pdf) { mostrarNotificacao('Nenhum histórico pôde ser gerado.', 'error'); return; }
 
     const pdfBlob = pdf.output('blob');
     window.open(URL.createObjectURL(pdfBlob), '_blank');
