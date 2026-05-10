@@ -93,7 +93,8 @@ function obterConfigHist() {
             resolucao: el('histCfgResolucao').value.trim(),
             assinatura1: el('histCfgAssinatura1').value.trim() || HIST_CONFIG_DEFAULTS.frente.assinatura1,
             assinatura2: el('histCfgAssinatura2').value.trim() || HIST_CONFIG_DEFAULTS.frente.assinatura2,
-            localData: el('histCfgLocalData')?.value.trim() || ''
+            localData: el('histCfgLocalData')?.value.trim() || '',
+            observacoes: el('histCfgObservacoes')?.value.trim() || ''
         },
         emblema: {
             tipo: el('histCfgEmblema')?.value || 'brasao-brasil',
@@ -118,6 +119,7 @@ function _aplicarConfigHistNosInputs(cfg) {
     el('histCfgAssinatura1').value = cfg?.frente?.assinatura1 || '';
     el('histCfgAssinatura2').value = cfg?.frente?.assinatura2 || '';
     if(el('histCfgLocalData')) el('histCfgLocalData').value = cfg?.frente?.localData || '';
+    if(el('histCfgObservacoes')) el('histCfgObservacoes').value = cfg?.frente?.observacoes || '';
     // Emblema
     const emb = cfg?.emblema || HIST_CONFIG_DEFAULTS.emblema;
     if (el('histCfgEmblema')) el('histCfgEmblema').value = emb.tipo || 'brasao-brasil';
@@ -4314,9 +4316,10 @@ function _histVersoMedioPortrait(pdf, hist, cfg) {
     pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.2);pdf.rect(ML,obsTop,UW,OBS_H,'S');
     pdf.setFont('helvetica','bold');pdf.setFontSize(5.5);pdf.setTextColor(0,40,120);
     pdf.text('OBSERVAÇÕES:',ML+1.5,obsTop+4);
-    if(fichaEntry.observacao){
+    const obsTexto=fichaEntry.observacao||cfg?.frente?.observacoes||'';
+    if(obsTexto){
         pdf.setFont('helvetica','normal');pdf.setFontSize(5);pdf.setTextColor(0,0,0);
-        const obsLns=pdf.splitTextToSize(fichaEntry.observacao,UW-4);
+        const obsLns=pdf.splitTextToSize(obsTexto,UW-4);
         pdf.text(obsLns.slice(0,Math.floor((OBS_H-6)/3)),ML+1.5,obsTop+8);
     }
 
