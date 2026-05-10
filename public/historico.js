@@ -2876,7 +2876,7 @@ function _gerarPreviewPDF(hist) {
 
         if (isMedioPreview) {
             _histFrenteMedioPortrait(pdf, hist, cfg);
-            pdf.addPage({ orientation: 'landscape' });
+            pdf.addPage({ orientation: 'portrait' });
             _histVersoMedioPortrait(pdf, hist, cfg);
         } else {
             _histFrente(pdf, hist, cfg);
@@ -2987,7 +2987,7 @@ async function _gerarLotePDF(ids, gradeEscolhida, token) {
 
             if (isMedio) {
                 _histFrenteMedioPortrait(pdf, hist, cfg);
-                pdf.addPage({ orientation: 'landscape' });
+                pdf.addPage({ orientation: 'portrait' });
                 _histVersoMedioPortrait(pdf, hist, cfg);
             } else {
                 _histFrente(pdf, hist, cfg);
@@ -3932,8 +3932,8 @@ function _histVersoMedioPortrait(pdf, hist, cfg) {
     const notas=hist.notas||{};
     const discs=grade.disciplinas||[];
 
-    // A4 PAISAGEM: largura=297mm, altura=210mm
-    const PW=297,PH=210,ML=8,MR=8,MT=6;
+    // A4 RETRATO: largura=210mm, altura=297mm
+    const PW=210,PH=297,ML=6,MR=6,MT=5;
     const UW=PW-ML-MR;
     let y=MT;
 
@@ -4068,23 +4068,20 @@ function _histVersoMedioPortrait(pdf, hist, cfg) {
     // Total sub-colunas: 4×(2+2+2) = 4×6 = 24 + 1 (disciplina) = 25
 
     const tblX=ML;
-    const cDisc=40; // largura coluna de disciplinas
+    const cDisc=26; // coluna disciplinas (estreitada para retrato)
     const remW=UW-cDisc;
-    // 4 bimestres, cada um tem: 2 avaliações × 2 campos + 1 grupo bimestre × 2 campos
-    // = 4 × 6 sub-colunas = 24 sub-cols
-    const avColW=remW/24; // largura de cada sub-coluna avaliação
-    // 2 av × 2sub + bim × 2sub = 6 sub-cols por bimestre → largura bimestre = remW/4 = 6×avColW
-    const bimW=remW/4; // = 6×avColW, largura de cada grupo bimestre
-    const avW=bimW/3; // = 2×avColW, largura de cada avaliação individual dentro do bimestre
-    // avColW = avW/2
+    // 24 sub-cols: 4 bimestres × (2 av × 2sub + 1 bim × 2sub)
+    const subColW=remW/24;  // ~7mm em retrato (198-26=172/24≈7.2mm)
+    const avW=subColW*2;    // largura de cada avaliação (NOTA+FALTAS)
+    const bimW=subColW*6;   // largura de cada grupo bimestre
 
-    const hdrH1=5; // cabeçalho nível 1
-    const hdrH2=4; // cabeçalho nível 2
-    const hdrH3=3.5; // cabeçalho nível 3 (NOTA/FALTAS/MB/FTB)
-    const rowH=3.5; // altura linha disciplina
+    const hdrH1=4.5;  // cabeçalho nível 1 (AVALIAÇÃO/FREQUÊNCIA)
+    const hdrH2=4.0;  // cabeçalho nível 2 (1ª AVALIAÇÃO...)
+    const hdrH3=3.0;  // cabeçalho nível 3 (NOTA/FALTAS/MB/FTB)
+    const rowH=3.5;   // altura linha disciplina
     const tblHdrH=hdrH1+hdrH2+hdrH3;
 
-    const DISC_FONT_SZ=5.5;
+    const DISC_FONT_SZ=4.8;
 
     // Cabeçalho nível 1: COMPONENTES CURRICULARES | AVALIAÇÃO/FREQUÊNCIA
     pdf.setFillColor(0,40,120);
@@ -4101,7 +4098,7 @@ function _histVersoMedioPortrait(pdf, hist, cfg) {
     // (desenhado ANTES do nível 3 para que nível 3 fique por cima)
     const yH2=y+hdrH1;
     const yH3=y+hdrH1+hdrH2;
-    const subColW=avW/2;
+    // subColW = avW/2 (já definido acima)
     let hx=tblX+cDisc;
     for(let bim=0;bim<4;bim++){
         const avA=bim*2+1;const avB=bim*2+2;
@@ -4259,70 +4256,64 @@ function _histVersoMedioPortrait(pdf, hist, cfg) {
     pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.3);
     pdf.rect(tblX,tblBodyStart-tblHdrH,UW,y-tblBodyStart+tblHdrH,'S');
 
-    // ─── RODAPÉ TOTALMENTE ANCORADO DO FUNDO (paisagem PH=210) ────────────
-    // Posições fixas a partir do fundo:
-    const fyBot=PH-3;          // dupla linha
-    const sigLblY=fyBot-5;     // labels SECRETÁRIO / DIRETOR
-    const sigLineY=sigLblY-6;  // linha de assinatura
-    const localLineY=sigLineY-7; // linha LOCAL / DATA
-    const rasurY=localLineY-4; // "Neste documento..."
+    // ─── RODAPÉ: alturas FIXAS ancoradas no fundo (portrait PH=297) ────────
+    // Blocos do fundo para cima:
+    const fyBot      = PH-3;          // dupla linha final
+    const sigLblY    = fyBot-5;       // rótulos SECRETÁRIO / DIRETOR
+    const sigLineY   = sigLblY-7;     // linhas de assinatura
+    const localLineY = sigLineY-9;    // LOCAL / DATA
+    const rasurY     = localLineY-5;  // "Neste documento..."
+    const OBS_H      = 20;            // OBSERVAÇÕES (altura fixa)
+    const VER_H      = 38;            // VERIFICAÇÃO (altura fixa)
+    const obsTop     = rasurY-1-OBS_H;
+    const verTop     = obsTop-1-VER_H;
+    const atenTop    = verTop-5;      // linha ATENÇÃO + MB/FTB
 
-    // Linha imediatamente após a tabela
-    const tabelaBot=y+0.5;
-
-    // ─── ATENÇÃO + MB/FTB ─────────────────────────────────────────────────
+    // ─── ATENÇÃO + MB/FTB ───────────────────────────────────────────────
     pdf.setFont('helvetica','italic');pdf.setFontSize(4.5);pdf.setTextColor(60,60,60);
-    pdf.text('ATENÇÃO: Preencher somente no caso do(a) estudante solicitar transferência durante o ano letivo.',ML,tabelaBot+2.5);
+    pdf.text('ATENÇÃO: Preencher somente no caso do(a) estudante solicitar transferência durante o ano letivo.',ML,atenTop+2.5);
     pdf.setFont('helvetica','normal');pdf.setFontSize(4.5);pdf.setTextColor(50,50,50);
-    pdf.text('MB: Média Bimestral   FTB: Falta Total Bimestre',PW-MR,tabelaBot+2.5,{align:'right'});
+    pdf.text('MB: Média Bimestral   FTB: Falta Total Bimestre',PW-MR,atenTop+2.5,{align:'right'});
 
-    // Espaço entre nota ATENÇÃO e a linha rasurY
-    const secTop=tabelaBot+5;
-    const secBot=rasurY-1;
-    const secH=Math.max(4,secBot-secTop);
-
-    // ─── VERIFICAÇÃO (esq 60%) + RESERVADO (dir 40%) ──────────────────────
-    const verBot=secTop+Math.floor(secH*0.52);
-    const verHh=verBot-secTop;
+    // ─── VERIFICAÇÃO (60%) + RESERVADO (40%) lado a lado ────────────────
     const verW=Math.floor(UW*0.60);
     const resW=UW-verW;
 
-    pdf.setFillColor(240,245,255);pdf.rect(ML,secTop,verW,verHh,'F');
-    pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.2);pdf.rect(ML,secTop,verW,verHh,'S');
+    pdf.setFillColor(240,245,255);pdf.rect(ML,verTop,verW,VER_H,'F');
+    pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.2);pdf.rect(ML,verTop,verW,VER_H,'S');
     pdf.setFont('helvetica','bold');pdf.setFontSize(5.5);pdf.setTextColor(0,40,120);
-    pdf.text('VERIFICAÇÃO DE RENDIMENTO E FREQUÊNCIA ESCOLAR',ML+1.5,secTop+3.5);
+    pdf.text('VERIFICAÇÃO DE RENDIMENTO E FREQUÊNCIA ESCOLAR',ML+1.5,verTop+4);
     const verLines=[
+        'Considerar-se-á o estudante que quanto à:',
         '1- Nota/Média obtiver mínimo de 60% de rendimento escolar em cada componente curricular da Formação Geral Básica/FGB;',
-        '2- As unidades curriculares dos Itinerários Formativos-IFs serão avaliadas exclusivamente de forma qualitativa.',
-        '3- Itinerários Formativos-IFs possuem escala única: I-EA; II-ES; III-EB. Correspondem a: 8,5<(EA)≤10; 6,0<(ES)≤8,5; (EB)=6,0',
-        '4- Assiduidade: frequência mínima de 75% do total da carga horária trabalhada durante o ano letivo.',
+        '2- As unidades curriculares dos Itinerários Formativos-IFs do Ensino Médio Regular (Tempo Integral e Parcial), serão avaliadas exclusivamente de forma qualitativa.',
+        '3- Todas as unidades curriculares dos Itinerários Formativos-IFs possuem escala de engajamento única: I-EA (8,5<EA≤10); II-ES (6,0<ES≤8,5); III-EB (EB=6,0).',
+        '4- Assiduidade obtiver frequência mínima de 75% do total da carga horária trabalhada pela escola durante o ano letivo.',
     ];
-    pdf.setFont('helvetica','normal');pdf.setFontSize(4.2);pdf.setTextColor(10,10,10);
-    let vy=secTop+6;
+    pdf.setFont('helvetica','normal');pdf.setFontSize(4.5);pdf.setTextColor(10,10,10);
+    let vy=verTop+7;
     verLines.forEach(t=>{
         const ls=pdf.splitTextToSize(t,verW-3);
-        if(vy+ls.length*2.4<secTop+verHh-0.5){pdf.text(ls,ML+1.5,vy);vy+=ls.length*2.4+0.8;}
+        if(vy+ls.length*2.5<verTop+VER_H-1){pdf.text(ls,ML+1.5,vy);vy+=ls.length*2.5+0.8;}
     });
 
-    pdf.setFillColor(255,255,255);pdf.rect(ML+verW,secTop,resW,verHh,'F');
-    pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.2);pdf.rect(ML+verW,secTop,resW,verHh,'S');
+    pdf.setFillColor(255,255,255);pdf.rect(ML+verW,verTop,resW,VER_H,'F');
+    pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.2);pdf.rect(ML+verW,verTop,resW,VER_H,'S');
     pdf.setFont('helvetica','bold');pdf.setFontSize(5.5);pdf.setTextColor(0,40,120);
-    pdf.text('RESERVADO PARA AUTENTICAÇÃO',ML+verW+resW/2,secTop+3.5,{align:'center',maxWidth:resW-2});
+    pdf.text('RESERVADO PARA AUTENTICAÇÃO',ML+verW+resW/2,verTop+4,{align:'center',maxWidth:resW-2});
 
-    // ─── OBSERVAÇÕES (abaixo, full width) ─────────────────────────────────
-    const obsTop=verBot+0.5;
-    const obsH=Math.max(3,secBot-obsTop);
-    pdf.setFillColor(255,255,255);pdf.rect(ML,obsTop,UW,obsH,'F');
-    pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.2);pdf.rect(ML,obsTop,UW,obsH,'S');
+    // ─── OBSERVAÇÕES (full width) ─────────────────────────────────────────
+    pdf.setFillColor(255,255,255);pdf.rect(ML,obsTop,UW,OBS_H,'F');
+    pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.2);pdf.rect(ML,obsTop,UW,OBS_H,'S');
     pdf.setFont('helvetica','bold');pdf.setFontSize(5.5);pdf.setTextColor(0,40,120);
-    pdf.text('OBSERVAÇÕES:',ML+1.5,obsTop+3.5);
+    pdf.text('OBSERVAÇÕES:',ML+1.5,obsTop+4);
     if(fichaEntry.observacao){
         pdf.setFont('helvetica','normal');pdf.setFontSize(5);pdf.setTextColor(0,0,0);
         const obsLns=pdf.splitTextToSize(fichaEntry.observacao,UW-4);
-        pdf.text(obsLns.slice(0,Math.floor((obsH-5)/3)),ML+1.5,obsTop+6);
+        pdf.text(obsLns.slice(0,Math.floor((OBS_H-6)/3)),ML+1.5,obsTop+8);
     }
 
-    // ─── NESTE DOCUMENTO / LOCAL / ASSINATURAS ────────────────────────────
+    // ─── NESTE DOCUMENTO / LOCAL / ASSINATURAS ───────────────────────────
     pdf.setFont('helvetica','italic');pdf.setFontSize(5.5);pdf.setTextColor(50,50,50);
     pdf.text('Neste documento não deverá haver emendas e nem rasuras.',PW/2,rasurY,{align:'center'});
 
