@@ -24,8 +24,9 @@ exports.listarModelos = async (req, res) => {
             filtro.arquivado = false;
         }
         const tipo = req.query.tipo || 'certificado';
-        if (tipo === 'historico') {
-            filtro.tipo = 'historico';
+        const tipos = tipo.split(',').map(t => t.trim()).filter(Boolean);
+        if (tipos.some(t => t === 'historico' || t === 'historico-layout')) {
+            filtro.tipo = { $in: tipos };
         } else {
             // Certificados: inclui documentos antigos sem campo tipo
             filtro.$or = [{ tipo: 'certificado' }, { tipo: { $exists: false } }];

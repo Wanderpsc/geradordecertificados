@@ -272,7 +272,7 @@ async function carregarModelosHist() {
 
     grid.innerHTML = _MSG_AGUARDANDO;
     try {
-        const resp = await _fetchHist(`${API_URL}/modelos?tipo=historico`, {
+        const resp = await _fetchHist(`${API_URL}/modelos?tipo=historico,historico-layout`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await resp.json();
@@ -289,6 +289,7 @@ async function carregarModelosHist() {
                 <div style="font-size:11px;color:#9ca3af;margin-bottom:8px;">${new Date(m.atualizadoEm).toLocaleDateString('pt-BR')}</div>
                 <div style="display:flex;gap:4px;flex-wrap:wrap;">
                     <button class="btn btn-primary btn-sm" onclick="carregarModeloHistNuvem('${m._id}')" style="font-size:11px;padding:4px 8px;">📂 Carregar</button>
+                    ${(m.tipo === 'historico-layout' || m.config?.tabela) ? `<button class="btn btn-sm" onclick="abrirEditorModeloHistoricoById('${m._id}')" style="font-size:11px;padding:4px 8px;background:#f5f3ff;color:#5b21b6;border:1px solid #ddd6fe;">🎨 Editar Layout</button>` : ''}
                     <button class="btn btn-sm" onclick="definirPadraoHist('${m._id}', '${escapeHtml(m.nome)}')" style="font-size:11px;padding:4px 8px;background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;">★ Padrão</button>
                     <button class="btn btn-danger btn-sm" onclick="excluirModeloHistNuvem('${m._id}', '${escapeHtml(m.nome)}')" style="font-size:11px;padding:4px 8px;">🗑️</button>
                 </div>
@@ -1956,25 +1957,35 @@ function abrirFichaIndividual() {
             <table style="width:100%;border-collapse:collapse;font-size:11px;">
                 <thead>
                     <tr style="background:#1e3a8a;color:white;">
-                        <th rowspan="2" style="padding:6px 8px;border:1px solid #93c5fd;min-width:160px;text-align:left;">DISCIPLINAS</th>
-                        <th colspan="${numAvals * 2}" style="padding:4px;border:1px solid #93c5fd;text-align:center;">AVALIAÇÃO / FREQUÊNCIA</th>
+                        <th rowspan="3" style="padding:6px 8px;border:1px solid #93c5fd;min-width:160px;text-align:left;">COMPONENTES CURRICULARES</th>
+                        <th colspan="24" style="padding:4px;border:1px solid #93c5fd;text-align:center;">AVALIAÇÃO / FREQUÊNCIA</th>
                     </tr>
-                    <tr style="background:#2563eb;color:white;">`;
-
-    for (let a = 1; a <= numAvals; a++) {
-        html += `<th colspan="2" style="padding:4px 2px;border:1px solid #93c5fd;text-align:center;font-size:10px;">${a}ª AVAL</th>`;
-    }
-
-    html += `</tr>
+                    <tr style="background:#2563eb;color:white;">
+                        <th colspan="6" style="padding:4px 2px;border:1px solid #93c5fd;text-align:center;font-size:10px;">1° BIMESTRE</th>
+                        <th colspan="6" style="padding:4px 2px;border:1px solid #93c5fd;text-align:center;font-size:10px;">2° BIMESTRE</th>
+                        <th colspan="6" style="padding:4px 2px;border:1px solid #93c5fd;text-align:center;font-size:10px;">3° BIMESTRE</th>
+                        <th colspan="6" style="padding:4px 2px;border:1px solid #93c5fd;text-align:center;font-size:10px;">4° BIMESTRE</th>
+                    </tr>
                     <tr style="background:#3b82f6;color:white;">
-                        <th style="border:1px solid #93c5fd;"></th>`;
-
-    for (let a = 1; a <= numAvals; a++) {
-        html += `<th style="padding:2px;border:1px solid #93c5fd;text-align:center;font-size:9px;">Notas</th>
-                 <th style="padding:2px;border:1px solid #93c5fd;text-align:center;font-size:9px;">Faltas</th>`;
-    }
-
-    html += `</tr></thead><tbody>`;
+                    ${[1,2,3,4].map(bim=>{
+                        const avA=bim*2-1, avB=bim*2;
+                        return `<th colspan="2" style="padding:2px;border:1px solid #93c5fd;text-align:center;font-size:9px;">${avA}ª AVAL</th>
+                                <th colspan="2" style="padding:2px;border:1px solid #93c5fd;text-align:center;font-size:9px;">${avB}ª AVAL</th>
+                                <th style="padding:2px;border:1px solid #93c5fd;text-align:center;font-size:9px;background:#1d4ed8;">MB</th>
+                                <th style="padding:2px;border:1px solid #93c5fd;text-align:center;font-size:9px;background:#1d4ed8;">FTB</th>`;
+                    }).join('')}
+                    </tr>
+                    <tr style="background:#60a5fa;color:#1e3a8a;">
+                        <th style="border:1px solid #93c5fd;font-size:9px;padding:2px;"></th>
+                        ${[1,2,3,4].map(bim=>`
+                            <th style="padding:2px;border:1px solid #93c5fd;text-align:center;font-size:8px;">Nota</th>
+                            <th style="padding:2px;border:1px solid #93c5fd;text-align:center;font-size:8px;">Faltas</th>
+                            <th style="padding:2px;border:1px solid #93c5fd;text-align:center;font-size:8px;">Nota</th>
+                            <th style="padding:2px;border:1px solid #93c5fd;text-align:center;font-size:8px;">Faltas</th>
+                            <th style="padding:2px;border:1px solid #93c5fd;text-align:center;font-size:8px;background:#bfdbfe;">Auto</th>
+                            <th style="padding:2px;border:1px solid #93c5fd;text-align:center;font-size:8px;background:#bfdbfe;">Auto</th>`).join('')}
+                    </tr>
+                </thead><tbody>`;
 
     // Obter registros existentes
     const fichaAtual = fichaExistente.find(f => f.ano === anoAtual) || {};
@@ -1989,15 +2000,42 @@ function abrirFichaIndividual() {
         html += `<tr>
             <td style="padding:3px 6px;border:1px solid #e5e7eb;font-size:11px;white-space:nowrap;">${escapeHtml(disc.nome)}</td>`;
 
-        for (let a = 1; a <= numAvals; a++) {
-            const av = avaliacoes.find(x => x.num === a) || {};
+        for (let bim = 1; bim <= 4; bim++) {
+            const avA = bim*2-1, avB = bim*2;
+            const avDataA = avaliacoes.find(x => x.num === avA) || {};
+            const avDataB = avaliacoes.find(x => x.num === avB) || {};
+            // MB calculado (exibe como placeholder)
+            const mbCalc = (avDataA.nota !== undefined && avDataB.nota !== undefined)
+                ? ((Number(avDataA.nota)+Number(avDataB.nota))/2).toFixed(1) : '';
+            const ftbCalc = (avDataA.faltas !== undefined || avDataB.faltas !== undefined)
+                ? String(Number(avDataA.faltas||0)+Number(avDataB.faltas||0)) : '';
+            // Avaliação A
             html += `<td style="padding:1px;border:1px solid #e5e7eb;text-align:center;">
-                <input type="number" step="0.01" min="0" max="10" class="ficha-input" data-disc="${escapeHtml(disc.nome)}" data-aval="${a}" data-campo="nota"
-                    value="${av.nota !== undefined ? av.nota : ''}" style="width:42px;text-align:center;border:1px solid #d1d5db;border-radius:3px;padding:2px;font-size:10px;">
+                <input type="number" step="0.01" min="0" max="10" class="ficha-input" data-disc="${escapeHtml(disc.nome)}" data-aval="${avA}" data-campo="nota"
+                    value="${avDataA.nota !== undefined ? avDataA.nota : ''}" style="width:38px;text-align:center;border:1px solid #d1d5db;border-radius:3px;padding:2px;font-size:10px;" onchange="atualizarMBFicha(this)">
             </td>
             <td style="padding:1px;border:1px solid #e5e7eb;text-align:center;">
-                <input type="number" min="0" class="ficha-input" data-disc="${escapeHtml(disc.nome)}" data-aval="${a}" data-campo="faltas"
-                    value="${av.faltas !== undefined ? av.faltas : ''}" style="width:42px;text-align:center;border:1px solid #d1d5db;border-radius:3px;padding:2px;font-size:10px;">
+                <input type="number" min="0" class="ficha-input" data-disc="${escapeHtml(disc.nome)}" data-aval="${avA}" data-campo="faltas"
+                    value="${avDataA.faltas !== undefined ? avDataA.faltas : ''}" style="width:38px;text-align:center;border:1px solid #d1d5db;border-radius:3px;padding:2px;font-size:10px;" onchange="atualizarMBFicha(this)">
+            </td>`;
+            // Avaliação B
+            html += `<td style="padding:1px;border:1px solid #e5e7eb;text-align:center;">
+                <input type="number" step="0.01" min="0" max="10" class="ficha-input" data-disc="${escapeHtml(disc.nome)}" data-aval="${avB}" data-campo="nota"
+                    value="${avDataB.nota !== undefined ? avDataB.nota : ''}" style="width:38px;text-align:center;border:1px solid #d1d5db;border-radius:3px;padding:2px;font-size:10px;" onchange="atualizarMBFicha(this)">
+            </td>
+            <td style="padding:1px;border:1px solid #e5e7eb;text-align:center;">
+                <input type="number" min="0" class="ficha-input" data-disc="${escapeHtml(disc.nome)}" data-aval="${avB}" data-campo="faltas"
+                    value="${avDataB.faltas !== undefined ? avDataB.faltas : ''}" style="width:38px;text-align:center;border:1px solid #d1d5db;border-radius:3px;padding:2px;font-size:10px;" onchange="atualizarMBFicha(this)">
+            </td>`;
+            // MB e FTB (calculados, readonly)
+            const discKey=escapeHtml(disc.nome);
+            html += `<td style="padding:1px;border:1px solid #e5e7eb;text-align:center;background:#f0fdf4;">
+                <input type="text" readonly class="ficha-mb" data-disc="${discKey}" data-bim="${bim}" data-campo="mb"
+                    value="${mbCalc}" style="width:38px;text-align:center;border:none;background:transparent;font-size:10px;color:#166534;font-weight:bold;">
+            </td>
+            <td style="padding:1px;border:1px solid #e5e7eb;text-align:center;background:#f0fdf4;">
+                <input type="text" readonly class="ficha-mb" data-disc="${discKey}" data-bim="${bim}" data-campo="ftb"
+                    value="${ftbCalc}" style="width:38px;text-align:center;border:none;background:transparent;font-size:10px;color:#166534;font-weight:bold;">
             </td>`;
         }
         html += `</tr>`;
@@ -2010,8 +2048,13 @@ function abrirFichaIndividual() {
             <textarea id="fichaObservacao" class="form-control" rows="2" style="font-size:12px;">${fichaAtual.observacao || ''}</textarea>
         </div>
 
+        <div style="margin-top:10px;padding:8px 12px;background:#fef3c7;border:1px solid #fde68a;border-radius:8px;font-size:12px;color:#92400e;">
+            💡 <strong>Dica:</strong> As Médias Bimestrais (MB) e a Média Final são calculadas automaticamente ao salvar.
+            A nota final de cada disciplina (Média das 4 MBs) será auto-preenchida na <strong>3ª Série</strong> da frente do histórico.
+        </div>
         <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;border-top:2px solid #e5e7eb;padding-top:12px;">
             <button class="btn btn-secondary" onclick="this.closest('.overlay-modal').remove()">Cancelar</button>
+            <button class="btn btn-secondary" onclick="calcularMediasFicha()" style="background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;">📊 Calcular Médias</button>
             <button class="btn btn-primary" onclick="salvarFichaIndividual()">💾 Salvar Ficha</button>
         </div>
     </div>`;
@@ -2019,6 +2062,55 @@ function abrirFichaIndividual() {
     modal.innerHTML = html;
     document.body.appendChild(modal);
     modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+}
+
+function atualizarMBFicha(inputEl) {
+    // Ao mudar uma avaliação, recalcula MB e FTB do bimestre correspondente
+    const disc = inputEl.dataset.disc;
+    const avNum = parseInt(inputEl.dataset.aval);
+    const bim = Math.ceil(avNum / 2); // av 1,2 → bim 1; av 3,4 → bim 2; etc.
+    const avA = bim*2-1, avB = bim*2;
+    const discEsc = CSS.escape(disc);
+    const notaA = document.querySelector(`.ficha-input[data-disc="${discEsc}"][data-aval="${avA}"][data-campo="nota"]`)?.value;
+    const notaB = document.querySelector(`.ficha-input[data-disc="${discEsc}"][data-aval="${avB}"][data-campo="nota"]`)?.value;
+    const faltasA = document.querySelector(`.ficha-input[data-disc="${discEsc}"][data-aval="${avA}"][data-campo="faltas"]`)?.value;
+    const faltasB = document.querySelector(`.ficha-input[data-disc="${discEsc}"][data-aval="${avB}"][data-campo="faltas"]`)?.value;
+
+    const mbEl = document.querySelector(`.ficha-mb[data-disc="${discEsc}"][data-bim="${bim}"][data-campo="mb"]`);
+    const ftbEl = document.querySelector(`.ficha-mb[data-disc="${discEsc}"][data-bim="${bim}"][data-campo="ftb"]`);
+
+    if (mbEl && notaA !== '' && notaA !== undefined && notaB !== '' && notaB !== undefined) {
+        mbEl.value = ((parseFloat(notaA) + parseFloat(notaB)) / 2).toFixed(1);
+    } else if (mbEl) {
+        mbEl.value = '';
+    }
+    if (ftbEl) {
+        const fa = parseFloat(faltasA || 0), fb = parseFloat(faltasB || 0);
+        ftbEl.value = (isNaN(fa) ? 0 : fa) + (isNaN(fb) ? 0 : fb);
+    }
+}
+
+function calcularMediasFicha() {
+    // Para cada disciplina, calcula MB por bimestre e mostra numa tabela resumo
+    const discs = [...new Set([...document.querySelectorAll('.ficha-input')].map(i=>i.dataset.disc))];
+    let resumo = '📊 MÉDIAS BIMESTRAIS:\n\n';
+    discs.forEach(disc => {
+        const mbs = [];
+        for(let bim=0;bim<4;bim++){
+            const avA=bim*2+1, avB=bim*2+2;
+            const notaA=document.querySelector(`.ficha-input[data-disc="${CSS.escape(disc)}"][data-aval="${avA}"][data-campo="nota"]`)?.value;
+            const notaB=document.querySelector(`.ficha-input[data-disc="${CSS.escape(disc)}"][data-aval="${avB}"][data-campo="nota"]`)?.value;
+            if(notaA!==undefined&&notaA!==''&&notaB!==undefined&&notaB!==''){
+                const mb=((parseFloat(notaA)+parseFloat(notaB))/2).toFixed(1);
+                mbs.push(Number(mb));
+            }
+        }
+        if(mbs.length){
+            const mediaFinal=(mbs.reduce((a,b)=>a+b,0)/mbs.length).toFixed(1);
+            resumo+=`${disc}: MB1=${mbs[0]||'-'} MB2=${mbs[1]||'-'} MB3=${mbs[2]||'-'} MB4=${mbs[3]||'-'} → MÉDIA FINAL: ${mediaFinal}\n`;
+        }
+    });
+    alert(resumo||'Preencha as notas das avaliações para calcular as médias.');
 }
 
 function salvarFichaIndividual() {
@@ -2046,6 +2138,38 @@ function salvarFichaIndividual() {
         }
     });
 
+    // ── AUTO-CÁLCULO: média final por disciplina (média das 4 MBs) ────────
+    // E auto-preenche nota da 3ª série na tabela de notas da frente
+    const notasAutoPreench = {};
+    Object.values(registrosMap).forEach(reg => {
+        const mbs = [];
+        for(let bim=0;bim<4;bim++){
+            const avA=reg.avaliacoes.find(a=>a.num===bim*2+1)||{};
+            const avB=reg.avaliacoes.find(a=>a.num===bim*2+2)||{};
+            if(avA.nota!==undefined&&avB.nota!==undefined){
+                mbs.push((Number(avA.nota)+Number(avB.nota))/2);
+            }
+        }
+        if(mbs.length===4){
+            const mediaFinal=mbs.reduce((a,b)=>a+b,0)/mbs.length;
+            reg.mediaFinal=parseFloat(mediaFinal.toFixed(1));
+            notasAutoPreench[reg.disciplina]=reg.mediaFinal;
+        }
+    });
+
+    // Determinar índice da última série (3ª série = série 3)
+    const grade=HIST_STATE.gradeAtual||HIST_STATE.gradesAtual?.[0];
+    const numSeries=grade?.numSeries||grade?.nomesSeries?.length||3;
+    const ultimaSerieIdx=String(numSeries); // '3' para Ensino Médio
+
+    // Auto-preencher campos de nota da última série nos inputs da tabela principal
+    Object.entries(notasAutoPreench).forEach(([discNome,media])=>{
+        const inputNota=document.querySelector(`.nota-input[data-disc="${CSS.escape(discNome)}"][data-serie="${ultimaSerieIdx}"][data-campo="nota"]`);
+        if(inputNota&&(!inputNota.value||(inputNota.value&&confirm(`Substituir nota de "${discNome}" (${ultimaSerieIdx}ª série)\nAtual: ${inputNota.value} → Nova (média calculada): ${media}\n\nConfirmar substituição?`)))){
+            inputNota.value=media;
+        }
+    });
+
     const registros = Object.values(registrosMap);
     const fichaEntry = { ano, registros, observacao };
 
@@ -2064,7 +2188,8 @@ function salvarFichaIndividual() {
     HIST_STATE.historicoAtual.fichaIndividual = fichaArr;
 
     document.getElementById('modalFichaIndividual')?.remove();
-    mostrarNotificacao('Ficha Individual salva localmente. Clique em "Salvar Notas" para persistir.', 'success');
+    const numAutoPreench = Object.keys(notasAutoPreench).length;
+    mostrarNotificacao(`Ficha Individual salva!${numAutoPreench ? ` Médias de ${numAutoPreench} disciplina(s) calculadas e aplicadas à ${ultimaSerieIdx}ª série.` : ''} Clique em "Salvar Notas" para persistir.`, 'success');
 }
 
 // ==================== CRIAR GRADES POR TURMA (2025) ====================
@@ -3162,6 +3287,388 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
 }
 
 function _histVersoMedioPortrait(pdf, hist, cfg) {
+    // ======================================================================
+    // FICHA INDIVIDUAL DO RENDIMENTO ESCOLAR E FREQUÊNCIA
+    // Modelo: 8 avaliações bimestrais (NOTA+FALTAS por avaliação) +
+    //         MB (Média Bimestral) + FTB (Falta Total Bimestre) a cada 2 avaliações
+    // ======================================================================
+    const aluno=hist.aluno||{};
+    const grade=hist.grade||{};
+    const fichaIndividual=hist.fichaIndividual||[];
+    const notas=hist.notas||{};
+    const discs=grade.disciplinas||[];
+
+    const PW=210,PH=297,ML=8,MR=8,MT=6;
+    const UW=PW-ML-MR;
+    let y=MT;
+
+    const hCfg=cfg?.cabecalho||{};
+    const inst=hCfg.nomeInstituicao||'';
+    const end_=hCfg.endereco||'';
+    const l1=hCfg.linha1||'REPÚBLICA FEDERATIVA DO BRASIL';
+    const l2=hCfg.linha2||'ESTADO DO PIAUÍ';
+    const l3=hCfg.linha3||'SECRETARIA DE ESTADO DA EDUCAÇÃO';
+    const dN=aluno.dataNascimento||{};
+    const nascStr=dN.dia?`${dN.dia} de ${dN.mes||''} de ${dN.ano||''}`:'';
+    const natStr=[aluno.naturalidade?.cidade,aluno.naturalidade?.estado].filter(Boolean).join(' / ');
+    const filStr=[aluno.filiacao?.mae,aluno.filiacao?.pai].filter(Boolean).join('  e  ');
+
+    // Obter dados da ficha individual (último ano registrado ou o mais recente)
+    const fichaEntry = fichaIndividual.length
+        ? fichaIndividual.sort((a,b)=>(b.ano||'').localeCompare(a.ano||''))[0]
+        : {};
+    const fichaAno = fichaEntry.ano || '';
+    const fichaRegistros = fichaEntry.registros || [];
+
+    // Função auxiliar para buscar avaliação
+    const _getAv=(discNome,avNum)=>{
+        const reg=fichaRegistros.find(r=>r.disciplina===discNome)||{};
+        const av=(reg.avaliacoes||[]).find(a=>a.num===avNum)||{};
+        return av;
+    };
+
+    // ─── LINHA DUPLA SUPERIOR ─────────────────────────────────────────────
+    _hLine(pdf,ML,y,PW-MR,y,0.6,[0,40,120]);
+    _hLine(pdf,ML,y+1.3,PW-MR,y+1.3,0.2,[0,40,120]);
+    y+=3;
+
+    // ─── CABEÇALHO: brasão à esquerda + bloco de dados à direita ─────────
+    const emb=cfg?.emblema||{};
+    const tipoEmb=emb.tipo||'brasao-brasil';
+    const bW=Number(emb.largura)||18;
+    const bH=Number(emb.altura)||22;
+    const embQual=Math.min(100,Math.max(1,Number(emb.qualidade)||100));
+    const embComp=embQual>=85?'NONE':embQual>=65?'FAST':embQual>=40?'MEDIUM':'SLOW';
+
+    const brasaoX=ML;
+    const brasaoY=y;
+    if(tipoEmb!=='nenhum'){
+        try{
+            let src=null,fmt='PNG';
+            if(tipoEmb==='custom'&&typeof HIST_UPLOADS!=='undefined'&&HIST_UPLOADS?.emblemaCustom){src=HIST_UPLOADS.emblemaCustom;fmt=src.startsWith('data:image/png')?'PNG':'JPEG';}
+            else if(tipoEmb==='brasao-brasil'&&typeof BRASAO_BRASIL!=='undefined'){src=BRASAO_BRASIL;}
+            if(src)pdf.addImage(src,fmt,brasaoX,brasaoY,bW,bH,undefined,embComp);
+        }catch(_){}
+    }
+
+    // Bloco de governo e escola abaixo do brasão
+    let ty=y;
+    const govX=ML+bW+3;
+    const govW=UW-bW-3;
+    pdf.setFont('helvetica','bold');pdf.setFontSize(6.5);pdf.setTextColor(0,0,0);
+    pdf.text(l1,govX+govW/2,ty+3,{align:'center',maxWidth:govW});ty+=3.5;
+    pdf.setFontSize(6.5);pdf.text(l2,govX+govW/2,ty+3,{align:'center',maxWidth:govW});ty+=3.5;
+    pdf.setFont('helvetica','normal');pdf.setFontSize(6);pdf.text(l3,govX+govW/2,ty+3,{align:'center',maxWidth:govW});ty+=3;
+    pdf.setFont('helvetica','bold');pdf.setFontSize(6);pdf.text(inst,govX+govW/2,ty+3,{align:'center',maxWidth:govW});ty+=3.5;
+
+    // Caixa ANO à direita do brasão
+    const anoBoxW=20,anoBoxH=8,anoBoxX=PW-MR-anoBoxW,anoBoxY=y;
+    pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.3);
+    pdf.rect(anoBoxX,anoBoxY,anoBoxW,anoBoxH,'S');
+    pdf.setFont('helvetica','bold');pdf.setFontSize(6);pdf.setTextColor(0,0,0);
+    pdf.text('ANO:',anoBoxX+1.5,anoBoxY+3.5);
+    pdf.setFont('helvetica','normal');pdf.text(fichaAno,anoBoxX+10,anoBoxY+3.5,{maxWidth:8});
+
+    y=Math.max(y+bH,ty)+2;
+
+    // ─── TÍTULO DA FICHA ──────────────────────────────────────────────────
+    pdf.setFillColor(0,40,120);pdf.rect(ML,y,UW,6,'F');
+    pdf.setFont('helvetica','bold');pdf.setFontSize(6.5);pdf.setTextColor(255,255,255);
+    const tituloFicha='FICHA INDIVIDUAL DO RENDIMENTO ESCOLAR E FREQUÊNCIA DO ESTUDANTE DO ENSINO MÉDIO REGULAR EM TEMPO INTEGRAL I';
+    const tituloLns=pdf.splitTextToSize(tituloFicha,UW-4);
+    const tituloH=Math.max(6,tituloLns.length*3.5+2);
+    pdf.setFillColor(0,40,120);pdf.rect(ML,y,UW,tituloH,'F');
+    pdf.setFont('helvetica','bold');pdf.setFontSize(6.5);pdf.setTextColor(255,255,255);
+    tituloLns.forEach((ln,i)=>pdf.text(ln,PW/2,y+3+i*3.5,{align:'center'}));
+    y+=tituloH+1;
+
+    // ─── DADOS DO ALUNO ───────────────────────────────────────────────────
+    const alunoBoxH=16;
+    pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.2);
+    pdf.rect(ML,y,UW,alunoBoxH,'S');
+    [4,8,12].forEach(off=>pdf.line(ML,y+off,ML+UW,y+off));
+
+    const af=(ly,lbl,lW,val,maxW)=>{
+        pdf.setFont('helvetica','bold');pdf.setFontSize(5.5);pdf.setTextColor(0,30,100);
+        pdf.text(lbl,ML+1,ly);
+        pdf.setFont('helvetica','normal');pdf.setFontSize(5.5);pdf.setTextColor(0,0,0);
+        pdf.text(val||'',ML+lW,ly,{maxWidth:maxW||(UW-lW-1)});
+    };
+    af(y+2.8,'ESTABELECIMENTO DE ENSINO:',45,inst,UW-80);
+    af(y+2.8,'MUNICÍPIO/UF:',UW-35,natStr||'',33);
+    af(y+6.8,'ESTUDANTE:',18,aluno.nome||'');
+    af(y+10.8,'RG:',6,aluno.rg||'',28);
+    af(y+10.8,'ÓRGÃO EMISSOR:',ML+40-ML,aluno.orgaoEmissor||'',20);
+    af(y+10.8,'CPF:',ML+72-ML,aluno.cpf||'',40);
+    af(y+14.8,'DATA DE NASCIMENTO:',34,nascStr,UW/2-36);
+    af(y+14.8,'NATURALIDADE:',UW/2+12,natStr,UW/2-40);
+    y+=alunoBoxH+1;
+
+    // ─── TABELA BIMESTRAL ─────────────────────────────────────────────────
+    // Layout: COMPONENTES | Av1(N,F) | Av2(N,F) | Bim1(MB,FTB) | Av3 | Av4 | Bim2 | Av5 | Av6 | Bim3 | Av7 | Av8 | Bim4
+    // Colunas: 1 disc + 4×(2av + 1bim) = 1+4×3 = 13 grupos de colunas
+    // Cada avaliação tem: NOTA + FALTAS = 2 sub-colunas
+    // Cada bimestre tem: MB + FTB = 2 sub-colunas
+    // Total sub-colunas: 4×(2+2+2) = 4×6 = 24 + 1 (disciplina) = 25
+
+    const tblX=ML;
+    const cDisc=40; // largura coluna de disciplinas
+    const remW=UW-cDisc;
+    // 4 bimestres, cada um tem: 2 avaliações × 2 campos + 1 grupo bimestre × 2 campos
+    // = 4 × 6 sub-colunas = 24 sub-cols
+    const avColW=remW/24; // largura de cada sub-coluna avaliação
+    // 2 av × 2sub + bim × 2sub = 6 sub-cols por bimestre → largura bimestre = remW/4 = 6×avColW
+    const bimW=remW/4; // = 6×avColW, largura de cada grupo bimestre
+    const avW=bimW/3; // = 2×avColW, largura de cada avaliação individual dentro do bimestre
+    // avColW = avW/2
+
+    const hdrH1=5; // cabeçalho nível 1
+    const hdrH2=4; // cabeçalho nível 2
+    const hdrH3=3.5; // cabeçalho nível 3 (NOTA/FALTAS/MB/FTB)
+    const rowH=3.5; // altura linha disciplina
+    const tblHdrH=hdrH1+hdrH2+hdrH3;
+
+    const DISC_FONT_SZ=5.5;
+
+    // Cabeçalho nível 1: COMPONENTES CURRICULARES | AVALIAÇÃO/FREQUÊNCIA
+    pdf.setFillColor(0,40,120);
+    pdf.rect(tblX,y,cDisc,tblHdrH,'F');
+    pdf.rect(tblX+cDisc,y,UW-cDisc,hdrH1,'F');
+    pdf.setFont('helvetica','bold');pdf.setFontSize(5.5);pdf.setTextColor(255,255,255);
+    const ccLns=pdf.splitTextToSize('COMPONENTES CURRICULARES',cDisc-2);
+    const ccH=ccLns.length*3.2;
+    ccLns.forEach((ln,i)=>pdf.text(ln,tblX+cDisc/2,y+tblHdrH/2-ccH/2+3.2*(i+0.5),{align:'center'}));
+    pdf.setFont('helvetica','bold');pdf.setFontSize(6);
+    pdf.text('AVALIAÇÃO / FREQUÊNCIA',tblX+cDisc+(UW-cDisc)/2,y+hdrH1-1,{align:'center'});
+
+    // Cabeçalho nível 2: 1ª AVALIAÇÃO | 2ª AVALIAÇÃO | 1° BIMESTRE | 3ª | 4ª | 2° BIM | ...
+    let hx=tblX+cDisc;
+    const yH2=y+hdrH1;
+    pdf.setFillColor(20,60,150);
+    for(let bim=0;bim<4;bim++){
+        const avA=bim*2+1;const avB=bim*2+2;
+        // Av A
+        pdf.setFillColor(20,60,150);
+        pdf.rect(hx,yH2,avW,hdrH2,'F');
+        pdf.setFont('helvetica','bold');pdf.setFontSize(4.8);pdf.setTextColor(255,255,255);
+        pdf.text(`${avA}ª AVAL.`,hx+avW/2,yH2+hdrH2-1,{align:'center'});
+        hx+=avW;
+        // Av B
+        pdf.rect(hx,yH2,avW,hdrH2,'F');
+        pdf.text(`${avB}ª AVAL.`,hx+avW/2,yH2+hdrH2-1,{align:'center'});
+        hx+=avW;
+        // Bimestre
+        pdf.setFillColor(0,40,120);
+        pdf.rect(hx,yH2,avW,hdrH2,'F');
+        pdf.text(`${bim+1}° BIM.`,hx+avW/2,yH2+hdrH2-1,{align:'center'});
+        hx+=avW;
+    }
+
+    // Cabeçalho nível 3: NOTA | FALTAS | NOTA | FALTAS | MB | FTB | ...
+    const yH3=y+hdrH1+hdrH2;
+    const subColW=avW/2;
+    hx=tblX+cDisc;
+    pdf.setFillColor(40,80,180);
+    const subHdrs=['NOTA','FALTAS'];
+    const bimSubHdrs=['MB','FTB'];
+    for(let bim=0;bim<4;bim++){
+        // 2 avaliações × 2 sub-colunas
+        for(let av=0;av<2;av++){
+            for(let sub=0;sub<2;sub++){
+                pdf.setFillColor(sub===0?40:60,sub===0?80:100,180);
+                pdf.rect(hx,yH3,subColW,hdrH3,'F');
+                pdf.setFont('helvetica','bold');pdf.setFontSize(4);pdf.setTextColor(255,255,255);
+                pdf.text(subHdrs[sub],hx+subColW/2,yH3+hdrH3-0.8,{align:'center'});
+                hx+=subColW;
+            }
+        }
+        // bimestre × 2 sub-colunas
+        for(let sub=0;sub<2;sub++){
+            pdf.setFillColor(0,sub===0?55:45,sub===0?140:120);
+            pdf.rect(hx,yH3,subColW,hdrH3,'F');
+            pdf.setFont('helvetica','bold');pdf.setFontSize(4);pdf.setTextColor(255,255,255);
+            pdf.text(bimSubHdrs[sub],hx+subColW/2,yH3+hdrH3-0.8,{align:'center'});
+            hx+=subColW;
+        }
+    }
+
+    // Bordas cabeçalho
+    pdf.setDrawColor(80,120,200);pdf.setLineWidth(0.15);
+    pdf.rect(tblX,y,UW,tblHdrH,'S');
+    hx=tblX+cDisc;
+    pdf.line(hx,y,hx,y+tblHdrH);
+    for(let bim=0;bim<4;bim++){
+        for(let col=0;col<6;col++){
+            hx+=subColW;
+            pdf.line(hx,y,hx,y+tblHdrH);
+        }
+    }
+
+    y+=tblHdrH;
+
+    // ─── LINHAS DE DISCIPLINAS ────────────────────────────────────────────
+    const tblBodyStart=y;
+    let rowIdx=0;
+
+    // Agrupar por categoria (mesmo mapa da frente)
+    const catMap=new Map();
+    discs.forEach(dc=>{const k=dc.categoria||'outros';if(!catMap.has(k))catMap.set(k,[]);catMap.get(k).push(dc);});
+    const catLabels={formacao_geral:'FORMAÇÃO GERAL BÁSICA',itinerarios:'ITINERÁRIOS FORMATIVOS',atividades_integradoras:'ATIVIDADES INTEGRADORAS',linguagens:'LINGUAGENS, CÓDIGOS E SUAS TECNOLOGIAS',ciencias_humanas:'CIÊNCIAS HUMANAS E SUAS TECNOLOGIAS',ciencias_natureza:'CIÊNCIAS DA NATUREZA E SUAS TECNOLOGIAS',matematica:'MATEMÁTICA E SUAS TECNOLOGIAS',parte_flexivel:'PARTE FLEXÍVEL (DIVERSIFICADA)',ensino_religioso:'ENSINO RELIGIOSO'};
+
+    catMap.forEach((catDiscs,catId)=>{
+        const catNome=catLabels[catId]||catId.toUpperCase();
+        // Linha de categoria
+        pdf.setFillColor(220,230,255);
+        pdf.rect(tblX,y,UW,rowH,'F');
+        pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.15);pdf.rect(tblX,y,UW,rowH,'S');
+        pdf.setFont('helvetica','bold');pdf.setFontSize(DISC_FONT_SZ-0.5);pdf.setTextColor(0,30,120);
+        pdf.text(catNome,tblX+1,y+rowH-1,{maxWidth:UW-2});
+        y+=rowH;
+
+        catDiscs.forEach(disc=>{
+            const bg=rowIdx%2===0?[250,252,255]:[255,255,255];
+            pdf.setFillColor(...bg);pdf.rect(tblX,y,UW,rowH,'F');
+            pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.1);pdf.rect(tblX,y,UW,rowH,'S');
+            // Nome da disciplina
+            pdf.setFont('helvetica','normal');pdf.setFontSize(DISC_FONT_SZ);pdf.setTextColor(10,10,10);
+            pdf.text(disc.nome,tblX+1,y+rowH-1,{maxWidth:cDisc-2});
+            pdf.setDrawColor(0,40,120);pdf.line(tblX+cDisc,y,tblX+cDisc,y+rowH);
+
+            // Células bimestrais
+            let cx=tblX+cDisc;
+            for(let bim=0;bim<4;bim++){
+                const avA=bim*2+1,avB=bim*2+2;
+                const avDataA=_getAv(disc.nome,avA);
+                const avDataB=_getAv(disc.nome,avB);
+                const notaA=avDataA.nota!==undefined?Number(avDataA.nota).toFixed(1):'';
+                const faltasA=avDataA.faltas!==undefined?String(avDataA.faltas):'';
+                const notaB=avDataB.nota!==undefined?Number(avDataB.nota).toFixed(1):'';
+                const faltasB=avDataB.faltas!==undefined?String(avDataB.faltas):'';
+                // MB calculado: (notaA + notaB) / 2 (apenas se ambas existirem)
+                const mbVal=(avDataA.nota!==undefined&&avDataB.nota!==undefined)?
+                    ((Number(avDataA.nota)+Number(avDataB.nota))/2).toFixed(1):'';
+                // FTB calculado: faltas A + faltas B
+                const ftbVal=(avDataA.faltas!==undefined||avDataB.faltas!==undefined)?
+                    String((Number(avDataA.faltas||0)+Number(avDataB.faltas||0))):'';
+
+                const midY=y+rowH-1;
+                pdf.setFont('helvetica','normal');pdf.setFontSize(DISC_FONT_SZ);pdf.setTextColor(0,0,0);
+                // Av A
+                pdf.text(notaA,cx+subColW/2,midY,{align:'center'});
+                pdf.setDrawColor(0,40,120);pdf.line(cx+subColW,y,cx+subColW,y+rowH);
+                cx+=subColW;
+                pdf.text(faltasA,cx+subColW/2,midY,{align:'center'});
+                pdf.line(cx+subColW,y,cx+subColW,y+rowH);
+                cx+=subColW;
+                // Av B
+                pdf.text(notaB,cx+subColW/2,midY,{align:'center'});
+                pdf.line(cx+subColW,y,cx+subColW,y+rowH);
+                cx+=subColW;
+                pdf.text(faltasB,cx+subColW/2,midY,{align:'center'});
+                pdf.line(cx+subColW,y,cx+subColW,y+rowH);
+                cx+=subColW;
+                // MB
+                pdf.setFont('helvetica','bold');
+                pdf.text(mbVal,cx+subColW/2,midY,{align:'center'});
+                pdf.line(cx+subColW,y,cx+subColW,y+rowH);
+                cx+=subColW;
+                // FTB
+                pdf.text(ftbVal,cx+subColW/2,midY,{align:'center'});
+                pdf.line(cx+subColW,y,cx+subColW,y+rowH);
+                cx+=subColW;
+            }
+            rowIdx++;y+=rowH;
+        });
+    });
+
+    // Borda externa da tabela
+    pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.3);
+    pdf.rect(tblX,tblBodyStart-tblHdrH,UW,y-tblBodyStart+tblHdrH,'S');
+
+    y+=1;
+
+    // Nota de atenção
+    pdf.setFont('helvetica','italic');pdf.setFontSize(5.5);pdf.setTextColor(80,80,80);
+    pdf.text('ATENÇÃO: Preencher somente no caso do(a) estudante solicitar transferência durante o ano letivo.',ML,y+3.5);
+    y+=5;
+    pdf.setFont('helvetica','normal');pdf.setFontSize(5.5);pdf.setTextColor(50,50,50);
+    pdf.text('MB: Média Bimestral   FTB: Falta Total Bimestre',ML,y+3);
+    y+=5;
+
+    // ─── VERIFICAÇÃO DE RENDIMENTO ────────────────────────────────────────
+    const verLines=[
+        '1. O(a) estudante será considerado(a) aprovado(a) quando a média bimestral for igual ou superior a 5,0 (cinco) em cada componente curricular.',
+        '2. A frequência mínima exigida é de 75% do total de horas letivas.',
+        '3. Nos componentes dos Itinerários Formativos, a avaliação é qualitativa: A (Avançado), AA (Ainda Avançando).',
+        '4. Atividades Integradoras: frequência mínima de 75% do total da carga horária trabalhada para cada turma durante o ano letivo.',
+    ];
+    const verTitleH=5;
+    let verTotalH=verTitleH+2;
+    pdf.setFontSize(5.5);
+    verLines.forEach(t=>{verTotalH+=pdf.splitTextToSize(t,UW-7).length*3.2+1.2;});
+    verTotalH=Math.max(verTotalH,24);
+
+    pdf.setFillColor(235,240,255);pdf.rect(ML,y,UW,verTotalH,'F');
+    pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.25);pdf.rect(ML,y,UW,verTotalH,'S');
+    pdf.setFont('helvetica','bold');pdf.setFontSize(6.5);pdf.setTextColor(0,40,120);
+    pdf.text('VERIFICAÇÃO DE RENDIMENTO E FREQUÊNCIA ESCOLAR',ML+2,y+verTitleH-1);
+    pdf.setFont('helvetica','normal');pdf.setFontSize(5.5);pdf.setTextColor(15,15,15);
+    let vy=y+verTitleH+1.5;
+    verLines.forEach(t=>{
+        const ls=pdf.splitTextToSize(t,UW-7);
+        pdf.text(ls,ML+3,vy);vy+=ls.length*3.2+1.2;
+    });
+    y+=verTotalH+2;
+
+    // ─── OBSERVAÇÕES + RESERVADO ──────────────────────────────────────────
+    const avSpace=PH-y-30; // espaço disponível antes das assinaturas
+    const boxesH=Math.max(avSpace,20);
+    const halfW=(UW-2)/2;
+
+    pdf.setFillColor(255,255,255);pdf.rect(ML,y,halfW,boxesH,'F');
+    pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.25);pdf.rect(ML,y,halfW,boxesH,'S');
+    pdf.setFont('helvetica','bold');pdf.setFontSize(6.5);pdf.setTextColor(0,40,120);
+    pdf.text('OBSERVAÇÕES',ML+2,y+5);
+    if(fichaEntry.observacao){
+        pdf.setFont('helvetica','normal');pdf.setFontSize(6);pdf.setTextColor(0,0,0);
+        const obsLines=pdf.splitTextToSize(fichaEntry.observacao,halfW-5);
+        pdf.text(obsLines.slice(0,Math.floor((boxesH-8)/3.5)),ML+2,y+10);
+    }
+
+    pdf.setFillColor(255,255,255);pdf.rect(ML+halfW+2,y,halfW,boxesH,'F');
+    pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.25);pdf.rect(ML+halfW+2,y,halfW,boxesH,'S');
+    pdf.setFont('helvetica','bold');pdf.setFontSize(6.5);pdf.setTextColor(0,40,120);
+    const rLns=pdf.splitTextToSize('RESERVADO PARA AUTENTICAÇÃO',halfW-4);
+    pdf.text(rLns,ML+halfW+4,y+5);
+    // Número de registro
+    if(hist.registro){
+        pdf.setFont('helvetica','normal');pdf.setFontSize(6);pdf.setTextColor(0,0,0);
+        pdf.text(hist.registro,ML+halfW+4,y+12);
+    }
+    y+=boxesH+2;
+
+    // Nota rasuras
+    pdf.setFont('helvetica','italic');pdf.setFontSize(5.8);pdf.setTextColor(60,60,60);
+    pdf.text('Neste documento não deverão haver emendas e nem rasuras.',PW/2,y+2.5,{align:'center'});
+
+    // ─── RODAPÉ VERSO ─────────────────────────────────────────────────────
+    const sig1v=cfg?.frente?.assinatura1||'SECRETÁRIO(A)';
+    const sig2v=cfg?.frente?.assinatura2||'DIRETOR(A)';
+    const localDataV=cfg?.frente?.localData||hist.dataEmissao||'';
+    const rodapeYv=PH-28;
+    _drawLocalData(pdf,localDataV,rodapeYv,PW);
+    const sigYv=rodapeYv+12;
+    [{cx:ML+UW*0.25,sig:sig1v},{cx:ML+UW*0.75,sig:sig2v}].forEach(({cx,sig})=>{
+        pdf.setLineWidth(0.2);pdf.setDrawColor(0,40,120);
+        pdf.line(cx-45,sigYv,cx+45,sigYv);
+        _hText(pdf,sig,cx,sigYv+4,{size:6,align:'center',bold:true});
+    });
+    const fyBot=PH-6;
+    _hLine(pdf,ML,fyBot,PW-MR,fyBot,0.6,[0,40,120]);
+    _hLine(pdf,ML,fyBot+1.2,PW-MR,fyBot+1.2,0.2,[0,40,120]);
+}
+
+function _histVersoMedioPortraitLegado(pdf, hist, cfg) {
     const aluno=hist.aluno||{};
     const grade=hist.grade||{};
     const seriesInfo=hist.seriesInfo||[];
