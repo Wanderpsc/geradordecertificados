@@ -2872,7 +2872,7 @@ function _gerarPreviewPDF(hist) {
         const cfg = obterConfigHist();
         const { jsPDF } = window.jspdf;
         const isMedioPreview = hist.tipo === 'medio';
-        const pdf = new jsPDF({ orientation: isMedioPreview ? 'landscape' : 'portrait', unit: 'mm', format: 'a4' });
+        const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
         if (isMedioPreview) {
             _histFrenteMedioPortrait(pdf, hist, cfg);
@@ -2979,9 +2979,9 @@ async function _gerarLotePDF(ids, gradeEscolhida, token) {
 
             const isMedio = hist.tipo === 'medio';
             if (!primeiroDoc) {
-                pdf.addPage({ orientation: isMedio ? 'landscape' : 'portrait' });
+                pdf.addPage({ orientation: 'portrait' });
             } else {
-                pdf = new jsPDF({ orientation: isMedio ? 'landscape' : 'portrait', unit: 'mm', format: 'a4' });
+                pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
             }
             primeiroDoc = false;
 
@@ -3107,8 +3107,8 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     const numSeries=series.length;
     const discs=grade.disciplinas||[];
 
-    // A4 PAISAGEM: largura=297mm, altura=210mm
-    const PW=297,PH=210,ML=8,MR=8,MT=5;
+    // A4 RETRATO: largura=210mm, altura=297mm
+    const PW=210,PH=297,ML=6,MR=6,MT=5;
     const UW=PW-ML-MR;
     let y=MT;
 
