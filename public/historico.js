@@ -3383,7 +3383,7 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
             pdf.rect(tblX,tblY,cCC,rh,'F');
             pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.15);pdf.rect(tblX,tblY,cCC,rh,'S');
             pdf.setFont('helvetica','bold');pdf.setFontSize(6);pdf.setTextColor(0,0,80);
-            pdf.text(serNome.toUpperCase(),tblX+cCC/2,tblY+rh/2+2,{align:'center'});
+            pdf.text(serNome.toUpperCase(),tblX+cCC/2,tblY+rh/2+6*0.18,{align:'center'});
             // Notas por disciplina — centralizadas horizontal e verticalmente
             allDiscs.forEach((d,i)=>{
                 const cx=tblX+cCC+i*colW;
@@ -3392,7 +3392,7 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
                 pdf.setFillColor(255,255,255);pdf.rect(cx,tblY,colW,rh,'F');
                 pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.15);pdf.rect(cx,tblY,colW,rh,'S');
                 pdf.setFont('helvetica','normal');pdf.setFontSize(6);pdf.setTextColor(0,0,0);
-                pdf.text(nv,cx+colW/2,tblY+rh/2+2,{align:'center'});
+                pdf.text(nv,cx+colW/2,tblY+rh/2+6*0.18,{align:'center'});
             });
             tblY+=rh;
         }
@@ -3403,14 +3403,14 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
             pdf.rect(tblX,tblY,cCC,rh,'F');
             pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.15);pdf.rect(tblX,tblY,cCC,rh,'S');
             pdf.setFont('helvetica','bold');pdf.setFontSize(5.5);pdf.setTextColor(0,0,80);
-            pdf.text('CARGA HORÁRIA',tblX+cCC/2,tblY+rh/2+2,{align:'center'});
+            pdf.text('CARGA HORÁRIA',tblX+cCC/2,tblY+rh/2+5.5*0.18,{align:'center'});
             allDiscs.forEach((d,i)=>{
                 const cx=tblX+cCC+i*colW;
                 const ch=(d.cargaHorariaPorSerie?.[si]??d.cargaHorariaPadrao??0);
                 pdf.setFillColor(248,251,255);pdf.rect(cx,tblY,colW,rh,'F');
                 pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.15);pdf.rect(cx,tblY,colW,rh,'S');
                 pdf.setFont('helvetica','normal');pdf.setFontSize(5.5);pdf.setTextColor(60,60,120);
-                pdf.text(ch?String(ch):'',cx+colW/2,tblY+rh/2+2,{align:'center'});
+                pdf.text(ch?String(ch):'',cx+colW/2,tblY+rh/2+5.5*0.18,{align:'center'});
             });
             tblY+=rh;
         }
