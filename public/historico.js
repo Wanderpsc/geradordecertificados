@@ -4097,67 +4097,85 @@ function _histVersoMedioPortrait(pdf, hist, cfg) {
     pdf.setFont('helvetica','bold');pdf.setFontSize(6);
     pdf.text('AVALIAÇÃO / FREQUÊNCIA',tblX+cDisc+(UW-cDisc)/2,y+hdrH1-1,{align:'center'});
 
-    // Cabeçalho nível 2: 1ª AVALIAÇÃO | 2ª AVALIAÇÃO | 1° BIMESTRE | 3ª | 4ª | 2° BIM | ...
-    let hx=tblX+cDisc;
+    // ── Nível 2: 1ªAVALIAÇÃO | 2ªAVALIAÇÃO | 1°BIM | 3ª | 4ª | 2°BIM | ...
+    // (desenhado ANTES do nível 3 para que nível 3 fique por cima)
     const yH2=y+hdrH1;
-    pdf.setFillColor(20,60,150);
+    const yH3=y+hdrH1+hdrH2;
+    const subColW=avW/2;
+    let hx=tblX+cDisc;
     for(let bim=0;bim<4;bim++){
         const avA=bim*2+1;const avB=bim*2+2;
-        // Av A
+        // Av A (azul médio)
         pdf.setFillColor(20,60,150);
-        pdf.rect(hx,yH2,avW,hdrH2,'F');
+        pdf.rect(hx,yH2,avW,hdrH2+hdrH3,'FD'); // fundo cobre nível 2 + nível 3
         pdf.setFont('helvetica','bold');pdf.setFontSize(4.8);pdf.setTextColor(255,255,255);
-        pdf.text(`${avA}ª AVAL.`,hx+avW/2,yH2+hdrH2-1,{align:'center'});
+        pdf.text(`${avA}ª AVALIAÇÃO`,hx+avW/2,yH2+hdrH2*0.65,{align:'center',maxWidth:avW-0.5});
         hx+=avW;
-        // Av B
-        pdf.rect(hx,yH2,avW,hdrH2,'F');
-        pdf.text(`${avB}ª AVAL.`,hx+avW/2,yH2+hdrH2-1,{align:'center'});
+        // Av B (mesma cor)
+        pdf.setFillColor(20,60,150);
+        pdf.rect(hx,yH2,avW,hdrH2+hdrH3,'FD');
+        pdf.setFont('helvetica','bold');pdf.setFontSize(4.8);pdf.setTextColor(255,255,255);
+        pdf.text(`${avB}ª AVALIAÇÃO`,hx+avW/2,yH2+hdrH2*0.65,{align:'center',maxWidth:avW-0.5});
         hx+=avW;
-        // Bimestre
+        // Bimestre (azul escuro)
         pdf.setFillColor(0,40,120);
-        pdf.rect(hx,yH2,avW,hdrH2,'F');
-        pdf.text(`${bim+1}° BIM.`,hx+avW/2,yH2+hdrH2-1,{align:'center'});
+        pdf.rect(hx,yH2,avW,hdrH2+hdrH3,'FD');
+        pdf.setFont('helvetica','bold');pdf.setFontSize(4.8);pdf.setTextColor(255,255,255);
+        pdf.text(`${bim+1}° BIMESTRE`,hx+avW/2,yH2+hdrH2*0.65,{align:'center',maxWidth:avW-0.5});
         hx+=avW;
     }
 
-    // Cabeçalho nível 3: NOTA | FALTAS | NOTA | FALTAS | MB | FTB | ...
-    const yH3=y+hdrH1+hdrH2;
-    const subColW=avW/2;
+    // ── Nível 3: NOTA | FALTAS | NOTA | FALTAS | MB | FTB (por cima do nível 2)
     hx=tblX+cDisc;
-    pdf.setFillColor(40,80,180);
     const subHdrs=['NOTA','FALTAS'];
     const bimSubHdrs=['MB','FTB'];
     for(let bim=0;bim<4;bim++){
-        // 2 avaliações × 2 sub-colunas
         for(let av=0;av<2;av++){
             for(let sub=0;sub<2;sub++){
-                pdf.setFillColor(sub===0?40:60,sub===0?80:100,180);
-                pdf.rect(hx,yH3,subColW,hdrH3,'F');
-                pdf.setFont('helvetica','bold');pdf.setFontSize(4);pdf.setTextColor(255,255,255);
+                // apenas linha separadora + texto (sem rect de fundo, herda cor do nível 2)
+                pdf.setDrawColor(150,180,255);pdf.setLineWidth(0.1);
+                pdf.line(hx,yH3,hx+subColW,yH3);
+                pdf.setFont('helvetica','bold');pdf.setFontSize(3.8);pdf.setTextColor(255,255,255);
                 pdf.text(subHdrs[sub],hx+subColW/2,yH3+hdrH3-0.8,{align:'center'});
                 hx+=subColW;
             }
         }
-        // bimestre × 2 sub-colunas
         for(let sub=0;sub<2;sub++){
-            pdf.setFillColor(0,sub===0?55:45,sub===0?140:120);
-            pdf.rect(hx,yH3,subColW,hdrH3,'F');
-            pdf.setFont('helvetica','bold');pdf.setFontSize(4);pdf.setTextColor(255,255,255);
+            pdf.setDrawColor(150,180,255);pdf.setLineWidth(0.1);
+            pdf.line(hx,yH3,hx+subColW,yH3);
+            pdf.setFont('helvetica','bold');pdf.setFontSize(3.8);pdf.setTextColor(200,235,255);
             pdf.text(bimSubHdrs[sub],hx+subColW/2,yH3+hdrH3-0.8,{align:'center'});
             hx+=subColW;
         }
     }
 
-    // Bordas cabeçalho
-    pdf.setDrawColor(80,120,200);pdf.setLineWidth(0.15);
+    // ── Bordas verticais do cabeçalho
+    pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.2);
+    // Borda externa do cabeçalho inteiro
     pdf.rect(tblX,y,UW,tblHdrH,'S');
+    // Separador COMPONENTES | avaliações
+    pdf.line(tblX+cDisc,y,tblX+cDisc,y+tblHdrH);
+    // Separador entre grupos bimestre
     hx=tblX+cDisc;
-    pdf.line(hx,y,hx,y+tblHdrH);
     for(let bim=0;bim<4;bim++){
-        for(let col=0;col<6;col++){
-            hx+=subColW;
-            pdf.line(hx,y,hx,y+tblHdrH);
-        }
+        // linha entre av A e av B
+        hx+=avW;
+        pdf.setLineWidth(0.1);pdf.setDrawColor(80,120,200);
+        pdf.line(hx,yH2,hx,y+tblHdrH);
+        // linha entre av B e bimestre
+        hx+=avW;
+        pdf.line(hx,yH2,hx,y+tblHdrH);
+        // linha entre bimestres (mais grossa)
+        hx+=avW;
+        pdf.setLineWidth(0.25);pdf.setDrawColor(0,40,120);
+        pdf.line(hx,y,hx,y+tblHdrH);
+        // linhas de sub-cols (apenas na linha yH3)
+    }
+    // Sub-linhas verticais no nível 3
+    hx=tblX+cDisc;
+    pdf.setLineWidth(0.1);pdf.setDrawColor(80,120,200);
+    for(let bim=0;bim<4;bim++){
+        for(let sub=0;sub<6;sub++){ hx+=subColW; pdf.line(hx,yH3,hx,y+tblHdrH); }
     }
 
     y+=tblHdrH;
@@ -4241,94 +4259,88 @@ function _histVersoMedioPortrait(pdf, hist, cfg) {
     pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.3);
     pdf.rect(tblX,tblBodyStart-tblHdrH,UW,y-tblBodyStart+tblHdrH,'S');
 
-    // ─── ANCORAGEM DO RODAPÉ (de baixo para cima) ─────────────────────────
-    // Reservas fixas a partir do fundo da página (paisagem: PH=210)
-    const fyBot=PH-4;            // dupla linha final
-    const sigY=fyBot-12;         // linha de assinatura
-    const localY=sigY-8;         // linha LOCAL / DATA
-    const rasurY=localY-4;       // "Neste documento não deverá..."
-    const BOTTOM_FIXED=rasurY;   // tudo acima disso é conteúdo variável
+    // ─── RODAPÉ TOTALMENTE ANCORADO DO FUNDO (paisagem PH=210) ────────────
+    // Posições fixas a partir do fundo:
+    const fyBot=PH-3;          // dupla linha
+    const sigLblY=fyBot-5;     // labels SECRETÁRIO / DIRETOR
+    const sigLineY=sigLblY-6;  // linha de assinatura
+    const localLineY=sigLineY-7; // linha LOCAL / DATA
+    const rasurY=localLineY-4; // "Neste documento..."
 
-    // Espaço disponível após a tabela
-    const tabelaBot=y+1;
-    const espacoDisp=BOTTOM_FIXED-tabelaBot-1;
+    // Linha imediatamente após a tabela
+    const tabelaBot=y+0.5;
 
-    // ─── ATENÇÃO + MB / FTB (1 linha compacta) ────────────────────────────
-    pdf.setFont('helvetica','italic');pdf.setFontSize(4.8);pdf.setTextColor(80,80,80);
+    // ─── ATENÇÃO + MB/FTB ─────────────────────────────────────────────────
+    pdf.setFont('helvetica','italic');pdf.setFontSize(4.5);pdf.setTextColor(60,60,60);
     pdf.text('ATENÇÃO: Preencher somente no caso do(a) estudante solicitar transferência durante o ano letivo.',ML,tabelaBot+2.5);
-    pdf.setFont('helvetica','normal');pdf.setFontSize(4.8);pdf.setTextColor(50,50,50);
+    pdf.setFont('helvetica','normal');pdf.setFontSize(4.5);pdf.setTextColor(50,50,50);
     pdf.text('MB: Média Bimestral   FTB: Falta Total Bimestre',PW-MR,tabelaBot+2.5,{align:'right'});
 
-    const secTop=tabelaBot+5; // início das seções abaixo da nota
-    const secH=Math.max(0,BOTTOM_FIXED-secTop-1); // altura total disponível para seções
+    // Espaço entre nota ATENÇÃO e a linha rasurY
+    const secTop=tabelaBot+5;
+    const secBot=rasurY-1;
+    const secH=Math.max(4,secBot-secTop);
 
-    // Dividir espaço: VERIFICAÇÃO+RESERVADO (lado a lado, 55%) | OBSERVAÇÕES (45%)
-    const verH=Math.floor(secH*0.55);
-    const obsH=secH-verH-1;
-
-    // ─── VERIFICAÇÃO + RESERVADO (lado a lado) ────────────────────────────
+    // ─── VERIFICAÇÃO (esq 60%) + RESERVADO (dir 40%) ──────────────────────
+    const verBot=secTop+Math.floor(secH*0.52);
+    const verHh=verBot-secTop;
     const verW=Math.floor(UW*0.60);
     const resW=UW-verW;
 
-    // VERIFICAÇÃO
-    pdf.setFillColor(240,245,255);pdf.rect(ML,secTop,verW,verH,'F');
-    pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.2);pdf.rect(ML,secTop,verW,verH,'S');
-    pdf.setFont('helvetica','bold');pdf.setFontSize(6);pdf.setTextColor(0,40,120);
-    pdf.text('VERIFICAÇÃO DE RENDIMENTO E FREQUÊNCIA ESCOLAR',ML+1.5,secTop+4);
+    pdf.setFillColor(240,245,255);pdf.rect(ML,secTop,verW,verHh,'F');
+    pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.2);pdf.rect(ML,secTop,verW,verHh,'S');
+    pdf.setFont('helvetica','bold');pdf.setFontSize(5.5);pdf.setTextColor(0,40,120);
+    pdf.text('VERIFICAÇÃO DE RENDIMENTO E FREQUÊNCIA ESCOLAR',ML+1.5,secTop+3.5);
     const verLines=[
         '1- Nota/Média obtiver mínimo de 60% de rendimento escolar em cada componente curricular da Formação Geral Básica/FGB;',
-        '2- As unidades curriculares dos Itinerários Formativos-IFs do Ensino Médio Regular (Tempo Integral e Parcial), serão avaliadas exclusivamente de forma qualitativa.',
-        '3- Todas as unidades curriculares dos Itinerários Formativos-IFs (Linhas de Aprofundamento, Projeto de Vida, Eletivas e as Atividades Integradoras), possuem uma escala de engajamento única: I - Engajamento Avançado (EA); II - Engajamento Satisfatório (ES) e III - Engajamento Básico (EB). Os conceitos nos Incisos de I a III correspondem respectivamente: 8,5 < (EA) ≤ 10; 6,0 < (ES) ≤ 8,5; (EB) = 6,0',
-        '4- Assiduidade obtiver frequência mínima de 75% do total da carga horária trabalhada pela escola durante o ano letivo.',
+        '2- As unidades curriculares dos Itinerários Formativos-IFs serão avaliadas exclusivamente de forma qualitativa.',
+        '3- Itinerários Formativos-IFs possuem escala única: I-EA; II-ES; III-EB. Correspondem a: 8,5<(EA)≤10; 6,0<(ES)≤8,5; (EB)=6,0',
+        '4- Assiduidade: frequência mínima de 75% do total da carga horária trabalhada durante o ano letivo.',
     ];
-    const verFontSz=4.5;
-    pdf.setFont('helvetica','normal');pdf.setFontSize(verFontSz);pdf.setTextColor(10,10,10);
-    let vy=secTop+6.5;
+    pdf.setFont('helvetica','normal');pdf.setFontSize(4.2);pdf.setTextColor(10,10,10);
+    let vy=secTop+6;
     verLines.forEach(t=>{
-        const ls=pdf.splitTextToSize(t,verW-4);
-        if(vy+ls.length*2.6<secTop+verH-1){pdf.text(ls,ML+2,vy);vy+=ls.length*2.6+1;}
+        const ls=pdf.splitTextToSize(t,verW-3);
+        if(vy+ls.length*2.4<secTop+verHh-0.5){pdf.text(ls,ML+1.5,vy);vy+=ls.length*2.4+0.8;}
     });
 
-    // RESERVADO
-    pdf.setFillColor(255,255,255);pdf.rect(ML+verW,secTop,resW,verH,'F');
-    pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.2);pdf.rect(ML+verW,secTop,resW,verH,'S');
-    pdf.setFont('helvetica','bold');pdf.setFontSize(6);pdf.setTextColor(0,40,120);
-    const rLns=pdf.splitTextToSize('RESERVADO PARA AUTENTICAÇÃO',resW-3);
-    pdf.text(rLns,ML+verW+1.5,secTop+4);
+    pdf.setFillColor(255,255,255);pdf.rect(ML+verW,secTop,resW,verHh,'F');
+    pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.2);pdf.rect(ML+verW,secTop,resW,verHh,'S');
+    pdf.setFont('helvetica','bold');pdf.setFontSize(5.5);pdf.setTextColor(0,40,120);
+    pdf.text('RESERVADO PARA AUTENTICAÇÃO',ML+verW+resW/2,secTop+3.5,{align:'center',maxWidth:resW-2});
 
-    // ─── OBSERVAÇÕES (full width abaixo) ──────────────────────────────────
-    const obsTop=secTop+verH+1;
+    // ─── OBSERVAÇÕES (abaixo, full width) ─────────────────────────────────
+    const obsTop=verBot+0.5;
+    const obsH=Math.max(3,secBot-obsTop);
     pdf.setFillColor(255,255,255);pdf.rect(ML,obsTop,UW,obsH,'F');
     pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.2);pdf.rect(ML,obsTop,UW,obsH,'S');
-    pdf.setFont('helvetica','bold');pdf.setFontSize(6);pdf.setTextColor(0,40,120);
-    pdf.text('OBSERVAÇÕES:',ML+1.5,obsTop+4);
+    pdf.setFont('helvetica','bold');pdf.setFontSize(5.5);pdf.setTextColor(0,40,120);
+    pdf.text('OBSERVAÇÕES:',ML+1.5,obsTop+3.5);
     if(fichaEntry.observacao){
-        pdf.setFont('helvetica','normal');pdf.setFontSize(5.5);pdf.setTextColor(0,0,0);
-        const obsLines=pdf.splitTextToSize(fichaEntry.observacao,UW-5);
-        pdf.text(obsLines.slice(0,Math.floor((obsH-6)/3.2)),ML+2,obsTop+7);
+        pdf.setFont('helvetica','normal');pdf.setFontSize(5);pdf.setTextColor(0,0,0);
+        const obsLns=pdf.splitTextToSize(fichaEntry.observacao,UW-4);
+        pdf.text(obsLns.slice(0,Math.floor((obsH-5)/3)),ML+1.5,obsTop+6);
     }
 
-    // ─── "NESTE DOCUMENTO NÃO DEVERÁ HAVER EMENDAS..." ───────────────────
-    pdf.setFont('helvetica','italic');pdf.setFontSize(5.5);pdf.setTextColor(60,60,60);
+    // ─── NESTE DOCUMENTO / LOCAL / ASSINATURAS ────────────────────────────
+    pdf.setFont('helvetica','italic');pdf.setFontSize(5.5);pdf.setTextColor(50,50,50);
     pdf.text('Neste documento não deverá haver emendas e nem rasuras.',PW/2,rasurY,{align:'center'});
 
-    // ─── LOCAL / DATA ─────────────────────────────────────────────────────
     const sig1v=cfg?.frente?.assinatura1||'SECRETÁRIO(A)';
     const sig2v=cfg?.frente?.assinatura2||'DIRETOR(A)';
     const localDataV=cfg?.frente?.localData||hist.dataEmissao||'';
-    _drawLocalData(pdf,localDataV,localY,PW);
+    _drawLocalData(pdf,localDataV,localLineY,PW);
 
-    // ─── ASSINATURAS ──────────────────────────────────────────────────────
-    const sigLineW=60;
+    const sigLineW=55;
     [{cx:PW*0.28,sig:sig1v},{cx:PW*0.72,sig:sig2v}].forEach(({cx,sig})=>{
         pdf.setLineWidth(0.2);pdf.setDrawColor(0,40,120);
-        pdf.line(cx-sigLineW/2,sigY,cx+sigLineW/2,sigY);
-        _hText(pdf,sig,cx,sigY+4,{size:6,align:'center',bold:true});
+        pdf.line(cx-sigLineW/2,sigLineY,cx+sigLineW/2,sigLineY);
+        pdf.setFont('helvetica','bold');pdf.setFontSize(6);pdf.setTextColor(0,0,0);
+        pdf.text(sig,cx,sigLblY,{align:'center'});
     });
 
-    // ─── DUPLA LINHA INFERIOR ─────────────────────────────────────────────
     _hLine(pdf,ML,fyBot,PW-MR,fyBot,0.6,[0,40,120]);
-    _hLine(pdf,ML,fyBot+1.2,PW-MR,fyBot+1.2,0.2,[0,40,120]);
+    _hLine(pdf,ML,fyBot+1.0,PW-MR,fyBot+1.0,0.2,[0,40,120]);
 }
 
 function _histVersoMedioPortraitLegado(pdf, hist, cfg) {
