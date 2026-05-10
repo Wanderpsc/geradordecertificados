@@ -1490,30 +1490,6 @@
                 </div>
             </div>
 
-            <!-- Seção: Modelos de Configuração do Histórico -->
-            <div class="card" style="margin-top: 20px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
-                    <div>
-                        <h2 style="margin-bottom: 2px;">🗂️ Modelos de Configuração do Histórico</h2>
-                        <p style="color: #6b7280; font-size: 13px; margin: 4px 0 0 0;">Salve as configurações atuais como um modelo nomeado. Defina um modelo como <strong>padrão</strong> para carregá-lo automaticamente ao abrir a aba.</p>
-                    </div>
-                    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-                        <button class="btn btn-success" onclick="abrirNovoModeloHistoricoVisual()" style="font-weight:700;background:linear-gradient(135deg,#059669,#10b981);">
-                            🎨 Novo Modelo de Layout Visual
-                        </button>
-                        <button class="btn btn-primary" onclick="salvarModeloHistNaNuvem()" style="font-weight:700;">☁️ Salvar Modelo Atual</button>
-                    </div>
-                </div>
-                <!-- Indicador de modelo vinculado -->
-                <div id="histModeloAtualInfo" style="display:none;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:13px;color:#1e3a8a;justify-content:space-between;align-items:center;">
-                    <span>Editando: <strong id="histModeloAtualNome"></strong></span>
-                    <button onclick="descarregarModeloHist()" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:12px;">✕ Desvincular</button>
-                </div>
-                <div id="histModelosGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin-top: 8px;">
-                    <div style="text-align: center; color: #9ca3af; padding: 20px; grid-column: 1/-1;">Carregando modelos...</div>
-                </div>
-            </div>
-
             <!-- Seção 1: Matrizes Curriculares -->
             <div class="card" style="margin-top: 20px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
@@ -1528,18 +1504,41 @@
                 </div>
             </div>
 
-            <!-- Seção 2: Histórico Escolar -->
+            <!-- Seção 2: Histórico Escolar + Modelos (unificado) -->
             <div class="card" style="margin-top: 20px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 8px;">
-                    <h2 style="margin:0;">📋 Histórico Escolar</h2>
-                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px;">
+                    <div>
+                        <h2 style="margin-bottom: 2px;">📋 Histórico Escolar</h2>
+                        <p style="color: #6b7280; font-size: 13px; margin: 4px 0 0 0;">Monte um Histórico Escolar selecionando uma Matriz para cada série. Salve modelos de layout para reutilizar.</p>
+                    </div>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                        <button class="btn btn-success" onclick="abrirNovoModeloHistoricoVisual()" style="font-weight:700;background:linear-gradient(135deg,#059669,#10b981);">
+                            🎨 Novo Modelo de Layout Visual
+                        </button>
+                        <button class="btn btn-primary" onclick="salvarModeloHistNaNuvem()" style="font-weight:700;">☁️ Salvar Modelo Atual</button>
                         <button class="btn btn-success" onclick="criarModeloEMIntegralI()" style="background:linear-gradient(135deg,#0369a1,#0ea5e9);font-weight:700;" title="Cria automaticamente a matriz e o histórico com as disciplinas do modelo EM Integral I">
                             ⚡ Criar Modelo: EM Integral I
                         </button>
                         <button class="btn btn-primary" onclick="abrirModalNovaGrade()">+ Novo Histórico</button>
                     </div>
                 </div>
-                <p style="color: #6b7280; font-size: 13px; margin-bottom: 15px;">Monte um Histórico Escolar selecionando uma Matriz para cada série. A união das matrizes forma o histórico completo.</p>
+
+                <!-- Indicador de modelo vinculado -->
+                <div id="histModeloAtualInfo" style="display:none;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:13px;color:#1e3a8a;justify-content:space-between;align-items:center;">
+                    <span>Editando: <strong id="histModeloAtualNome"></strong></span>
+                    <button onclick="descarregarModeloHist()" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:12px;">✕ Desvincular</button>
+                </div>
+
+                <!-- Subseção: Modelos de Configuração -->
+                <div style="border-bottom: 1px solid #e5e7eb; margin-bottom: 16px; padding-bottom: 16px;">
+                    <h3 style="font-size: 13px; font-weight: 700; color: #1e3a8a; margin-bottom: 4px;">🗂️ Modelos de Configuração</h3>
+                    <p style="color: #6b7280; font-size: 12px; margin-bottom: 10px;">Salve as configurações atuais como um modelo nomeado. Defina um modelo como <strong>padrão</strong> para carregá-lo automaticamente ao abrir a aba.</p>
+                    <div id="histModelosGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px;">
+                        <div style="text-align: center; color: #9ca3af; padding: 20px; grid-column: 1/-1;">Carregando modelos...</div>
+                    </div>
+                </div>
+
+                <!-- Subseção: Lista de Históricos -->
                 <div id="listaGrades" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px;">
                     <div style="text-align: center; color: #9ca3af; padding: 30px; grid-column: 1/-1;">Carregando históricos...</div>
                 </div>
