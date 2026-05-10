@@ -3288,8 +3288,8 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     // Cabeçalho (texto vertical disciplinas): altura proporcional ao texto mais longo
     // Usar altura fixa de 35mm para cabeçalho (comporta ~6 chars de nome)
     // Escalar se não couber
-    const rowData=3.8; // altura linha de dados (1ª SÉRIE / CARGA HORÁRIA)
-    const rowInst=3.2; // altura linha estabelecimento/município/uf/ano
+    const rowData=5.0; // altura linha de dados (1ª SÉRIE / CARGA HORÁRIA)
+    const rowInst=7.5; // altura linha estabelecimento/município/uf/ano (comporta rótulo + valor)
     // Por série: 2 linhas de dados + 1 linha info = 3 linhas → rowData*2 + rowInst
     const perSerieH=rowData*2+rowInst;
     const totalDataH=perSerieH*numSeries;
@@ -3375,39 +3375,39 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
         // Linha 1: nota por disciplina
         {
             const rh=rowData;
-            // Célula "N° SÉRIE"
-            pdf.setFillColor(240,245,255);
+            // Célula "N° SÉRIE" — centralizada
+            pdf.setFillColor(220,232,255);
             pdf.rect(tblX,tblY,cCC,rh,'F');
             pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.15);pdf.rect(tblX,tblY,cCC,rh,'S');
-            pdf.setFont('helvetica','bold');pdf.setFontSize(5.5);pdf.setTextColor(0,0,0);
-            pdf.text(serNome.toUpperCase(),tblX+1,tblY+rh/2+1.8);
-            // Notas por disciplina
+            pdf.setFont('helvetica','bold');pdf.setFontSize(6);pdf.setTextColor(0,0,80);
+            pdf.text(serNome.toUpperCase(),tblX+cCC/2,tblY+rh/2+2,{align:'center'});
+            // Notas por disciplina — centralizadas horizontal e verticalmente
             allDiscs.forEach((d,i)=>{
                 const cx=tblX+cCC+i*colW;
                 const nd=(notas[d.nome]||{})[sKey]||{};
                 const nv=nd.nota!==undefined?String(Number(nd.nota).toFixed(1)):'';
                 pdf.setFillColor(255,255,255);pdf.rect(cx,tblY,colW,rh,'F');
                 pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.15);pdf.rect(cx,tblY,colW,rh,'S');
-                pdf.setFont('helvetica','normal');pdf.setFontSize(5.5);pdf.setTextColor(0,0,0);
-                pdf.text(nv,cx+colW/2,tblY+rh/2+1.8,{align:'center'});
+                pdf.setFont('helvetica','normal');pdf.setFontSize(6);pdf.setTextColor(0,0,0);
+                pdf.text(nv,cx+colW/2,tblY+rh/2+2,{align:'center'});
             });
             tblY+=rh;
         }
         // Linha 2: carga horária por disciplina
         {
             const rh=rowData;
-            pdf.setFillColor(248,250,255);
+            pdf.setFillColor(240,246,255);
             pdf.rect(tblX,tblY,cCC,rh,'F');
             pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.15);pdf.rect(tblX,tblY,cCC,rh,'S');
-            pdf.setFont('helvetica','bold');pdf.setFontSize(5);pdf.setTextColor(0,0,0);
-            pdf.text('CARGA HORÁRIA',tblX+1,tblY+rh/2+1.8);
+            pdf.setFont('helvetica','bold');pdf.setFontSize(5.5);pdf.setTextColor(0,0,80);
+            pdf.text('CARGA HORÁRIA',tblX+cCC/2,tblY+rh/2+2,{align:'center'});
             allDiscs.forEach((d,i)=>{
                 const cx=tblX+cCC+i*colW;
                 const ch=(d.cargaHorariaPorSerie?.[si]??d.cargaHorariaPadrao??0);
-                pdf.setFillColor(255,255,255);pdf.rect(cx,tblY,colW,rh,'F');
+                pdf.setFillColor(248,251,255);pdf.rect(cx,tblY,colW,rh,'F');
                 pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.15);pdf.rect(cx,tblY,colW,rh,'S');
-                pdf.setFont('helvetica','normal');pdf.setFontSize(5);pdf.setTextColor(80,80,80);
-                pdf.text(ch?String(ch):'',cx+colW/2,tblY+rh/2+1.8,{align:'center'});
+                pdf.setFont('helvetica','normal');pdf.setFontSize(5.5);pdf.setTextColor(60,60,120);
+                pdf.text(ch?String(ch):'',cx+colW/2,tblY+rh/2+2,{align:'center'});
             });
             tblY+=rh;
         }
@@ -3429,12 +3429,14 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
             ];
             cells.forEach(({lbl,val},ci)=>{
                 const pw=partW[ci];
-                pdf.setFillColor(235,242,255);pdf.rect(px,tblY,pw,rh,'F');
+                pdf.setFillColor(210,225,250);pdf.rect(px,tblY,pw,rh,'F');
                 pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.15);pdf.rect(px,tblY,pw,rh,'S');
-                pdf.setFont('helvetica','bold');pdf.setFontSize(4.5);pdf.setTextColor(0,0,120);
-                pdf.text(lbl,px+pw/2,tblY+1.5,{align:'center',maxWidth:pw-0.5});
-                pdf.setFont('helvetica','normal');pdf.setFontSize(5);pdf.setTextColor(0,0,0);
-                pdf.text(val,px+pw/2,tblY+rh-0.5,{align:'center',maxWidth:pw-1});
+                // Rótulo no topo (negrito, azul)
+                pdf.setFont('helvetica','bold');pdf.setFontSize(4.8);pdf.setTextColor(0,0,140);
+                pdf.text(lbl,px+pw/2,tblY+2.2,{align:'center',maxWidth:pw-1});
+                // Valor abaixo (normal, preto, tamanho maior)
+                pdf.setFont('helvetica','normal');pdf.setFontSize(5.5);pdf.setTextColor(0,0,0);
+                pdf.text(String(val),px+pw/2,tblY+5.8,{align:'center',maxWidth:pw-1});
                 px+=pw;
             });
             tblY+=rh;
