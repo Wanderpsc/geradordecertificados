@@ -4219,14 +4219,14 @@ function _histVersoMedioPortrait(pdf, hist, cfg) {
             const bg=rowIdx%2===0?[250,252,255]:[255,255,255];
             pdf.setFillColor(...bg);pdf.rect(tblX,y,UW,rowH,'F');
             pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.1);pdf.rect(tblX,y,UW,rowH,'S');
-            // Nome da disciplina — centralizado verticalmente na célula
+            // Nome da disciplina — centralizado horizontal e verticalmente na célula
             pdf.setFont('helvetica','normal');pdf.setFontSize(DISC_FONT_SZ);pdf.setTextColor(10,10,10);
             {
                 const discLines=pdf.splitTextToSize(disc.nome,cDisc-2);
                 const lineHmm=DISC_FONT_SZ*0.42; // ~mm por linha
                 const blockH=discLines.length*lineHmm;
                 const textY=y+(rowH-blockH)/2+lineHmm*0.85;
-                pdf.text(discLines,tblX+1,Math.max(y+lineHmm,textY));
+                pdf.text(discLines,tblX+cDisc/2,Math.max(y+lineHmm,textY),{align:'center',maxWidth:cDisc-2});
             }
             pdf.setDrawColor(0,40,120);pdf.line(tblX+cDisc,y,tblX+cDisc,y+rowH);
 
@@ -4247,7 +4247,7 @@ function _histVersoMedioPortrait(pdf, hist, cfg) {
                 const ftbVal=(avDataA.faltas!==undefined||avDataB.faltas!==undefined)?
                     String((Number(avDataA.faltas||0)+Number(avDataB.faltas||0))):'';
 
-                const midY=y+rowH-1;
+                const midY=y+rowH/2+DISC_FONT_SZ*0.18; // centro vertical da célula
                 pdf.setFont('helvetica','normal');pdf.setFontSize(DISC_FONT_SZ);pdf.setTextColor(0,0,0);
                 // Av A
                 pdf.text(notaA,cx+subColW/2,midY,{align:'center'});
