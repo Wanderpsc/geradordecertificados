@@ -2860,8 +2860,8 @@ async function previewHistorico(id) {
         const histOriginal = data.historico;
 
         // Exibe seletor de modelo antes de gerar
-        await _mostrarSeletorModeloHist(histOriginal, (hist) => {
-            _gerarPreviewPDF(hist);
+        await _mostrarSeletorModeloHist(histOriginal, async (hist) => {
+            await _gerarPreviewPDF(hist);
         });
     } catch (e) {
         console.error('Erro ao gerar pré-visualização:', e);
@@ -2869,27 +2869,29 @@ async function previewHistorico(id) {
     }
 }
 
-function _gerarPreviewPDF(hist) {
+async function _gerarPreviewPDF(hist) {
     try {
         const cfg = obterConfigHist();
         const { jsPDF } = window.jspdf;
         const isMedioPreview = hist.tipo === 'medio';
-        let pdf;
+        let blob;
 
         if (isMedioPreview) {
-            pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-            _histFrenteMedioPortrait(pdf, hist, cfg);
-            pdf.addPage([210, 297]); // retrato explícito independente da orientação do doc
-            _histVersoMedioPortrait(pdf, hist, cfg);
+            const pdfFrente = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+            _histFrenteMedioPortrait(pdfFrente, hist, cfg);
+            const pdfVerso = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            _histVersoMedioPortrait(pdfVerso, hist, cfg);
+            blob = await _mergePDFsComPdfLib([pdfFrente, pdfVerso]);
         } else {
-            pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
             _histFrente(pdf, hist, cfg);
             pdf.addPage();
             _histVerso(pdf, hist, cfg);
+            blob = pdf.output('blob');
         }
 
         if (_histPreviewBlobUrl) URL.revokeObjectURL(_histPreviewBlobUrl);
-        _histPreviewBlobUrl = URL.createObjectURL(pdf.output('blob'));
+        _histPreviewBlobUrl = URL.createObjectURL(blob);
 
         const card = document.getElementById('histPreviewCard');
         const frame = document.getElementById('histPreviewFrame');
@@ -2965,8 +2967,7 @@ async function _gerarLotePDF(ids, gradeEscolhida, token) {
     mostrarNotificacao(`Gerando ${ids.length} histórico(s)...`, 'info');
     const { jsPDF } = window.jspdf;
     const cfg = obterConfigHist();
-    let pdf = null;
-    let primeiroDoc = true;
+    const docsParaMerge = [];
 
     for (const histId of ids) {
         try {
@@ -2983,42 +2984,65 @@ async function _gerarLotePDF(ids, gradeEscolhida, token) {
             const isMedio = hist.tipo === 'medio';
 
             if (isMedio) {
-                if (primeiroDoc) {
-                    pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-                } else {
-                    pdf.addPage([297, 210]); // nova frente landscape
-                }
-                primeiroDoc = false;
-                _histFrenteMedioPortrait(pdf, hist, cfg);
-                pdf.addPage([210, 297]); // verso retrato explícito
-                _histVersoMedioPortrait(pdf, hist, cfg);
+                // Frente: landscape em documento separado
+                const pdfFrente = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+                _histFrenteMedioPortrait(pdfFrente, hist, cfg);
+                docsParaMerge.push(pdfFrente);
+                // Verso: portrait em documento separado
+                const pdfVerso = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+                _histVersoMedioPortrait(pdfVerso, hist, cfg);
+                docsParaMerge.push(pdfVerso);
             } else {
-                if (primeiroDoc) {
-                    pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-                } else {
-                    pdf.addPage();
-                }
-                primeiroDoc = false;
+                const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
                 _histFrente(pdf, hist, cfg);
                 pdf.addPage();
                 _histVerso(pdf, hist, cfg);
+                docsParaMerge.push(pdf);
             }
         } catch (e) {
             console.error('Erro ao gerar histórico:', histId, e);
         }
     }
 
-    if (!pdf) { mostrarNotificacao('Nenhum histórico pôde ser gerado.', 'error'); return; }
+    if (!docsParaMerge.length) { mostrarNotificacao('Nenhum histórico pôde ser gerado.', 'error'); return; }
 
-    const pdfBlob = pdf.output('blob');
-    window.open(URL.createObjectURL(pdfBlob), '_blank');
+    const finalBlob = await _mergePDFsComPdfLib(docsParaMerge);
+    const finalUrl = URL.createObjectURL(finalBlob);
+    window.open(finalUrl, '_blank');
+    const fileName = ids.length === 1 ? 'Historico_Escolar.pdf' : `Historicos_${ids.length}.pdf`;
     setTimeout(() => {
-        pdf.save(ids.length === 1 ? 'Historico_Escolar.pdf' : `Historicos_${ids.length}.pdf`);
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(finalBlob);
+        a.download = fileName;
+        a.click();
     }, 400);
     mostrarNotificacao(`${ids.length} histórico(s) gerado(s)!`, 'success');
 }
 
 // ---------- helpers baixo nível ----------
+
+/**
+ * Combina múltiplos objetos jsPDF num único Blob usando pdf-lib.
+ * Preserva a orientação real de cada documento (landscape/portrait).
+ * @param {Array} jsPDFDocs - array de instâncias jsPDF
+ * @returns {Promise<Blob>}
+ */
+async function _mergePDFsComPdfLib(jsPDFDocs) {
+    const { PDFDocument } = PDFLib;
+    const mergedDoc = await PDFDocument.create();
+
+    for (const doc of jsPDFDocs) {
+        const bytes = doc.output('arraybuffer');
+        const srcDoc = await PDFDocument.load(bytes);
+        const pageCount = srcDoc.getPageCount();
+        const indices = Array.from({ length: pageCount }, (_, i) => i);
+        const pages = await mergedDoc.copyPages(srcDoc, indices);
+        pages.forEach(p => mergedDoc.addPage(p));
+    }
+
+    const mergedBytes = await mergedDoc.save();
+    return new Blob([mergedBytes], { type: 'application/pdf' });
+}
 
 function _hRect(pdf, x, y, w, h, fill, stroke) {
     if (fill) { pdf.setFillColor(fill[0], fill[1], fill[2]); pdf.rect(x, y, w, h, 'F'); }
