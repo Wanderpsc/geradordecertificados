@@ -2874,11 +2874,11 @@ function _gerarPreviewPDF(hist) {
         const cfg = obterConfigHist();
         const { jsPDF } = window.jspdf;
         const isMedioPreview = hist.tipo === 'medio';
-        const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
 
         if (isMedioPreview) {
             _histFrenteMedioPortrait(pdf, hist, cfg);
-            pdf.addPage({ orientation: 'portrait' });
+            pdf.addPage({ orientation: 'portrait', format: 'a4' });
             _histVersoMedioPortrait(pdf, hist, cfg);
         } else {
             _histFrente(pdf, hist, cfg);
@@ -2981,15 +2981,15 @@ async function _gerarLotePDF(ids, gradeEscolhida, token) {
 
             const isMedio = hist.tipo === 'medio';
             if (!primeiroDoc) {
-                pdf.addPage({ orientation: 'portrait' });
+                pdf.addPage({ orientation: 'landscape', format: 'a4' });
             } else {
-                pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+                pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
             }
             primeiroDoc = false;
 
             if (isMedio) {
                 _histFrenteMedioPortrait(pdf, hist, cfg);
-                pdf.addPage({ orientation: 'portrait' });
+                pdf.addPage({ orientation: 'portrait', format: 'a4' });
                 _histVersoMedioPortrait(pdf, hist, cfg);
             } else {
                 _histFrente(pdf, hist, cfg);
@@ -3078,7 +3078,7 @@ function _drawLocalData(pdf, localData, rodapeY, PW) {
 function _histFrenteMedioPortrait(pdf, hist, cfg) {
     // =====================================================================
     // FRENTE: disciplinas como COLUNAS (texto vertical), séries como LINHAS
-    // Replica exatamente o modelo oficial das imagens de referência
+    // Página 1 em PAISAGEM (landscape): 297mm × 210mm
     // =====================================================================
     const aluno=hist.aluno||{};
     const grade=hist.grade||{};
@@ -3088,8 +3088,8 @@ function _histFrenteMedioPortrait(pdf, hist, cfg) {
     const numSeries=series.length;
     const discs=grade.disciplinas||[];
 
-    // A4 RETRATO: largura=210mm, altura=297mm
-    const PW=210,PH=297,ML=6,MR=6,MT=5;
+    // A4 PAISAGEM: largura=297mm, altura=210mm
+    const PW=297,PH=210,ML=6,MR=6,MT=5;
     const UW=PW-ML-MR;
     let y=MT;
 
