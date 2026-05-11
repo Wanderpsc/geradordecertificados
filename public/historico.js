@@ -3050,52 +3050,29 @@ function _drawLocalData(pdf, localData, rodapeY, PW) {
     const totalW=localW+commaW+dayW+deW+monthW+deW+yearW;
     let lx=PW/2-totalW/2;
 
-    // Parse: "Cidade - PI, 22 de dezembro de 2025"
-    const partes=localData.split(',');
-    const localTxt=(partes[0]||'').trim();
-    const dataTxt=partes.slice(1).join(',').trim();
-    const m=dataTxt.match(/^\s*(\d+)\s+de\s+(.+?)\s+de\s+(\d+)/);
-    const dayTxt=m?m[1]:'';
-    const monthTxt=m?m[2]:'';
-    const yearTxt=m?m[3]:'';
+    // Largura total da parte da data (para centralizar o label DATA)
+    const dateW=dayW+deW+monthW+deW+yearW;
+    const dateStartX=lx+localW+commaW;
 
     pdf.setLineWidth(0.2);pdf.setDrawColor(0,40,120);
-    pdf.setFont('helvetica','normal');pdf.setFontSize(7);pdf.setTextColor(0,0,0);
+    pdf.setFont('helvetica','bold');pdf.setFontSize(5.5);pdf.setTextColor(0,0,0);
 
-    const TY=rodapeY-5; // baseline do texto acima da linha (5mm evita sobreposição)
-
-    // Linha local
+    // Linha LOCAL — sem texto acima (linhas em branco para preenchimento manual)
     pdf.line(lx,rodapeY,lx+localW,rodapeY);
-    pdf.text(localTxt,lx+localW/2,TY,{align:'center',maxWidth:localW-2});
-    pdf.setFont('helvetica','bold');pdf.setFontSize(5.5);
     pdf.text('LOCAL',lx+localW/2,rodapeY+3.5,{align:'center'});
-    lx+=localW;
-
-    // Vírgula
-    pdf.setFont('helvetica','normal');pdf.setFontSize(7);
-    pdf.text(',',lx+0.5,TY);lx+=commaW;
+    lx+=localW+commaW;
 
     // Linha dia
-    pdf.line(lx,rodapeY,lx+dayW,rodapeY);
-    pdf.text(dayTxt,lx+dayW/2,TY,{align:'center',maxWidth:dayW});
-    lx+=dayW;
-
-    // " de "
-    pdf.text(' de ',lx+deW/2,TY,{align:'center'});lx+=deW;
+    pdf.line(lx,rodapeY,lx+dayW,rodapeY); lx+=dayW+deW;
 
     // Linha mês
-    pdf.line(lx,rodapeY,lx+monthW,rodapeY);
-    pdf.text(monthTxt,lx+monthW/2,TY,{align:'center',maxWidth:monthW-2});
-    lx+=monthW;
-
-    // " de "
-    pdf.text(' de ',lx+deW/2,TY,{align:'center'});lx+=deW;
+    pdf.line(lx,rodapeY,lx+monthW,rodapeY); lx+=monthW+deW;
 
     // Linha ano
     pdf.line(lx,rodapeY,lx+yearW,rodapeY);
-    pdf.text(yearTxt,lx+yearW/2,TY,{align:'center',maxWidth:yearW});
-    pdf.setFont('helvetica','bold');pdf.setFontSize(5.5);
-    pdf.text('DATA',lx+yearW/2,rodapeY+3.5,{align:'center'});
+
+    // DATA centralizado sobre toda a parte da data (dia + de + mês + de + ano)
+    pdf.text('DATA',dateStartX+dateW/2,rodapeY+3.5,{align:'center'});
 }
 
 function _histFrenteMedioPortrait(pdf, hist, cfg) {
