@@ -2874,13 +2874,15 @@ function _gerarPreviewPDF(hist) {
         const cfg = obterConfigHist();
         const { jsPDF } = window.jspdf;
         const isMedioPreview = hist.tipo === 'medio';
-        const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+        let pdf;
 
         if (isMedioPreview) {
+            pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
             _histFrenteMedioPortrait(pdf, hist, cfg);
-            pdf.addPage({ orientation: 'portrait', format: 'a4' });
+            pdf.addPage([210, 297]); // retrato explícito independente da orientação do doc
             _histVersoMedioPortrait(pdf, hist, cfg);
         } else {
+            pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
             _histFrente(pdf, hist, cfg);
             pdf.addPage();
             _histVerso(pdf, hist, cfg);
@@ -2974,24 +2976,29 @@ async function _gerarLotePDF(ids, gradeEscolhida, token) {
             const data = await resp.json();
             if (!data.success) continue;
 
-            // Aplica o modelo escolhido (substitui a grade, mantém notas)
             const hist = gradeEscolhida
                 ? Object.assign({}, data.historico, { grade: gradeEscolhida })
                 : data.historico;
 
             const isMedio = hist.tipo === 'medio';
-            if (!primeiroDoc) {
-                pdf.addPage({ orientation: 'landscape', format: 'a4' });
-            } else {
-                pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-            }
-            primeiroDoc = false;
 
             if (isMedio) {
+                if (primeiroDoc) {
+                    pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+                } else {
+                    pdf.addPage([297, 210]); // nova frente landscape
+                }
+                primeiroDoc = false;
                 _histFrenteMedioPortrait(pdf, hist, cfg);
-                pdf.addPage({ orientation: 'portrait', format: 'a4' });
+                pdf.addPage([210, 297]); // verso retrato explícito
                 _histVersoMedioPortrait(pdf, hist, cfg);
             } else {
+                if (primeiroDoc) {
+                    pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+                } else {
+                    pdf.addPage();
+                }
+                primeiroDoc = false;
                 _histFrente(pdf, hist, cfg);
                 pdf.addPage();
                 _histVerso(pdf, hist, cfg);
