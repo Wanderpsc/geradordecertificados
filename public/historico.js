@@ -4308,10 +4308,15 @@ function _histVersoMedioPortrait(pdf, hist, cfg) {
         '4- Assiduidade obtiver frequência mínima de 75% do total da carga horária trabalhada pela escola durante o ano letivo.',
     ];
     pdf.setFont('helvetica','normal');pdf.setFontSize(4.5);pdf.setTextColor(10,10,10);
+    const lineH=2.6;   // altura de cada linha de texto
+    const itemGap=1.5; // espaço fixo entre itens
     let vy=verTop+7;
     verLines.forEach(t=>{
         const ls=pdf.splitTextToSize(t,verW-3);
-        if(vy+ls.length*2.8<verTop+VER_H-1){pdf.text(ls,ML+1.5,vy);vy+=ls.length*2.8+0.6;}
+        if(vy+ls.length*lineH<verTop+VER_H-1){
+            pdf.text(ls,ML+1.5,vy);
+            vy+=ls.length*lineH+itemGap;
+        }
     });
 
     pdf.setFillColor(255,255,255);pdf.rect(ML+verW,verTop,resW,VER_H,'F');
