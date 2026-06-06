@@ -2447,16 +2447,18 @@ function desenharPreviewFrente(ctx, cfg, sx, sy, pw, ph, imgs) {
 
     // Bordas decorativas simuladas
     if (cfg.margens.bordaExibir === 'sim' && bordaEsp > 0) {
-        const sUnif = (sx + sy) / 2; // escala uniforme para espessura igual em todas as direções
+        const sUnif = (sx + sy) / 2;
+        const bEspH = bordaEsp * sUnif;          // horizontal (top/bottom)
+        const bEspV = bordaEsp * 1.37 * sUnif;   // vertical (esq/dir) ~37% maior, conforme modelo de referência
         if (imgs && imgs.bordaCompleta) {
             ctx.drawImage(imgs.bordaCompleta, 0, 0, pw, ph);
         } else {
             ctx.fillStyle = cfg.cores.borda || cfg.cores.principal;
             ctx.globalAlpha = 0.3;
-            ctx.fillRect(0, 0, bordaEsp * sUnif, ph); // esq
-            ctx.fillRect(pw - bordaEsp * sUnif, 0, bordaEsp * sUnif, ph); // dir
-            ctx.fillRect(0, 0, pw, bordaEsp * sUnif); // sup
-            ctx.fillRect(0, ph - bordaEsp * sUnif, pw, bordaEsp * sUnif); // inf
+            ctx.fillRect(0, 0, pw, bEspH);          // sup
+            ctx.fillRect(0, ph - bEspH, pw, bEspH); // inf
+            ctx.fillRect(0, 0, bEspV, ph);          // esq (por cima)
+            ctx.fillRect(pw - bEspV, 0, bEspV, ph); // dir (por cima)
             ctx.globalAlpha = 1;
         }
     }
@@ -2633,16 +2635,18 @@ function desenharPreviewVerso(ctx, cfg, sx, sy, pw, ph, imgs) {
 
     // Bordas
     if (cfg.verso.bordas === 'sim' && cfg.margens.bordaExibir === 'sim' && bordaEsp > 0) {
-        const sUnif = (sx + sy) / 2; // escala uniforme para espessura igual
+        const sUnif = (sx + sy) / 2;
+        const bEspH = bordaEsp * sUnif;          // horizontal (top/bottom)
+        const bEspV = bordaEsp * 1.37 * sUnif;   // vertical (esq/dir) ~37% maior, conforme modelo de referência
         if (imgs && imgs.bordaCompleta) {
             ctx.drawImage(imgs.bordaCompleta, 0, 0, pw, ph);
         } else {
             ctx.fillStyle = cfg.cores.borda || cfg.cores.principal;
             ctx.globalAlpha = 0.3;
-            ctx.fillRect(0, 0, bordaEsp * sUnif, ph);
-            ctx.fillRect(pw - bordaEsp * sUnif, 0, bordaEsp * sUnif, ph);
-            ctx.fillRect(0, 0, pw, bordaEsp * sUnif);
-            ctx.fillRect(0, ph - bordaEsp * sUnif, pw, bordaEsp * sUnif);
+            ctx.fillRect(0, 0, pw, bEspH);          // sup
+            ctx.fillRect(0, ph - bEspH, pw, bEspH); // inf
+            ctx.fillRect(0, 0, bEspV, ph);          // esq (por cima)
+            ctx.fillRect(pw - bEspV, 0, bEspV, ph); // dir (por cima)
             ctx.globalAlpha = 1;
         }
     }
@@ -3423,22 +3427,26 @@ async function gerarFrenteCertificado(pdf, aluno, cfg) {
                 pdf.addImage(CERT_UPLOADS.bordaCompleta, detectarFormatoImagem(CERT_UPLOADS.bordaCompleta), 0, 0, pageWidth, pageHeight);
             } catch(e) { console.error('Erro borda completa:', e); }
         } else {
+            // Espessura conforme modelo de referência: vertical ~37% maior que horizontal
+            const bordaEspH = bordaEspessura; // top/bottom
+            const bordaEspV = parseFloat((bordaEspessura * 1.37).toFixed(2)); // left/right (≈9.6mm quando H=7mm)
             const bordaV = CERT_UPLOADS.bordaVertical || CERT_UPLOADS._bordaVFromH || (typeof BORDA_VERTICAL !== 'undefined' ? BORDA_VERTICAL : null);
             const bordaH = CERT_UPLOADS.bordaHorizontal || (typeof BORDA_HORIZONTAL !== 'undefined' ? BORDA_HORIZONTAL : null);
-        
-            if (bordaV) {
-                try {
-                    const fmtV = detectarFormatoImagem(bordaV);
-                    pdf.addImage(bordaV, fmtV, 0, 0, bordaEspessura, pageHeight);
-                    pdf.addImage(bordaV, fmtV, pageWidth - bordaEspessura, 0, bordaEspessura, pageHeight);
-                } catch(e) { console.error('Erro borda vertical:', e); }
-            }
+
+            // H primeiro, V por cima: bordas verticais dominam nos cantos como no modelo de referência
             if (bordaH) {
                 try {
                     const fmtH = detectarFormatoImagem(bordaH);
-                    pdf.addImage(bordaH, fmtH, 0, 0, pageWidth, bordaEspessura);
-                    pdf.addImage(bordaH, fmtH, 0, pageHeight - bordaEspessura, pageWidth, bordaEspessura);
+                    pdf.addImage(bordaH, fmtH, 0, 0, pageWidth, bordaEspH);
+                    pdf.addImage(bordaH, fmtH, 0, pageHeight - bordaEspH, pageWidth, bordaEspH);
                 } catch(e) { console.error('Erro borda horizontal:', e); }
+            }
+            if (bordaV) {
+                try {
+                    const fmtV = detectarFormatoImagem(bordaV);
+                    pdf.addImage(bordaV, fmtV, 0, 0, bordaEspV, pageHeight);
+                    pdf.addImage(bordaV, fmtV, pageWidth - bordaEspV, 0, bordaEspV, pageHeight);
+                } catch(e) { console.error('Erro borda vertical:', e); }
             }
         }
     }
@@ -3854,22 +3862,26 @@ function gerarVersoCertificado(pdf, aluno, cfg) {
                 pdf.addImage(CERT_UPLOADS.bordaCompleta, detectarFormatoImagem(CERT_UPLOADS.bordaCompleta), 0, 0, pageWidth, pageHeight);
             } catch(e) { console.error('Erro borda completa verso:', e); }
         } else {
+            // Espessura conforme modelo de referência: vertical ~37% maior que horizontal
+            const bordaEspH = bordaEspessura; // top/bottom
+            const bordaEspV = parseFloat((bordaEspessura * 1.37).toFixed(2)); // left/right
             const bordaV = CERT_UPLOADS.bordaVertical || CERT_UPLOADS._bordaVFromH || (typeof BORDA_VERTICAL !== 'undefined' ? BORDA_VERTICAL : null);
             const bordaH = CERT_UPLOADS.bordaHorizontal || (typeof BORDA_HORIZONTAL !== 'undefined' ? BORDA_HORIZONTAL : null);
-        
-            if (bordaV) {
-                try {
-                    const fmtV = detectarFormatoImagem(bordaV);
-                    pdf.addImage(bordaV, fmtV, 0, 0, bordaEspessura, pageHeight);
-                    pdf.addImage(bordaV, fmtV, pageWidth - bordaEspessura, 0, bordaEspessura, pageHeight);
-                } catch(e) { console.error('Erro borda vertical verso:', e); }
-            }
+
+            // H primeiro, V por cima: bordas verticais dominam nos cantos como no modelo de referência
             if (bordaH) {
                 try {
                     const fmtH = detectarFormatoImagem(bordaH);
-                    pdf.addImage(bordaH, fmtH, 0, 0, pageWidth, bordaEspessura);
-                    pdf.addImage(bordaH, fmtH, 0, pageHeight - bordaEspessura, pageWidth, bordaEspessura);
+                    pdf.addImage(bordaH, fmtH, 0, 0, pageWidth, bordaEspH);
+                    pdf.addImage(bordaH, fmtH, 0, pageHeight - bordaEspH, pageWidth, bordaEspH);
                 } catch(e) { console.error('Erro borda horizontal verso:', e); }
+            }
+            if (bordaV) {
+                try {
+                    const fmtV = detectarFormatoImagem(bordaV);
+                    pdf.addImage(bordaV, fmtV, 0, 0, bordaEspV, pageHeight);
+                    pdf.addImage(bordaV, fmtV, pageWidth - bordaEspV, 0, bordaEspV, pageHeight);
+                } catch(e) { console.error('Erro borda vertical verso:', e); }
             }
         }
     }

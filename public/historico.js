@@ -71,6 +71,16 @@ const HIST_CONFIG_DEFAULTS = {
         largura: 22,
         altura: 26,
         qualidade: 100
+    },
+    verso: {
+        tituloVerificacao: 'VERIFICAÇÃO DE RENDIMENTO E FREQUÊNCIA ESCOLAR',
+        textoIntro: 'Considerar-se-á o estudante que quanto à:',
+        item1: '1- Nota/Média obtiver mínimo de 60% de rendimento escolar em cada componente curricular da Formação Geral Básica/FGB;',
+        item2: '2- As unidades curriculares dos Itinérarios Formativos-IFs do Ensino Médio Regular (Tempo Integral e Parcial), serão avaliadas exclusivamente de forma qualitativa.',
+        item3: '3- Todas as unidades curriculares dos Itinérarios Formativos-IFs (Linhas de Aprofundamento, Projeto de Vida, Eletivas e as Atividades Integradoras), possuem uma escala de engajamento única, com as seguintes definições operacionais: I - Engajamento Avançado (EA); II - Engajamento Satisfatório (ES) e III - Engajamento Básico (EB). Os conceitos definidos nos Incisos de I a III, correspondem respectivamente aos seguintes intervalos em escala numérica de conceitos variando de 6,0 (seis) a 10,0 (dez): 8,5 < (EA) <= 10; 6,0 < (ES) <= 8,5; (EB) = 6,0',
+        item4: '4- Assiduidade obtiver frequência mínima de 75% do total da carga horária trabalhada pela escola durante o ano letivo.',
+        textoAtencao: 'ATENÇÃO: Preencher somente no caso do(a) estudante solicitar transferência durante o ano letivo.',
+        tituloReservado: 'RESERVADO PARA AUTENTICAÇÃO'
     }
 };
 
@@ -101,6 +111,16 @@ function obterConfigHist() {
             largura: parseInt(el('histCfgEmblemaLargura')?.value) || 22,
             altura: parseInt(el('histCfgEmblemaAltura')?.value) || 26,
             qualidade: parseInt(el('histCfgEmblemaQualidade')?.value) || 100
+        },
+        verso: {
+            tituloVerificacao: el('histCfgVersoTituloVerificacao')?.value.trim() || HIST_CONFIG_DEFAULTS.verso.tituloVerificacao,
+            textoIntro:        el('histCfgVersoIntro')?.value.trim()        || HIST_CONFIG_DEFAULTS.verso.textoIntro,
+            item1:             el('histCfgVersoItem1')?.value.trim()         || HIST_CONFIG_DEFAULTS.verso.item1,
+            item2:             el('histCfgVersoItem2')?.value.trim()         || HIST_CONFIG_DEFAULTS.verso.item2,
+            item3:             el('histCfgVersoItem3')?.value.trim()         || HIST_CONFIG_DEFAULTS.verso.item3,
+            item4:             el('histCfgVersoItem4')?.value.trim()         || HIST_CONFIG_DEFAULTS.verso.item4,
+            textoAtencao:      el('histCfgVersoAtencao')?.value.trim()       || HIST_CONFIG_DEFAULTS.verso.textoAtencao,
+            tituloReservado:   el('histCfgVersoReservado')?.value.trim()     || HIST_CONFIG_DEFAULTS.verso.tituloReservado
         }
     };
 }
@@ -133,6 +153,17 @@ function _aplicarConfigHistNosInputs(cfg) {
         const prev = el('previewEmblemaHist');
         if (prev) prev.innerHTML = `<img src="${HIST_UPLOADS.emblemaCustom}" style="max-height: 60px; border-radius: 8px; margin-top: 6px;">`;
     }
+    // Verso
+    const v = cfg?.verso || HIST_CONFIG_DEFAULTS.verso;
+    if (el('histCfgVersoTituloVerificacao')) el('histCfgVersoTituloVerificacao').value = v.tituloVerificacao || HIST_CONFIG_DEFAULTS.verso.tituloVerificacao;
+    if (el('histCfgVersoIntro'))              el('histCfgVersoIntro').value              = v.textoIntro        || HIST_CONFIG_DEFAULTS.verso.textoIntro;
+    if (el('histCfgVersoItem1'))              el('histCfgVersoItem1').value              = v.item1             || HIST_CONFIG_DEFAULTS.verso.item1;
+    if (el('histCfgVersoItem2'))              el('histCfgVersoItem2').value              = v.item2             || HIST_CONFIG_DEFAULTS.verso.item2;
+    if (el('histCfgVersoItem3'))              el('histCfgVersoItem3').value              = v.item3             || HIST_CONFIG_DEFAULTS.verso.item3;
+    if (el('histCfgVersoItem4'))              el('histCfgVersoItem4').value              = v.item4             || HIST_CONFIG_DEFAULTS.verso.item4;
+    if (el('histCfgVersoAtencao'))            el('histCfgVersoAtencao').value            = v.textoAtencao      || HIST_CONFIG_DEFAULTS.verso.textoAtencao;
+    if (el('histCfgVersoReservado'))          el('histCfgVersoReservado').value          = v.tituloReservado   || HIST_CONFIG_DEFAULTS.verso.tituloReservado;
+    _atualizarBalaoverso();
 }
 
 function carregarConfigHist() {
@@ -178,6 +209,35 @@ function resetarConfigHist() {
     if (prev) prev.innerHTML = '';
     _aplicarConfigHistNosInputs(HIST_CONFIG_DEFAULTS);
     mostrarNotificacao('Configurações restauradas para o padrão.', 'info');
+}
+
+// Atualiza o balão visual do verso com os textos dos inputs
+function _atualizarBalaoverso() {
+    const el = id => document.getElementById(id);
+    const b = el('versoBalaoPrev');
+    if (!b) return;
+    const get = id => (el(id)?.value || '').trim();
+    const tit  = get('histCfgVersoTituloVerificacao') || HIST_CONFIG_DEFAULTS.verso.tituloVerificacao;
+    const intro = get('histCfgVersoIntro')             || HIST_CONFIG_DEFAULTS.verso.textoIntro;
+    const i1   = get('histCfgVersoItem1')              || HIST_CONFIG_DEFAULTS.verso.item1;
+    const i2   = get('histCfgVersoItem2')              || HIST_CONFIG_DEFAULTS.verso.item2;
+    const i3   = get('histCfgVersoItem3')              || HIST_CONFIG_DEFAULTS.verso.item3;
+    const i4   = get('histCfgVersoItem4')              || HIST_CONFIG_DEFAULTS.verso.item4;
+    const rsv  = get('histCfgVersoReservado')          || HIST_CONFIG_DEFAULTS.verso.tituloReservado;
+    const atc  = get('histCfgVersoAtencao')            || HIST_CONFIG_DEFAULTS.verso.textoAtencao;
+    const e = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const verDiv = b.querySelector('.verso-bloco-verificacao');
+    if (verDiv) verDiv.innerHTML = `
+        <div class="verso-bloco-titulo">${e(tit)}</div>
+        <div class="verso-bloco-intro">${e(intro)}</div>
+        <div class="verso-bloco-item">${e(i1)}</div>
+        <div class="verso-bloco-item">${e(i2)}</div>
+        <div class="verso-bloco-item">${e(i3)}</div>
+        <div class="verso-bloco-item">${e(i4)}</div>`;
+    const rsvDiv = b.querySelector('.verso-bloco-reservado-titulo');
+    if (rsvDiv) rsvDiv.textContent = rsv;
+    const atcDiv = b.querySelector('.verso-bloco-atencao');
+    if (atcDiv) atcDiv.textContent = atc;
 }
 
 function handleUploadEmblemaHist(event) {
@@ -4319,7 +4379,7 @@ function _histVersoMedioPortrait(pdf, hist, cfg) {
 
     // ─── ATENÇÃO + MB/FTB ───────────────────────────────────────────────
     pdf.setFont('helvetica','italic');pdf.setFontSize(4.5);pdf.setTextColor(60,60,60);
-    pdf.text('ATENÇÃO: Preencher somente no caso do(a) estudante solicitar transferência durante o ano letivo.',ML,atenTop+2.5);
+    pdf.text((cfg?.verso?.textoAtencao || HIST_CONFIG_DEFAULTS.verso.textoAtencao),ML,atenTop+2.5);
     pdf.setFont('helvetica','normal');pdf.setFontSize(4.5);pdf.setTextColor(50,50,50);
     pdf.text('MB: Média Bimestral   FTB: Falta Total Bimestre',PW-MR,atenTop+2.5,{align:'right'});
 
@@ -4330,13 +4390,16 @@ function _histVersoMedioPortrait(pdf, hist, cfg) {
     pdf.setFillColor(240,245,255);pdf.rect(ML,verTop,verW,VER_H,'F');
     pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.2);pdf.rect(ML,verTop,verW,VER_H,'S');
     pdf.setFont('helvetica','bold');pdf.setFontSize(5.5);pdf.setTextColor(0,40,120);
-    pdf.text('VERIFICAÇÃO DE RENDIMENTO E FREQUÊNCIA ESCOLAR',ML+verW/2,verTop+4,{align:'center',maxWidth:verW-3});
+    const _vCfg = cfg?.verso || {};
+    pdf.text(
+        _vCfg.tituloVerificacao || HIST_CONFIG_DEFAULTS.verso.tituloVerificacao,
+        ML+verW/2,verTop+4,{align:'center',maxWidth:verW-3});
     const verLines=[
-        'Considerar-se-á o estudante que quanto à:',
-        '1- Nota/Média obtiver mínimo de 60% de rendimento escolar em cada componente curricular da Formação Geral Básica/FGB;',
-        '2- As unidades curriculares dos Itinérarios Formativos-IFs do Ensino Médio Regular (Tempo Integral e Parcial), serão avaliadas exclusivamente de forma qualitativa.',
-        '3- Todas as unidades curriculares dos Itinérarios Formativos-IFs (Linhas de Aprofundamento, Projeto de Vida, Eletivas e as Atividades Integradoras), possuem uma escala de engajamento única, com as seguintes definições operacionais: I - Engajamento Avançado (EA); II - Engajamento Satisfatório (ES) e III - Engajamento Básico (EB). Os conceitos definidos nos Incisos de I a III, correspondem respectivamente aos seguintes intervalos em escala numérica de conceitos variando de 6,0 (seis) a 10,0 (dez): 8,5 < (EA) <= 10; 6,0 < (ES) <= 8,5; (EB) = 6,0',
-        '4- Assiduidade obtiver frequência mínima de 75% do total da carga horária trabalhada pela escola durante o ano letivo.',
+        _vCfg.textoIntro || HIST_CONFIG_DEFAULTS.verso.textoIntro,
+        _vCfg.item1      || HIST_CONFIG_DEFAULTS.verso.item1,
+        _vCfg.item2      || HIST_CONFIG_DEFAULTS.verso.item2,
+        _vCfg.item3      || HIST_CONFIG_DEFAULTS.verso.item3,
+        _vCfg.item4      || HIST_CONFIG_DEFAULTS.verso.item4,
     ];
     pdf.setFont('helvetica','normal');pdf.setFontSize(4.5);pdf.setTextColor(10,10,10);
     const lineH=2.6;   // altura de cada linha de texto
@@ -4353,7 +4416,7 @@ function _histVersoMedioPortrait(pdf, hist, cfg) {
     pdf.setFillColor(255,255,255);pdf.rect(ML+verW,verTop,resW,VER_H,'F');
     pdf.setDrawColor(0,40,120);pdf.setLineWidth(0.2);pdf.rect(ML+verW,verTop,resW,VER_H,'S');
     pdf.setFont('helvetica','bold');pdf.setFontSize(5.5);pdf.setTextColor(0,40,120);
-    pdf.text('RESERVADO PARA AUTENTICAÇÃO',ML+verW+resW/2,verTop+4,{align:'center',maxWidth:resW-2});
+    pdf.text((_vCfg.tituloReservado || HIST_CONFIG_DEFAULTS.verso.tituloReservado),ML+verW+resW/2,verTop+4,{align:'center',maxWidth:resW-2});
 
     // ─── OBSERVAÇÕES (full width) ─────────────────────────────────────────
     pdf.setFillColor(255,255,255);pdf.rect(ML,obsTop,UW,OBS_H,'F');
