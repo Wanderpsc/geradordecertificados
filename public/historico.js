@@ -2934,19 +2934,30 @@ async function _gerarPreviewPDF(hist) {
         const cfg = obterConfigHist();
         const { jsPDF } = window.jspdf;
         const isMedioPreview = hist.tipo === 'medio';
+
+        // Pergunta qual verso usar
+        const versoEscolhido = await _escolherVersoHist(hist.tipo);
+        if (versoEscolhido === null) return; // usuário cancelou
+
         let blob;
 
         if (isMedioPreview) {
             const pdfFrente = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
             _histFrenteMedioPortrait(pdfFrente, hist, cfg);
-            const pdfVerso = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-            _histVersoMedioPortrait(pdfVerso, hist, cfg);
-            blob = await _mergePDFsComPdfLib([pdfFrente, pdfVerso]);
+            if (versoEscolhido === 'sem') {
+                blob = pdfFrente.output('blob');
+            } else {
+                const pdfVerso = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+                _histVersoMedioPortrait(pdfVerso, hist, cfg);
+                blob = await _mergePDFsComPdfLib([pdfFrente, pdfVerso]);
+            }
         } else {
             const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
             _histFrente(pdf, hist, cfg);
-            pdf.addPage();
-            _histVerso(pdf, hist, cfg);
+            if (versoEscolhido !== 'sem') {
+                pdf.addPage();
+                _histVerso(pdf, hist, cfg);
+            }
             blob = pdf.output('blob');
         }
 
@@ -2997,6 +3008,83 @@ function abrirHistPreviewNovaPagina() {
 
 // ==================== GERAÇÃO DE PDF ====================
 
+/**
+ * Exibe modal para o usuário escolher qual verso será incluído no PDF.
+ * @param {string} tipoHist  'medio' | 'fundamental'
+ * @returns {Promise<'ficha'|'sem'|null>}  null = cancelou
+ */
+function _escolherVersoHist(tipoHist) {
+    return new Promise(resolve => {
+        const isMedio = tipoHist === 'medio';
+
+        const opcoes = isMedio
+            ? [
+                { id: 'ficha', icon: '📃', titulo: 'Ficha Individual do Rendimento Escolar e Frequência', desc: 'Verso padrão do Ensino Médio Unificado com tabela bimestral, verificação e observações.' },
+                { id: 'sem',   icon: '🚫', titulo: 'Somente a frente (sem verso)',                        desc: 'Gera apenas a página principal do histórico, sem acrescentar o verso.' }
+              ]
+            : [
+                { id: 'ficha', icon: '📋', titulo: 'Verso padrão do Ensino Fundamental', desc: 'Verso com verificação de rendimento e frequência.' },
+                { id: 'sem',   icon: '🚫', titulo: 'Somente a frente (sem verso)',       desc: 'Gera apenas a página principal do histórico, sem acrescentar o verso.' }
+              ];
+
+        let selecionado = 'ficha'; // padrão
+
+        const modal = document.createElement('div');
+        modal.id = 'modalEscolherVerso';
+        modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.65);z-index:10200;display:flex;align-items:center;justify-content:center;padding:20px;';
+
+        const opcoesHTML = opcoes.map(o => `
+            <div onclick="_escolherVersoOpcao('${o.id}')" id="versoOpcao_${o.id}"
+                style="display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border:2px solid ${o.id === 'ficha' ? '#3b82f6' : '#e5e7eb'};background:${o.id === 'ficha' ? '#eff6ff' : 'white'};border-radius:10px;cursor:pointer;transition:all .15s;"
+                onmouseover="if(window._versoHist!=='${o.id}'){this.style.borderColor='#93c5fd';this.style.background='#f0f7ff';}"
+                onmouseout="if(window._versoHist!=='${o.id}'){this.style.borderColor='#e5e7eb';this.style.background='white';}">
+                <div style="font-size:22px;line-height:1;margin-top:2px;">${o.icon}</div>
+                <div style="flex:1;">
+                    <div style="font-weight:700;font-size:13px;color:#1e3a8a;">${o.titulo}</div>
+                    <div style="font-size:11px;color:#6b7280;margin-top:3px;">${o.desc}</div>
+                </div>
+                <div id="versoCheck_${o.id}" style="font-size:16px;color:#2563eb;${o.id === 'ficha' ? '' : 'display:none;'}">✔</div>
+            </div>`).join('');
+
+        modal.innerHTML = `
+        <div style="background:white;border-radius:16px;padding:28px;max-width:520px;width:95%;box-shadow:0 20px 60px rgba(0,0,0,.3);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                <h2 style="color:#1e3a8a;margin:0;font-size:17px;">📃 Escolha o Verso do Histórico</h2>
+                <button onclick="document.getElementById('modalEscolherVerso').remove();window._versoHistResolve(null);" style="background:none;border:none;font-size:22px;cursor:pointer;color:#6b7280;">✕</button>
+            </div>
+            <p style="color:#6b7280;font-size:12px;margin-bottom:16px;">Selecione qual modelo de verso será impresso junto com a frente do histórico.</p>
+            <div style="display:flex;flex-direction:column;gap:8px;">${opcoesHTML}</div>
+            <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px;border-top:1px solid #e5e7eb;padding-top:14px;">
+                <button class="btn btn-secondary" onclick="document.getElementById('modalEscolherVerso').remove();window._versoHistResolve(null);">Cancelar</button>
+                <button class="btn btn-primary" onclick="_confirmarVersoHist()">✅ Gerar PDF</button>
+            </div>
+        </div>`;
+
+        window._versoHist = selecionado;
+        window._versoHistResolve = resolve;
+        document.body.appendChild(modal);
+        modal.addEventListener('click', e => { if (e.target === modal) { modal.remove(); resolve(null); } });
+    });
+}
+
+function _escolherVersoOpcao(id) {
+    window._versoHist = id;
+    document.querySelectorAll('[id^="versoOpcao_"]').forEach(el => {
+        const isMe = el.id === 'versoOpcao_' + id;
+        el.style.borderColor = isMe ? '#3b82f6' : '#e5e7eb';
+        el.style.background   = isMe ? '#eff6ff' : 'white';
+    });
+    document.querySelectorAll('[id^="versoCheck_"]').forEach(el => {
+        el.style.display = el.id === 'versoCheck_' + id ? '' : 'none';
+    });
+}
+
+function _confirmarVersoHist() {
+    const escolha = window._versoHist || 'ficha';
+    document.getElementById('modalEscolherVerso')?.remove();
+    if (window._versoHistResolve) window._versoHistResolve(escolha);
+}
+
 async function gerarHistoricoPDF() {
     const ids = [...HIST_STATE.historicosSelecionados];
     if (!ids.length) { mostrarNotificacao('Selecione pelo menos um histórico.', 'error'); return; }
@@ -3019,11 +3107,14 @@ async function gerarHistoricoPDF() {
     // Exibe seletor de modelo (usando o primeiro histórico como referência)
     await _mostrarSeletorModeloHist(histReferencia, async (histComModelo) => {
         const gradeEscolhida = histComModelo.grade;
-        await _gerarLotePDF(ids, gradeEscolhida, token);
+        // Pergunta qual verso usar antes de gerar
+        const versoEscolhido = await _escolherVersoHist(histReferencia.tipo);
+        if (versoEscolhido === null) return; // cancelou
+        await _gerarLotePDF(ids, gradeEscolhida, token, versoEscolhido);
     });
 }
 
-async function _gerarLotePDF(ids, gradeEscolhida, token) {
+async function _gerarLotePDF(ids, gradeEscolhida, token, versoEscolhido = 'ficha') {
     mostrarNotificacao(`Gerando ${ids.length} histórico(s)...`, 'info');
     const { jsPDF } = window.jspdf;
     const cfg = obterConfigHist();
@@ -3048,15 +3139,19 @@ async function _gerarLotePDF(ids, gradeEscolhida, token) {
                 const pdfFrente = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
                 _histFrenteMedioPortrait(pdfFrente, hist, cfg);
                 docsParaMerge.push(pdfFrente);
-                // Verso: portrait em documento separado
-                const pdfVerso = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-                _histVersoMedioPortrait(pdfVerso, hist, cfg);
-                docsParaMerge.push(pdfVerso);
+                // Verso: somente se escolhido
+                if (versoEscolhido !== 'sem') {
+                    const pdfVerso = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+                    _histVersoMedioPortrait(pdfVerso, hist, cfg);
+                    docsParaMerge.push(pdfVerso);
+                }
             } else {
                 const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
                 _histFrente(pdf, hist, cfg);
-                pdf.addPage();
-                _histVerso(pdf, hist, cfg);
+                if (versoEscolhido !== 'sem') {
+                    pdf.addPage();
+                    _histVerso(pdf, hist, cfg);
+                }
                 docsParaMerge.push(pdf);
             }
         } catch (e) {
