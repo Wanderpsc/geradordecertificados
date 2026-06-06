@@ -2946,9 +2946,13 @@ async function _gerarPreviewPDF(hist) {
             _histFrenteMedioPortrait(pdfFrente, hist, cfg);
             if (versoEscolhido === 'sem') {
                 blob = pdfFrente.output('blob');
-            } else {
+            } else if (versoEscolhido === 'ficha') {
                 const pdfVerso = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
                 _histVersoMedioPortrait(pdfVerso, hist, cfg);
+                blob = await _mergePDFsComPdfLib([pdfFrente, pdfVerso]);
+            } else { // 'unificado' (padrão)
+                const pdfVerso = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+                _histVersoMedioUnificado(pdfVerso, hist, cfg);
                 blob = await _mergePDFsComPdfLib([pdfFrente, pdfVerso]);
             }
         } else {
@@ -3019,15 +3023,16 @@ function _escolherVersoHist(tipoHist) {
 
         const opcoes = isMedio
             ? [
-                { id: 'ficha', icon: '📃', titulo: 'Ficha Individual do Rendimento Escolar e Frequência', desc: 'Verso padrão do Ensino Médio Unificado com tabela bimestral, verificação e observações.' },
-                { id: 'sem',   icon: '🚫', titulo: 'Somente a frente (sem verso)',                        desc: 'Gera apenas a página principal do histórico, sem acrescentar o verso.' }
+                { id: 'unificado', icon: '📄', titulo: 'Verso do Histórico Escolar do Ensino Médio Unificado', desc: 'Verso oficial com campos do aluno, tabela de séries, verificação de rendimento e assinaturas.' },
+                { id: 'ficha',     icon: '📃', titulo: 'Ficha Individual do Rendimento Escolar e Frequência', desc: 'Verso com tabela bimestral detalhada (notas e faltas por avaliação).' },
+                { id: 'sem',       icon: '🚫', titulo: 'Somente a frente (sem verso)',                        desc: 'Gera apenas a página principal do histórico, sem acrescentar o verso.' }
               ]
             : [
                 { id: 'ficha', icon: '📋', titulo: 'Verso padrão do Ensino Fundamental', desc: 'Verso com verificação de rendimento e frequência.' },
                 { id: 'sem',   icon: '🚫', titulo: 'Somente a frente (sem verso)',       desc: 'Gera apenas a página principal do histórico, sem acrescentar o verso.' }
               ];
 
-        let selecionado = 'ficha'; // padrão
+        let selecionado = isMedio ? 'unificado' : 'ficha'; // padrão
 
         const modal = document.createElement('div');
         modal.id = 'modalEscolherVerso';
@@ -3035,7 +3040,7 @@ function _escolherVersoHist(tipoHist) {
 
         const opcoesHTML = opcoes.map(o => `
             <div onclick="_escolherVersoOpcao('${o.id}')" id="versoOpcao_${o.id}"
-                style="display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border:2px solid ${o.id === 'ficha' ? '#3b82f6' : '#e5e7eb'};background:${o.id === 'ficha' ? '#eff6ff' : 'white'};border-radius:10px;cursor:pointer;transition:all .15s;"
+                style="display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border:2px solid ${o.id === selecionado ? '#3b82f6' : '#e5e7eb'};background:${o.id === selecionado ? '#eff6ff' : 'white'};border-radius:10px;cursor:pointer;transition:all .15s;"
                 onmouseover="if(window._versoHist!=='${o.id}'){this.style.borderColor='#93c5fd';this.style.background='#f0f7ff';}"
                 onmouseout="if(window._versoHist!=='${o.id}'){this.style.borderColor='#e5e7eb';this.style.background='white';}">
                 <div style="font-size:22px;line-height:1;margin-top:2px;">${o.icon}</div>
@@ -3043,7 +3048,7 @@ function _escolherVersoHist(tipoHist) {
                     <div style="font-weight:700;font-size:13px;color:#1e3a8a;">${o.titulo}</div>
                     <div style="font-size:11px;color:#6b7280;margin-top:3px;">${o.desc}</div>
                 </div>
-                <div id="versoCheck_${o.id}" style="font-size:16px;color:#2563eb;${o.id === 'ficha' ? '' : 'display:none;'}">✔</div>
+                <div id="versoCheck_${o.id}" style="font-size:16px;color:#2563eb;${o.id === selecionado ? '' : 'display:none;'}">✔</div>
             </div>`).join('');
 
         modal.innerHTML = `
@@ -3135,14 +3140,16 @@ async function _gerarLotePDF(ids, gradeEscolhida, token, versoEscolhido = 'ficha
             const isMedio = hist.tipo === 'medio';
 
             if (isMedio) {
-                // Frente: landscape em documento separado
                 const pdfFrente = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
                 _histFrenteMedioPortrait(pdfFrente, hist, cfg);
                 docsParaMerge.push(pdfFrente);
-                // Verso: somente se escolhido
-                if (versoEscolhido !== 'sem') {
+                if (versoEscolhido === 'ficha') {
                     const pdfVerso = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
                     _histVersoMedioPortrait(pdfVerso, hist, cfg);
+                    docsParaMerge.push(pdfVerso);
+                } else if (versoEscolhido !== 'sem') { // 'unificado' (padrão)
+                    const pdfVerso = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+                    _histVersoMedioUnificado(pdfVerso, hist, cfg);
                     docsParaMerge.push(pdfVerso);
                 }
             } else {
@@ -4077,6 +4084,177 @@ function _histFrenteMedioPortraitLegado(pdf, hist, cfg) {
     const fyBot=PH-6;
     _hLine(pdf,ML,fyBot,PW-MR,fyBot,0.6,[0,40,120]);
     _hLine(pdf,ML,fyBot+1.2,PW-MR,fyBot+1.2,0.2,[0,40,120]);
+}
+
+// ============================================================
+// VERSO DO HISTÓRICO ESCOLAR DO ENSINO MÉDIO UNIFICADO
+// Modelo baseado em: VERSO_HISTORICO_ESCOLAR_DO_ENSINO_MEDIO_UNIFICADO.docx
+// (sem tabela bimestral — verso simples com verificação e assinaturas)
+// ============================================================
+function _histVersoMedioUnificado(pdf, hist, cfg) {
+    const PW=210, PH=297, ML=6, MR=6, MT=5;
+    const UW=PW-ML-MR;
+    let y=MT;
+    const aluno=hist.aluno||{};
+    const grade=hist.grade||{};
+    const seriesInfo=hist.seriesInfo||[];
+    const _v=cfg?.verso||{};
+    const hCfg=cfg?.cabecalho||{};
+    const COR=[0,40,120];
+
+    // Helper: label + linha sublinhada
+    const campoLn=(label,valor,x,yy,w)=>{
+        pdf.setFont('helvetica','bold');pdf.setFontSize(6.5);pdf.setTextColor(...COR);
+        pdf.text(label,x,yy);
+        const lw=pdf.getStringUnitWidth(label)*6.5/pdf.internal.scaleFactor+0.5;
+        pdf.setFont('helvetica','normal');pdf.setTextColor(0,0,0);
+        if(valor)pdf.text(String(valor),x+lw,yy,{maxWidth:w-lw-1});
+        pdf.setDrawColor(...COR);pdf.setLineWidth(0.15);
+        pdf.line(x+lw,yy+1,x+w,yy+1);
+    };
+
+    // ─── CAMPOS DO ALUNO ───────────────────────────────────────────────
+    const fH=4.8;
+    const nascStr=(()=>{const d=aluno.dataNascimento||{};return d.dia?`${d.dia} de ${d.mes||''} de ${d.ano||''}`:''})();
+    const natStr=[aluno.naturalidade?.cidade,aluno.naturalidade?.estado].filter(Boolean).join(' / ');
+
+    campoLn('ESTABELECIMENTO DE ENSINO:',hCfg.nomeInstituicao||'',ML,y+fH-1,UW); y+=fH+1;
+    campoLn('ENDEREÇO:',hCfg.endereco||'',ML,y+fH-1,UW); y+=fH+1;
+    campoLn('ESTUDANTE:',aluno.nome||'',ML,y+fH-1,UW); y+=fH+1;
+    campoLn('NOME SOCIAL:',aluno.nomeSocial||'',ML,y+fH-1,UW); y+=fH+1;
+
+    campoLn('RG:',aluno.rg||'',ML,y+fH-1,UW*0.22);
+    campoLn('ÓRGÃO EMISSOR:',aluno.orgaoEmissor||'',ML+UW*0.22+1,y+fH-1,UW*0.26);
+    campoLn('CPF:',aluno.cpf||'',ML+UW*0.48+1,y+fH-1,UW*0.52-1); y+=fH+1;
+
+    campoLn('DATA DE NASCIMENTO:',nascStr,ML,y+fH-1,UW*0.38);
+    campoLn('NATURALIDADE:',natStr,ML+UW*0.38+1,y+fH-1,UW*0.33);
+    campoLn('NACIONALIDADE:',aluno.nacionalidade||'',ML+UW*0.71+1,y+fH-1,UW*0.29-1); y+=fH+1;
+
+    campoLn('FILIAÇÃO:',aluno.filiacao?.mae||'',ML,y+fH-1,UW); y+=fH+1;
+    campoLn('E',aluno.filiacao?.pai||'',ML,y+fH-1,UW); y+=fH+2;
+
+    // ─── TABELA DE SÉRIES ──────────────────────────────────────────────
+    const series=grade.nomesSeries?.length?grade.nomesSeries:['1ª Série','2ª Série','3ª Série'];
+    const tHH=5, tRH=4.5;
+    const colW={serie:UW*0.07,ano:UW*0.10,escola:UW*0.50,municipio:UW*0.23,estado:UW*0.10};
+    const cols=[
+        {label:'SÉRIE',     w:colW.serie},
+        {label:'ANO',       w:colW.ano},
+        {label:'ESTABELECIMENTO DE ENSINO:', w:colW.escola},
+        {label:'MUNICÍPIO:',w:colW.municipio},
+        {label:'ESTADO:',   w:colW.estado}
+    ];
+
+    // Header da tabela
+    pdf.setFillColor(...COR);pdf.rect(ML,y,UW,tHH,'F');
+    pdf.setFont('helvetica','bold');pdf.setFontSize(5.5);pdf.setTextColor(255,255,255);
+    let cx=ML;
+    cols.forEach(({label,w})=>{
+        pdf.text(label,cx+w/2,y+3.5,{align:'center',maxWidth:w-1});
+        cx+=w;
+        pdf.setDrawColor(100,140,200);pdf.setLineWidth(0.15);
+        if(cx<ML+UW)pdf.line(cx,y,cx,y+tHH);
+    });
+    y+=tHH;
+
+    // Linhas de série
+    series.forEach((serie,idx)=>{
+        const si=seriesInfo.find(s=>String(s.serie)===String(idx+1))||{};
+        pdf.setFillColor(idx%2===0?248:255,idx%2===0?251:255,255);
+        pdf.rect(ML,y,UW,tRH,'F');
+        pdf.setDrawColor(180,210,230);pdf.setLineWidth(0.1);pdf.rect(ML,y,UW,tRH,'S');
+        pdf.setFont('helvetica','normal');pdf.setFontSize(5.5);pdf.setTextColor(0,0,0);
+        cx=ML;
+        [
+            {val:(serie.match(/\d+/)||[idx+1])[0]+'ª',w:colW.serie},
+            {val:si.ano||'',                            w:colW.ano},
+            {val:hCfg.nomeInstituicao||'',              w:colW.escola},
+            {val:aluno.municipio||'',                   w:colW.municipio},
+            {val:aluno.uf||'',                          w:colW.estado}
+        ].forEach(({val,w})=>{
+            pdf.text(String(val),cx+w/2,y+tRH-1,{align:'center',maxWidth:w-1});
+            cx+=w;
+            pdf.setDrawColor(180,210,230);pdf.setLineWidth(0.1);
+            if(cx<ML+UW)pdf.line(cx,y-tHH+0.1,cx,y+tRH);
+        });
+        y+=tRH;
+    });
+    // Borda externa da tabela
+    pdf.setDrawColor(...COR);pdf.setLineWidth(0.3);
+    pdf.rect(ML,y-series.length*tRH-tHH,UW,series.length*tRH+tHH,'S');
+    y+=3;
+
+    // ─── VERIFICAÇÃO (60%) + RESERVADO (40%) ───────────────────────────
+    const VER_H=42;
+    const verW=Math.floor(UW*0.60);
+    const resW=UW-verW;
+
+    const verLines=[
+        _v.textoIntro       ||HIST_CONFIG_DEFAULTS.verso.textoIntro,
+        _v.item1            ||HIST_CONFIG_DEFAULTS.verso.item1,
+        _v.item2            ||HIST_CONFIG_DEFAULTS.verso.item2,
+        _v.item3            ||HIST_CONFIG_DEFAULTS.verso.item3,
+        _v.item4            ||HIST_CONFIG_DEFAULTS.verso.item4,
+    ];
+
+    pdf.setFillColor(240,245,255);pdf.rect(ML,y,verW,VER_H,'F');
+    pdf.setDrawColor(...COR);pdf.setLineWidth(0.2);pdf.rect(ML,y,verW,VER_H,'S');
+    pdf.setFont('helvetica','bold');pdf.setFontSize(5.5);pdf.setTextColor(...COR);
+    pdf.text(_v.tituloVerificacao||HIST_CONFIG_DEFAULTS.verso.tituloVerificacao,ML+verW/2,y+4,{align:'center',maxWidth:verW-3});
+    pdf.setFont('helvetica','normal');pdf.setFontSize(4.5);pdf.setTextColor(10,10,10);
+    const lH=2.6,iG=1.5;let vy=y+7;
+    verLines.forEach(t=>{
+        const ls=pdf.splitTextToSize(t,verW-3);
+        if(vy+ls.length*lH<y+VER_H-1){pdf.text(ls,ML+1.5,vy);vy+=ls.length*lH+iG;}
+    });
+
+    pdf.setFillColor(255,255,255);pdf.rect(ML+verW,y,resW,VER_H,'F');
+    pdf.setDrawColor(...COR);pdf.setLineWidth(0.2);pdf.rect(ML+verW,y,resW,VER_H,'S');
+    pdf.setFont('helvetica','bold');pdf.setFontSize(5.5);pdf.setTextColor(...COR);
+    pdf.text(_v.tituloReservado||HIST_CONFIG_DEFAULTS.verso.tituloReservado,ML+verW+resW/2,y+4,{align:'center',maxWidth:resW-2});
+    y+=VER_H+2;
+
+    // ─── OBSERVAÇÕES ───────────────────────────────────────────────────
+    const OBS_H=22;
+    pdf.setFillColor(255,255,255);pdf.rect(ML,y,UW,OBS_H,'F');
+    pdf.setDrawColor(...COR);pdf.setLineWidth(0.2);pdf.rect(ML,y,UW,OBS_H,'S');
+    pdf.setFont('helvetica','bold');pdf.setFontSize(5.5);pdf.setTextColor(...COR);
+    pdf.text('OBSERVAÇÕES:',ML+1.5,y+4);
+    const fichaEntry=(hist.fichaIndividual||[]).sort((a,b)=>(b.ano||'').localeCompare(a.ano||''))[0]||{};
+    const obsTexto=fichaEntry.observacao||cfg?.frente?.observacoes||'';
+    if(obsTexto){
+        pdf.setFont('helvetica','normal');pdf.setFontSize(5);pdf.setTextColor(0,0,0);
+        const obsLns=pdf.splitTextToSize(obsTexto,UW-4);
+        pdf.text(obsLns.slice(0,Math.floor((OBS_H-6)/3)),ML+1.5,y+8);
+    }
+    y+=OBS_H+2;
+
+    // ─── RODAPÉ ────────────────────────────────────────────────────────
+    const fyBot=PH-3;
+    const sigLblY=fyBot-5;
+    const sigLineY=sigLblY-7;
+    const localLineY=sigLineY-9;
+    const rasurY=localLineY-6;
+
+    pdf.setFont('helvetica','bold');pdf.setFontSize(6);pdf.setTextColor(0,0,0);
+    pdf.text('Neste documento não deverá haver emendas e nem rasuras.',PW/2,rasurY,{align:'center'});
+
+    _drawLocalData(pdf,cfg?.frente?.localData||hist.dataEmissao||'',localLineY,PW);
+
+    const sig1=cfg?.frente?.assinatura1||'SECRETÁRIO(A)';
+    const sig2=cfg?.frente?.assinatura2||'DIRETOR(A)';
+    const sigLineW=55;
+    [{cx:PW*0.28,sig:sig1},{cx:PW*0.72,sig:sig2}].forEach(({cx,sig})=>{
+        pdf.setLineWidth(0.2);pdf.setDrawColor(...COR);
+        pdf.line(cx-sigLineW/2,sigLineY,cx+sigLineW/2,sigLineY);
+        pdf.setFont('helvetica','bold');pdf.setFontSize(6);pdf.setTextColor(0,0,0);
+        pdf.text(sig,cx,sigLblY,{align:'center'});
+    });
+
+    // linhas duplas finais
+    pdf.setDrawColor(...COR);pdf.setLineWidth(0.4);pdf.line(ML,fyBot-1,PW-MR,fyBot-1);
+    pdf.setLineWidth(0.15);pdf.line(ML,fyBot,PW-MR,fyBot);
 }
 
 function _histVersoMedioPortrait(pdf, hist, cfg) {
